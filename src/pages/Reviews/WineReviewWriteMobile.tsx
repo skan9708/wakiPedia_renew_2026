@@ -89,19 +89,38 @@ export function WineReviewWriteMobile() {
           <div className="flex items-center gap-2 text-2xl">
             {Array.from({ length: 5 }).map((_, i) => {
               const idx = i + 1;
-              const active = (hover || rating) >= idx;
+              const current = hover || rating;
+              const isFull = current >= idx;
+              const isHalf = !isFull && current >= idx - 0.5;
+              const fillPct = isFull ? '100%' : isHalf ? '50%' : '0%';
               return (
-                <button
-                  type="button"
-                  key={idx}
-                  className={`transition-colors ${active ? 'text-accent' : 'text-border'}`}
-                  onMouseEnter={() => setHover(idx)}
-                  onMouseLeave={() => setHover(0)}
-                  onClick={() => setRating(idx)}
-                  aria-label={`${idx}점`}
-                >
-                  ★
-                </button>
+                <span key={idx} className="relative inline-block leading-none">
+                  {/* base empty star */}
+                  <span className="text-border select-none">☆</span>
+                  {/* clipped filled star overlay */}
+                  <span className="absolute left-0 top-0 overflow-hidden pointer-events-none" style={{ width: fillPct }} aria-hidden="true">
+                    <span className="text-accent select-none">★</span>
+                  </span>
+                  {/* interactive halves */}
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 left-0 w-1/2 z-10"
+                    onMouseEnter={() => setHover(idx - 0.5)}
+                    onMouseLeave={() => setHover(0)}
+                    onClick={() => setRating(idx - 0.5)}
+                    aria-label={`${idx - 0.5}점`}
+                    title={`${idx - 0.5}점`}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 w-1/2 z-10"
+                    onMouseEnter={() => setHover(idx)}
+                    onMouseLeave={() => setHover(0)}
+                    onClick={() => setRating(idx)}
+                    aria-label={`${idx}점`}
+                    title={`${idx}점`}
+                  />
+                </span>
               );
             })}
           </div>
