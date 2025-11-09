@@ -44,6 +44,11 @@ body {
   @apply rounded-2xl shadow-card bg-white;
 }
 
+/* 브랜드 프라이빗 컬러(어두운 초록) 유틸 🎯 */
+.bg-private { background-color: #2E4A0C; }
+.text-private { color: #2E4A0C; }
+.border-private { border-color: #2E4A0C; }
+
 /* 하트 클릭 팝 애니메이션 (로티 대체 경량 효과) 💓 */
 @keyframes heart-pop {
   0% { transform: scale(0.6); opacity: 0; }
