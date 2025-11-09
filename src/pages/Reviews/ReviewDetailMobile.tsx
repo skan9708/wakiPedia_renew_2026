@@ -52,17 +52,13 @@ export function ReviewDetailMobile() {
 
       {/* 리뷰 텍스트 + 별점 */}
       <div className="px-4">
-        <div className="flex items-center gap-2">
-          <RatingStars value={review.rating} size="md" />
-          <span className="text-accent text-sm">{review.rating.toFixed(1)} 점</span>
+        <div className="card p-4 border border-border">
+          <div className="flex items-center gap-2">
+            <RatingStars value={review.rating} size="md" />
+            <span className="text-accent text-sm">{review.rating.toFixed(1)} 점</span>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed">{review.text}</p>
         </div>
-        <p className="mt-2 text-sm leading-relaxed">{review.text}</p>
-      </div>
-
-      {/* 와인 정보 */}
-      <div className="px-4">
-        <h3 className="text-base font-semibold mb-2">와인 정보</h3>
-        <div className="text-sm text-muted">{wine.regions} · <span className="text-accent">{wine.breed}</span></div>
       </div>
 
       {/* 느낌 */}
@@ -96,14 +92,14 @@ function DetailGauge({ title, left, right, value }: DGProps) {
     <div className="flex items-center gap-2">
       <div className="w-12 shrink-0 text-sm text-muted">{title}</div>
       <div className="flex-1">
-        <div className="relative h-12">
-          <div className="absolute -top-5 left-0 text-[12px] text-muted">{left}</div>
-          <div className="absolute -top-5 right-0 text-[12px] text-muted">{right}</div>
-          <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[5px] bg-neutral-200 rounded-full" />
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[5px] bg-accent rounded-full" style={{ width: fillPct }} />
+        <div className="relative h-10">
+          <div className="absolute -top-4 left-0 text-[12px] text-muted">{left}</div>
+          <div className="absolute -top-4 right-0 text-[12px] text-muted">{right}</div>
+          <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[4px] bg-neutral-200 rounded-full" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[4px] bg-accent rounded-full" style={{ width: fillPct }} />
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between">
             {Array.from({ length: 5 }).map((_, i) => (
-              <span key={i} className={`w-5 h-5 rounded-full border-2 ${i <= value ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`} />
+              <span key={i} className={`w-4 h-4 rounded-full border-2 ${i <= value ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`} />
             ))}
           </div>
         </div>
