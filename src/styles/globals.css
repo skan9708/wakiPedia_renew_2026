@@ -44,4 +44,15 @@ body {
   @apply rounded-2xl shadow-card bg-white;
 }
 
+/* 하트 클릭 팝 애니메이션 (로티 대체 경량 효과) 💓 */
+@keyframes heart-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.anim-heart-pop {
+  animation: heart-pop 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
 
