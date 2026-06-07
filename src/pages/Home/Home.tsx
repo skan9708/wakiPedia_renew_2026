@@ -89,6 +89,7 @@ export function Home() {
                 placeholder="와인 리뷰를 검색해 보세요"
                 onSearch={handleSearch}
                 className="bg-white/95 backdrop-blur-sm border-0 shadow-lg"
+                enableSuggestions
               />
             </div>
           </div>

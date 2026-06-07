@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
 
 type TasteOption = string;
 
@@ -14,36 +16,42 @@ const FEEL_OAKY = ['카카오','헤이즐넛','바닐라','초콜릿','아몬드
 const FEEL_VEGETAL = ['유칼립투스','로즈마리','타임','딜','민트','홍차','바질','토바코','월계수','토마토','피망','잔디','얼그레이','고수','솔향','허브향'];
 
 export function WineReviewWriteMobile() {
-  const [params] = useSearchParams();
-  const wineId = params.get('wine_id');
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const token = useAuthStore((s) => s.token);
+  const wineId = searchParams.get('wine_id');
+
+  if (!token) {
+    return (
+      <div className="mx-auto w-full max-w-mobile px-4 pt-16 text-center space-y-4">
+        <p className="text-muted">리뷰를 작성하려면 로그인이 필요합니다.</p>
+        <button className="w-full py-3 rounded-2xl bg-accent text-white" onClick={() => navigate('/auth/login')}>로그인하기</button>
+      </div>
+    );
+  }
 
   const [rating, setRating] = useState<number>(0);
   const [hover, setHover] = useState<number>(0);
   const [content, setContent] = useState<string>('');
   const [images, setImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [body, setBody] = useState<TasteOption | undefined>();
-  const [sweet, setSweet] = useState<TasteOption | undefined>();
-  const [acid, setAcid] = useState<TasteOption | undefined>();
-  const [tanin, setTanin] = useState<TasteOption | undefined>();
   const [bodyLevel, setBodyLevel] = useState<number>(2);
   const [sweetLevel, setSweetLevel] = useState<number>(2);
   const [acidLevel, setAcidLevel] = useState<number>(2);
   const [taninLevel, setTaninLevel] = useState<number>(2);
   const [visibility, setVisibility] = useState<'private' | 'public'>('public');
   const [feels, setFeels] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const fileRef = useRef<HTMLInputElement | null>(null);
-
-  const canSubmit = useMemo(() => rating > 0 && content.trim().length > 0, [rating, content]);
+  const canSubmit = useMemo(() => rating > 0 && content.trim().length > 0 && !!wineId, [rating, content, wineId]);
 
   const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    if (files.length === 0) return;
+    if (!files.length) return;
     setImages((prev) => [...prev, ...files]);
-    const nextUrls = files.map((f) => URL.createObjectURL(f));
-    setPreviews((prev) => [...prev, ...nextUrls]);
-    // reset for same file select
+    setPreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
     if (fileRef.current) fileRef.current.value = '';
   };
 
@@ -52,37 +60,51 @@ export function WineReviewWriteMobile() {
     setPreviews((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const toggleFeel = (token: string) => {
+  const toggleFeel = (token: string) =>
     setFeels((prev) => (prev.includes(token) ? prev.filter((t) => t !== token) : [...prev, token]));
-  };
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
-      wineId,
-      rating,
-      content,
-      imagesCount: images.length,
-      body,
-      sweet,
-      acid,
-      tanin,
-      visibility,
-      feels,
-    };
-    console.log('submit review', payload);
-    alert('로컬 데모: 콘솔에 payload가 출력되었습니다.');
+    if (!canSubmit) return;
+    setLoading(true);
+    setError('');
+    try {
+      const form = new FormData();
+      form.append('wine', wineId!);
+      form.append('rating', String(rating));
+      form.append('text', content);
+      form.append('body', String(bodyLevel));
+      form.append('acidity', String(acidLevel));
+      form.append('sweetness', String(sweetLevel));
+      form.append('tannin', String(taninLevel));
+      form.append('is_public', visibility === 'public' ? 'true' : 'false');
+      feels.forEach((f) => form.append('feels', f));
+      images.forEach((img) => form.append('images', img));
+
+      const { data } = await api.post('/reviews/', form);
+      navigate(`/reviews/${data.id}`);
+    } catch (err: any) {
+      const errData = err.response?.data;
+      if (errData && typeof errData === 'object') {
+        const msgs = Object.entries(errData).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
+        setError(msgs.join(' / '));
+      } else {
+        setError('리뷰 등록에 실패했습니다.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={onSubmit} className="space-y-5 font-sans">
-      {/* 제목/타깃 */}
       <div className="mx-auto w-full max-w-mobile px-4 pt-4">
-        <div className="text-xs text-muted">대상 와인</div>
+        <div className="text-xs text-muted">대상 와인 ID</div>
         <div className="text-sm mt-1">{wineId ?? '선택 필요'}</div>
+        {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
       </div>
 
-      {/* 별점 입력 */}
+      {/* 별점 */}
       <section className="mx-auto w-full max-w-mobile px-4">
         <h3 className="text-base font-semibold mb-2">별점</h3>
         <div className="card p-4">
@@ -95,34 +117,16 @@ export function WineReviewWriteMobile() {
               const fillPct = isFull ? '100%' : isHalf ? '50%' : '0%';
               return (
                 <span key={idx} className="relative inline-block leading-none">
-                  {/* base empty star */}
                   <span className="text-border select-none">☆</span>
-                  {/* clipped filled star overlay */}
-                  <span className="absolute left-0 top-0 overflow-hidden pointer-events-none" style={{ width: fillPct }} aria-hidden="true">
+                  <span className="absolute left-0 top-0 overflow-hidden pointer-events-none" style={{ width: fillPct }}>
                     <span className="text-accent select-none">★</span>
                   </span>
-                  {/* interactive halves */}
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 left-0 w-1/2 z-10"
-                    onMouseEnter={() => setHover(idx - 0.5)}
-                    onMouseLeave={() => setHover(0)}
-                    onClick={() => setRating(idx - 0.5)}
-                    aria-label={`${idx - 0.5}점`}
-                    title={`${idx - 0.5}점`}
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 w-1/2 z-10"
-                    onMouseEnter={() => setHover(idx)}
-                    onMouseLeave={() => setHover(0)}
-                    onClick={() => setRating(idx)}
-                    aria-label={`${idx}점`}
-                    title={`${idx}점`}
-                  />
+                  <button type="button" className="absolute inset-y-0 left-0 w-1/2 z-10" onMouseEnter={() => setHover(idx - 0.5)} onMouseLeave={() => setHover(0)} onClick={() => setRating(idx - 0.5)} />
+                  <button type="button" className="absolute inset-y-0 right-0 w-1/2 z-10" onMouseEnter={() => setHover(idx)} onMouseLeave={() => setHover(0)} onClick={() => setRating(idx)} />
                 </span>
               );
             })}
+            <span className="text-base text-muted ml-2">{rating > 0 ? `${rating.toFixed(1)}점` : ''}</span>
           </div>
         </div>
       </section>
@@ -131,13 +135,7 @@ export function WineReviewWriteMobile() {
       <section className="mx-auto w-full max-w-mobile px-4">
         <h3 className="text-base font-semibold mb-2">리뷰 작성</h3>
         <div className="card p-4">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={5}
-            placeholder="와인의 색상, 향, 맛과 기억하고 싶은 노트를 기록해 보세요."
-            className="w-full resize-none bg-transparent outline-none text-sm placeholder:text-muted"
-          />
+          <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={5} placeholder="와인의 색상, 향, 맛과 기억하고 싶은 노트를 기록해 보세요." className="w-full resize-none bg-transparent outline-none text-sm placeholder:text-muted" />
         </div>
       </section>
 
@@ -146,25 +144,11 @@ export function WineReviewWriteMobile() {
         <h3 className="text-base font-semibold mb-2">사진 선택</h3>
         <div className="card p-4">
           <div className="grid grid-cols-4 gap-3">
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="aspect-square rounded-xl bg-bgsubtle text-muted grid place-items-center text-xs"
-              aria-label="와인 사진 업로드"
-            >
-              와인 사진 업로드
-            </button>
+            <button type="button" onClick={() => fileRef.current?.click()} className="aspect-square rounded-xl bg-bgsubtle text-muted grid place-items-center text-xs">와인 사진 업로드</button>
             {previews.map((src, i) => (
               <div key={src} className="relative aspect-square rounded-xl overflow-hidden">
                 <img src={src} alt={`preview-${i}`} className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  className="absolute top-1 right-1 text-xs bg-black/50 text-white rounded px-1"
-                  onClick={() => onRemoveImage(i)}
-                  aria-label="사진 삭제"
-                >
-                  삭제
-                </button>
+                <button type="button" className="absolute top-1 right-1 text-xs bg-black/50 text-white rounded px-1" onClick={() => onRemoveImage(i)}>삭제</button>
               </div>
             ))}
           </div>
@@ -176,46 +160,10 @@ export function WineReviewWriteMobile() {
       <section className="mx-auto w-full max-w-mobile px-4">
         <h3 className="text-base font-semibold mb-6">와인 상세기록</h3>
         <div className="mt-0 space-y-5">
-          <TasteScaleRow
-            title="바디"
-            leftLabel="매우 가벼움"
-            rightLabel="매우 무거움"
-            value={bodyLevel}
-            onChange={(v) => {
-              setBodyLevel(v);
-              setBody(BODY_OPTIONS[v]);
-            }}
-          />
-          <TasteScaleRow
-            title="당도"
-            leftLabel="매우 드라이"
-            rightLabel="매우 스윗"
-            value={sweetLevel}
-            onChange={(v) => {
-              setSweetLevel(v);
-              setSweet(SWEET_OPTIONS[v]);
-            }}
-          />
-          <TasteScaleRow
-            title="산도"
-            leftLabel="매우 부드러움"
-            rightLabel="매우 시다"
-            value={acidLevel}
-            onChange={(v) => {
-              setAcidLevel(v);
-              setAcid(ACID_OPTIONS[v]);
-            }}
-          />
-          <TasteScaleRow
-            title="탄닌"
-            leftLabel="매우 부드러움"
-            rightLabel="매우 떫음"
-            value={taninLevel}
-            onChange={(v) => {
-              setTaninLevel(v);
-              setTanin(TANIN_OPTIONS[v]);
-            }}
-          />
+          <TasteScaleRow title="바디" leftLabel="매우 가벼움" rightLabel="매우 무거움" value={bodyLevel} onChange={setBodyLevel} />
+          <TasteScaleRow title="당도" leftLabel="매우 드라이" rightLabel="매우 스윗" value={sweetLevel} onChange={setSweetLevel} />
+          <TasteScaleRow title="산도" leftLabel="매우 부드러움" rightLabel="매우 시다" value={acidLevel} onChange={setAcidLevel} />
+          <TasteScaleRow title="탄닌" leftLabel="매우 부드러움" rightLabel="매우 떫음" value={taninLevel} onChange={setTaninLevel} />
         </div>
       </section>
 
@@ -228,31 +176,20 @@ export function WineReviewWriteMobile() {
         <FeelGroup title="식물 (Vegetal)" items={FEEL_VEGETAL} selected={feels} onToggle={toggleFeel} />
       </section>
 
-      {/* 공개 범위 (맨 아래) */}
+      {/* 공개 범위 */}
       <section className="mx-auto w-full max-w-mobile px-4 pb-12">
         <h3 className="text-base font-semibold mb-2">공개 범위</h3>
         <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            className={`py-2 rounded-xl border ${visibility==='public' ? 'bg-accent text-white border-accent' : 'border-border'}`}
-            onClick={() => setVisibility('public')}
-          >
-            전체 공개
-          </button>
-          <button
-            type="button"
-            className={`py-2 rounded-xl border ${visibility==='private' ? 'bg-accent text-white border-accent' : 'border-border'}`}
-            onClick={() => setVisibility('private')}
-          >
-            나만 보기
-          </button>
+          <button type="button" className={`py-2 rounded-xl border ${visibility === 'public' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('public')}>전체 공개</button>
+          <button type="button" className={`py-2 rounded-xl border ${visibility === 'private' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('private')}>나만 보기</button>
         </div>
       </section>
 
-      {/* 제출 버튼 - BottomNav 위에 고정 */}
       <div className="fixed bottom-16 left-0 right-0 bg-white/95 backdrop-blur border-t border-border">
         <div className="mx-auto w-full max-w-mobile px-4 py-2.5">
-          <button disabled={!canSubmit} className="w-full py-3 rounded-2xl bg-accent text-white disabled:opacity-50">리뷰 올리기</button>
+          <button disabled={!canSubmit || loading} className="w-full py-3 rounded-2xl bg-accent text-white disabled:opacity-50">
+            {loading ? '등록 중...' : '리뷰 올리기'}
+          </button>
         </div>
       </div>
       <div className="h-0" />
@@ -260,70 +197,24 @@ export function WineReviewWriteMobile() {
   );
 }
 
-type TasteRowProps = {
-  label: string;
-  options: string[];
-  value?: string;
-  onChange: (v: string) => void;
-};
-
-function TasteRow({ label, options, value, onChange }: TasteRowProps) {
-  return (
-    <div>
-      <div className="text-sm font-medium mb-1">{label}</div>
-      <div className="grid grid-cols-3 gap-1.5">
-        {options.map((opt) => (
-          <button
-            key={opt}
-            type="button"
-            className={`px-3 py-2 rounded-xl border text-sm ${value===opt ? 'bg-accent text-white border-accent' : 'border-border'}`}
-            onClick={() => onChange(opt)}
-            aria-pressed={value===opt}
-          >
-            {opt}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-type FeelGroupProps = {
-  title: string;
-  items: string[];
-  selected: string[];
-  onToggle: (token: string) => void;
-};
-
+type FeelGroupProps = { title: string; items: string[]; selected: string[]; onToggle: (t: string) => void };
 function FeelGroup({ title, items, selected, onToggle }: FeelGroupProps) {
   return (
     <div className="mb-3">
       <div className="text-sm font-medium mb-1">{title}</div>
       <div className="flex flex-wrap gap-1.5">
         {items.map((it) => (
-          <button
-            key={it}
-            type="button"
-            onClick={() => onToggle(it)}
+          <button key={it} type="button" onClick={() => onToggle(it)}
             className={`px-3 py-1.5 rounded-full text-sm border ${selected.includes(it) ? 'bg-neutral-200 border-neutral-200' : 'border-border'}`}
             aria-pressed={selected.includes(it)}
-          >
-            {it}
-          </button>
+          >{it}</button>
         ))}
       </div>
     </div>
   );
 }
 
-type TasteScaleRowProps = {
-  title: string;
-  leftLabel: string;
-  rightLabel: string;
-  value: number; // 0..4
-  onChange: (v: number) => void;
-};
-
+type TasteScaleRowProps = { title: string; leftLabel: string; rightLabel: string; value: number; onChange: (v: number) => void };
 function TasteScaleRow({ title, leftLabel, rightLabel, value, onChange }: TasteScaleRowProps) {
   const fillPct = `${(value / 4) * 100}%`;
   return (
@@ -331,26 +222,13 @@ function TasteScaleRow({ title, leftLabel, rightLabel, value, onChange }: TasteS
       <div className="w-12 shrink-0 text-sm text-muted">{title}</div>
       <div className="flex-1">
         <div className="relative h-12">
-          {/* labels */}
           <div className="absolute -top-5 left-0 text-[12px] text-muted">{leftLabel}</div>
           <div className="absolute -top-5 right-0 text-[12px] text-muted">{rightLabel}</div>
-          {/* base line */}
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[5px] bg-neutral-200 rounded-full" />
-          {/* filled gauge */}
-          <div
-            className="absolute left-0 top-1/2 -translate-y-1/2 h-[5px] bg-accent rounded-full"
-            style={{ width: fillPct }}
-          />
-          {/* steps */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[5px] bg-accent rounded-full" style={{ width: fillPct }} />
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between">
             {Array.from({ length: 5 }).map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onChange(i)}
-                aria-label={`${i + 1} 단계`}
-                className={`w-5 h-5 rounded-full border-2 ${i <= value ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`}
-              />
+              <button key={i} type="button" onClick={() => onChange(i)} className={`w-5 h-5 rounded-full border-2 ${i <= value ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`} />
             ))}
           </div>
         </div>
