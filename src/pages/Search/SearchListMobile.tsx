@@ -40,11 +40,11 @@ export function SearchListMobile() {
       <div className="sticky top-16 z-30 pt-2 pb-2 bg-white">
         <div className="mx-auto w-full max-w-mobile px-4 space-y-3">
           <SearchBar />
-          <button className="w-full py-3 rounded-2xl bg-accent text-white" onClick={() => setOpen(true)}>검색 필터</button>
+          <button className="w-full py-2 rounded-2xl border border-accent text-accent text-sm" onClick={() => setOpen(true)}>검색 필터</button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-10 mt-0">
+      <div className="grid grid-cols-1 gap-4 mt-0">
         {loading && (
           <div className="mx-auto w-full max-w-mobile px-4">
             <p className="text-center text-sm text-muted py-8">불러오는 중...</p>

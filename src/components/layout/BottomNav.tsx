@@ -5,7 +5,7 @@ const tabs = [
   { to: '/', label: '홈', icon: HomeIcon },
   { to: '/search', label: '검색', icon: Search },
   { to: '/reviews', label: '리뷰', icon: MessageSquare },
-  { to: '/me', label: '마이페이지', icon: User },
+  { to: '/me', label: '마이', icon: User },
   { to: '/chat', label: '챗봇', icon: Bot },
 ];
 

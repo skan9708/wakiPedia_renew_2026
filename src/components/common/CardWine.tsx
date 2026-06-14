@@ -1,59 +1,54 @@
 import { RatingStars } from './RatingStars';
+import defaultWineImg from '@/assets/default-wine.jpg';
 
 export type Wine = {
   id: string;
-  nameKr: string; // 한글 이름
-  nameEng: string; // 영문 이름
-  imageUrl?: string; // 대표 이미지 URL
-  wineType: 'Red'|'White'|'Rose'|'Sparkling';
-  regions?: string; // 원산지
-  breed?: string; // 품종
-  tags?: string[]; // 키워드 태그
-  ratingAverage?: number; // 평균 별점
+  nameKr: string;
+  nameEng: string;
+  imageUrl?: string;
+  wineType: 'Red' | 'White' | 'Rose' | 'Sparkling';
+  regions?: string;
+  breed?: string;
+  tags?: string[];
+  ratingAverage?: number;
+};
+
+const typeStyle: Record<string, string> = {
+  Red: 'bg-rose-100 text-rose-700',
+  White: 'bg-amber-100 text-amber-700',
+  Sparkling: 'bg-yellow-100 text-yellow-700',
+  Rose: 'bg-pink-100 text-pink-600',
 };
 
 type Props = { wine: Wine; onClick?: () => void };
 
 export function CardWine({ wine, onClick }: Props) {
   return (
-    <button onClick={onClick} className="card w-full text-left overflow-hidden">
-      {/* 큰 이미지 */}
-      <div className="w-full aspect-[16/11] bg-bgsubtle">
-        {wine.imageUrl ? (
-          <img src={wine.imageUrl} alt={wine.nameKr} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full grid place-items-center text-muted">이미지</div>
-        )}
+    <button onClick={onClick} className="card w-full text-left overflow-hidden mx-auto max-w-mobile">
+      <div className="w-full aspect-video bg-bgsubtle">
+        <img src={wine.imageUrl ?? defaultWineImg} alt={wine.nameKr} className="w-full h-full object-cover" />
       </div>
 
-      {/* 본문 */}
-      <div className="p-4 space-y-2">
-        {/* 영문 이름 */}
-        <div className="text-lg font-semibold text-fg truncate">{wine.nameEng}</div>
-        {/* 한글 이름 */}
-        <div className="text-sm text-muted truncate">{wine.nameKr}</div>
-
-        {/* 키워드 태그 */}
-        {wine.tags && wine.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {wine.tags.map((t) => (
-              <span key={t} className="px-2 py-0.5 rounded-full bg-bgsubtle text-xs text-muted">{t}</span>
-            ))}
+      <div className="p-4 space-y-1.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="text-base font-semibold text-fg truncate">{wine.nameEng}</div>
+            <div className="text-sm text-muted truncate">{wine.nameKr}</div>
           </div>
-        )}
-
-        {/* 원산지 / 품종 */}
-        <div className="text-sm text-muted">
-          <span>{wine.regions ?? '-'}</span>
-          <span className="mx-2">·</span>
-          <span className="text-accent">{wine.breed ?? '-'}</span>
+          <span className={`shrink-0 text-[11px] px-2 py-0.5 rounded-full font-medium ${typeStyle[wine.wineType] ?? 'bg-bgsubtle text-muted'}`}>
+            {wine.wineType}
+          </span>
         </div>
 
-        {/* 별점 */}
+        <div className="text-sm text-muted">
+          {wine.regions ?? '-'}
+          {wine.breed && <><span className="mx-1.5">·</span><span className="text-accent">{wine.breed}</span></>}
+        </div>
+
         {wine.ratingAverage != null && (
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-0.5">
             <RatingStars value={Number(wine.ratingAverage)} size="md" />
-            <span className="text-accent text-base font-medium">{Number(wine.ratingAverage).toFixed(0)} 점</span>
+            <span className="text-accent text-sm font-medium">{Number(wine.ratingAverage).toFixed(1)}점</span>
           </div>
         )}
       </div>

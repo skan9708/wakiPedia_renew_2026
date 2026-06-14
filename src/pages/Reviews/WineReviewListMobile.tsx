@@ -38,7 +38,7 @@ export function WineReviewListMobile() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-10 mt-0">
+      <div className="grid grid-cols-1 gap-3 mt-0">
         {loading && (
           <div className="mx-auto w-full max-w-mobile px-4">
             <p className="text-center text-sm text-muted py-8">불러오는 중...</p>
