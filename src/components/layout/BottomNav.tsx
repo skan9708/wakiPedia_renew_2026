@@ -1,4 +1,4 @@
-import { Home as HomeIcon, Search, MessageSquare, User, Bot } from 'lucide-react';
+import { Home as HomeIcon, Search, MessageSquare, User } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 const tabs = [
@@ -6,13 +6,12 @@ const tabs = [
   { to: '/search', label: '검색', icon: Search },
   { to: '/reviews', label: '리뷰', icon: MessageSquare },
   { to: '/me', label: '마이', icon: User },
-  { to: '/chat', label: '챗봇', icon: Bot },
 ];
 
 export function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white">
-      <div className="mx-auto w-full max-w-mobile px-4 grid grid-cols-5 place-items-center py-1.5">
+      <div className="mx-auto w-full max-w-mobile px-4 grid grid-cols-4 place-items-center py-1.5">
         {tabs.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
