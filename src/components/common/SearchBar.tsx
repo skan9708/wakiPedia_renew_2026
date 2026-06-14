@@ -98,7 +98,7 @@ function SearchBar({ placeholder = '와인/품종/지역 검색', onSearch, clas
           onChange={(e) => onInputChange(e.target.value)}
           onFocus={() => enableSuggestions && suggestions.length > 0 && setShowDropdown(true)}
           placeholder={placeholder}
-          className="bg-transparent outline-none text-base flex-1 placeholder:text-[15px] text-fg placeholder:text-muted"
+          className="bg-transparent outline-none text-base flex-1 min-w-0 placeholder:text-[15px] text-fg placeholder:text-muted"
           aria-label="검색어"
           autoComplete="off"
         />
