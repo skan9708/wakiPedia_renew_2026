@@ -3,6 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 
+const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY ?? '';
+const KAKAO_REDIRECT_URI = `${window.location.origin}/auth/kakao/callback`;
+
+function kakaoLogin() {
+  if (!KAKAO_REST_API_KEY) {
+    alert('카카오 API 키가 설정되지 않았습니다.');
+    return;
+  }
+  const url = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_REST_API_KEY}&redirect_uri=${encodeURIComponent(KAKAO_REDIRECT_URI)}&response_type=code`;
+  window.location.href = url;
+}
+
 export function LoginMobile() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
@@ -66,13 +78,23 @@ export function LoginMobile() {
       </section>
 
       <div className="fixed bottom-16 left-0 right-0 bg-white/95 backdrop-blur border-t border-border">
-        <div className="mx-auto w-full max-w-mobile px-4 py-2.5">
+        <div className="mx-auto w-full max-w-mobile px-4 py-2.5 space-y-2">
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3 rounded-2xl bg-accent text-white disabled:opacity-50"
           >
             {loading ? '로그인 중...' : '로그인'}
+          </button>
+          <button
+            type="button"
+            onClick={kakaoLogin}
+            className="w-full py-3 rounded-2xl bg-[#FEE500] text-[#191919] font-medium flex items-center justify-center gap-2"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path fillRule="evenodd" clipRule="evenodd" d="M9 1.5C4.86 1.5 1.5 4.19 1.5 7.5c0 2.09 1.24 3.93 3.12 5.01l-.8 2.98a.28.28 0 0 0 .43.3L7.6 13.6c.46.07.93.1 1.4.1 4.14 0 7.5-2.69 7.5-6S13.14 1.5 9 1.5z" fill="#191919"/>
+            </svg>
+            카카오로 로그인
           </button>
         </div>
       </div>

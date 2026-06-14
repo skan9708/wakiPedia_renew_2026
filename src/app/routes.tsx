@@ -5,6 +5,7 @@ import { SideDrawer } from '@/components/layout/SideDrawer';
 import { Home } from '@/pages/Home/Home';
 import { LoginMobile } from '@/pages/Auth/LoginMobile';
 import { SignupMobile } from '@/pages/Auth/SignupMobile';
+import { KakaoCallback } from '@/pages/Auth/KakaoCallback';
 import { SearchListMobile } from '@/pages/Search/SearchListMobile';
 import { WineFilterListMobile } from '@/pages/Search/WineFilterListMobile';
 import { WineReviewListMobile } from '@/pages/Reviews/WineReviewListMobile';
@@ -40,6 +41,7 @@ export function AppRoutes() {
           <Route path="/" element={<Home />} />
           <Route path="/auth/login" element={<LoginMobile />} />
           <Route path="/auth/signup" element={<SignupMobile />} />
+          <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
           <Route path="/search" element={<SearchListMobile />} />
           <Route path="/search/filters" element={<WineFilterListMobile />} />
           <Route path="/reviews" element={<WineReviewListMobile />} />

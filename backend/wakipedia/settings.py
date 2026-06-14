@@ -129,3 +129,5 @@ if _extra_cors:
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
+
+KAKAO_REST_API_KEY = os.environ.get("KAKAO_REST_API_KEY", "")
