@@ -64,11 +64,9 @@ export function SearchListMobile() {
           </div>
         )}
         {wines.map((w) => (
-          <CardWine
-            key={w.id}
-            wine={w}
-            onClick={() => navigate(`/wines/${w.id}`)}
-          />
+          <div key={w.id} className="mx-auto w-full max-w-mobile px-4">
+            <CardWine wine={w} onClick={() => navigate(`/wines/${w.id}`)} />
+          </div>
         ))}
       </div>
 
