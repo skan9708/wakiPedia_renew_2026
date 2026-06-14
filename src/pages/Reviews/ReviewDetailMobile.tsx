@@ -126,7 +126,7 @@ export function ReviewDetailMobile() {
         )}
 
         {/* 특징 게이지 */}
-        <div className="px-4">
+        <div className="px-4 pb-36">
           <h3 className="text-base font-semibold mb-2">특징</h3>
           <div className="space-y-4">
             <DetailGauge title="바디" left="매우 가벼움" right="매우 무거움" value={review.bodyRating} />
