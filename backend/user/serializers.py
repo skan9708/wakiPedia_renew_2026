@@ -37,7 +37,9 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.wine_reviews.filter(is_public=True).count()
 
     def get_likeCount(self, obj):
-        return obj.favorite_wines.count()
+        from django.db.models import Count
+        result = obj.wine_reviews.aggregate(total=Count("likes"))
+        return result["total"] or 0
 
 
 class SignupSerializer(serializers.ModelSerializer):
