@@ -30,7 +30,6 @@ export function LoginMobile() {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="mx-auto w-full max-w-mobile px-6 pt-8 text-center">
-        <img src="/src/assets/icons/icon_white.svg" alt="Wakipedia 로고" className="w-20 h-20 mx-auto mb-2" />
         <h1 className="text-accent font-brand text-5xl font-normal tracking-tight">Wakipedia</h1>
       </div>
 
