@@ -35,7 +35,7 @@ export function AppRoutes() {
     <div className="relative">
       <Header onMenu={() => setDrawerOpen(true)} />
       <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      <main className={`page-container pt-16`}>
+      <main className="pt-16 pb-24">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/auth/login" element={<LoginMobile />} />
