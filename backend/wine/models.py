@@ -64,7 +64,7 @@ class Wine(BaseModel):
     )
     eng_name = models.CharField("영어 이름", max_length=255)
     kor_name = models.CharField("한국어 이름", max_length=255)
-    type = models.CharField("타입", max_length=50, choices=TYPES)
+    type = models.CharField("타입", max_length=50, choices=TYPES, blank=True, default="")
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True, blank=True, related_name="wines")
     grape_varieties = models.ManyToManyField(GrapeVariety, related_name="wines", blank=True)
     image = models.ImageField("와인 이미지", upload_to="wines/", null=True, blank=True)
