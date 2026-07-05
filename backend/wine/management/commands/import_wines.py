@@ -74,6 +74,7 @@ class Command(BaseCommand):
             kor_name = (item.get('Name_KR') or '').strip()
             region = (item.get('Regions') or '').strip()
             raw_img = (item.get('WineIMG') or '').strip()
+            raw_rating = (item.get('RatingAverge') or '').strip()
 
             if not kor_name and not eng_name:
                 skipped += 1
@@ -82,7 +83,19 @@ class Command(BaseCommand):
             eng_name = eng_name or kor_name
             kor_name = kor_name or eng_name
 
-            if Wine.objects.filter(kor_name=kor_name, eng_name=eng_name).exists():
+            # 평점 파싱
+            bubble_rating = None
+            if raw_rating:
+                try:
+                    bubble_rating = round(float(raw_rating), 1)
+                except ValueError:
+                    pass
+
+            existing = Wine.objects.filter(kor_name=kor_name, eng_name=eng_name).first()
+            if existing:
+                if bubble_rating is not None and existing.bubble_avg_rating is None:
+                    existing.bubble_avg_rating = bubble_rating
+                    existing.save(update_fields=['bubble_avg_rating'])
                 skipped += 1
                 continue
 
@@ -108,6 +121,7 @@ class Command(BaseCommand):
                     type=wine_type,
                     country=country,
                     image_url=image_url,
+                    bubble_avg_rating=bubble_rating,
                 )
                 created += 1
             except Exception as e:

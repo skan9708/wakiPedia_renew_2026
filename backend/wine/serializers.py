@@ -63,9 +63,11 @@ class WineListSerializer(serializers.ModelSerializer):
 
     def get_ratingAverage(self, obj):
         avg = obj.reviews.filter(is_public=True).aggregate(Avg("rating"))["rating__avg"]
-        if avg is None:
-            return None
-        return round(avg / 10, 1)
+        if avg is not None:
+            return round(avg / 10, 1)
+        if obj.bubble_avg_rating is not None:
+            return round(obj.bubble_avg_rating, 1)
+        return None
 
     def get_isFavorite(self, obj):
         request = self.context.get("request")
@@ -209,7 +211,12 @@ class WineDetailSerializer(WineListSerializer):
 
     def get_ratingDistribution(self, obj):
         counts = [0] * 5
-        for r in self._public_reviews(obj).values_list("rating", flat=True):
+        reviews = self._public_reviews(obj)
+        if not reviews.exists() and obj.bubble_avg_rating is not None:
+            star = max(1, min(5, round(obj.bubble_avg_rating)))
+            counts[star - 1] = 1
+            return counts
+        for r in reviews.values_list("rating", flat=True):
             star = round(r / 10)
             clamped = max(1, min(5, star))
             counts[clamped - 1] += 1

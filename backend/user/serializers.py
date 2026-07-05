@@ -22,10 +22,11 @@ class UserSerializer(serializers.ModelSerializer):
     avatarUrl = serializers.SerializerMethodField()
     reviewCount = serializers.SerializerMethodField()
     likeCount = serializers.SerializerMethodField()
+    likeRank = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "email", "nickname", "avatarUrl", "reviewCount", "likeCount", "created_at")
+        fields = ("id", "email", "nickname", "avatarUrl", "reviewCount", "likeCount", "likeRank", "created_at")
 
     def get_avatarUrl(self, obj):
         request = self.context.get("request")
@@ -40,6 +41,21 @@ class UserSerializer(serializers.ModelSerializer):
         from django.db.models import Count
         result = obj.wine_reviews.aggregate(total=Count("likes"))
         return result["total"] or 0
+
+    def get_likeRank(self, obj):
+        from django.db.models import Count
+        from django.contrib.auth import get_user_model
+        UserModel = get_user_model()
+        my_likes = obj.wine_reviews.aggregate(total=Count("likes"))["total"] or 0
+        if my_likes == 0:
+            return None
+        users_above = UserModel.objects.annotate(
+            tl=Count("wine_reviews__likes")
+        ).filter(tl__gt=my_likes).count()
+        total = UserModel.objects.count()
+        rank = users_above + 1
+        top_pct = max(1, round((rank / max(total, 1)) * 100))
+        return {"rank": rank, "total": total, "topPercent": top_pct}
 
 
 class SignupSerializer(serializers.ModelSerializer):

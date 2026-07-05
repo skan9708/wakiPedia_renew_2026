@@ -69,6 +69,7 @@ class Wine(BaseModel):
     grape_varieties = models.ManyToManyField(GrapeVariety, related_name="wines", blank=True)
     image = models.ImageField("와인 이미지", upload_to="wines/", null=True, blank=True)
     image_url = models.URLField("외부 이미지 URL", blank=True, default="")
+    bubble_avg_rating = models.FloatField("버블 평균 평점", null=True, blank=True)
     registered_by = models.ForeignKey(
         "user.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="registered_wines"
     )

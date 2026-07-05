@@ -210,14 +210,14 @@ function GaugeRow({ title, left, right, value }: GaugeProps) {
   );
 }
 
+const BUBBLE_CSS = `
+@keyframes wc-float {
+  from { transform: translate(-50%, -50%) translateY(0px); }
+  to   { transform: translate(-50%, -50%) translateY(-8px); }
+}`;
+
 type CloudWord = { text: string; weight: number };
 function WordCloud({ words }: { words: CloudWord[] }) {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setTick((v) => v + 1), 2000);
-    return () => clearInterval(t);
-  }, []);
-
   const sizePxFor = (w: number) => (w >= 10 ? 26 : w >= 8 ? 22 : w >= 5 ? 20 : w >= 3 ? 16 : 14);
   const classFor = (w: number) => (w >= 8 ? 'text-accent' : w >= 5 ? 'text-fg' : 'text-muted');
   const list = [...words].sort((a, b) => b.weight - a.weight).slice(0, 10);
@@ -227,9 +227,7 @@ function WordCloud({ words }: { words: CloudWord[] }) {
   list.forEach((w, idx) => {
     const font = sizePxFor(w.weight);
     const r = font * 0.7;
-    let angle = idx * 0.6;
-    let radius = 10;
-    let found = false;
+    let angle = idx * 0.6, radius = 10, found = false;
     for (let iter = 0; iter < 2000 && !found; iter++) {
       const x = R + radius * Math.cos(angle);
       const y = R + radius * Math.sin(angle);
@@ -245,13 +243,21 @@ function WordCloud({ words }: { words: CloudWord[] }) {
 
   return (
     <div className="relative mx-auto w-full aspect-square max-w-[320px]">
+      <style>{BUBBLE_CSS}</style>
       {placed.map((p, i) => {
-        const fontSize = sizePxFor(p.weight);
-        const jitterX = ((i + tick) % 3) - 1;
-        const jitterY = ((tick + i * 2) % 3) - 1;
+        const dur = (2.2 + (i % 5) * 0.45).toFixed(2);
+        const del = ((i * 0.37) % 2.0).toFixed(2);
         return (
-          <span key={`${p.text}-${i}`} className={`absolute ${classFor(p.weight)} select-none`}
-            style={{ left: `${(p.x / (R * 2)) * 100}%`, top: `${(p.y / (R * 2)) * 100}%`, transform: `translate(-50%,-50%) translate(${jitterX}px,${jitterY}px)`, fontSize }}>
+          <span
+            key={`${p.text}-${i}`}
+            className={`absolute ${classFor(p.weight)} select-none`}
+            style={{
+              left: `${(p.x / (R * 2)) * 100}%`,
+              top: `${(p.y / (R * 2)) * 100}%`,
+              fontSize: sizePxFor(p.weight),
+              animation: `wc-float ${dur}s ease-in-out ${del}s infinite alternate`,
+            }}
+          >
             {p.text}
           </span>
         );

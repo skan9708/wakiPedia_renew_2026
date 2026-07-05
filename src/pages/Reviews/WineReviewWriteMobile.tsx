@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -15,21 +15,14 @@ const FEEL_FLORAL = ['아카시아','장미','자스민','라일락','바이올�
 const FEEL_OAKY = ['카카오','헤이즐넛','바닐라','초콜릿','아몬드','코코넛','캐러멜','스모크','모카','커피','인센스','마카다미아','캐슈넛','타르','피스타치오','후추','계피','오크향'];
 const FEEL_VEGETAL = ['유칼립투스','로즈마리','타임','딜','민트','홍차','바질','토바코','월계수','토마토','피망','잔디','얼그레이','고수','솔향','허브향'];
 
+type WineInfo = { nameKr: string; nameEng: string; wineType: string };
+
 export function WineReviewWriteMobile() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = useAuthStore((s) => s.token);
   const wineId = searchParams.get('wine_id');
-
-  if (!token) {
-    return (
-      <div className="mx-auto w-full max-w-mobile px-4 pt-16 text-center space-y-4">
-        <p className="text-muted">리뷰를 작성하려면 로그인이 필요합니다.</p>
-        <button className="w-full py-3 rounded-2xl bg-accent text-white" onClick={() => navigate('/auth/login')}>로그인하기</button>
-      </div>
-    );
-  }
-
+  const [wineInfo, setWineInfo] = useState<WineInfo | null>(null);
   const [rating, setRating] = useState<number>(0);
   const [hover, setHover] = useState<number>(0);
   const [content, setContent] = useState<string>('');
@@ -43,9 +36,22 @@ export function WineReviewWriteMobile() {
   const [feels, setFeels] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const fileRef = useRef<HTMLInputElement | null>(null);
   const canSubmit = useMemo(() => rating > 0 && content.trim().length > 0 && !!wineId, [rating, content, wineId]);
+
+  useEffect(() => {
+    if (!wineId) return;
+    api.get(`/wines/${wineId}/`).then(({ data }) => setWineInfo({ nameKr: data.nameKr, nameEng: data.nameEng, wineType: data.wineType })).catch(() => {});
+  }, [wineId]);
+
+  if (!token) {
+    return (
+      <div className="mx-auto w-full max-w-mobile px-4 pt-16 text-center space-y-4">
+        <p className="text-muted">리뷰를 작성하려면 로그인이 필요합니다.</p>
+        <button className="w-full py-3 rounded-2xl bg-accent text-white" onClick={() => navigate('/auth/login')}>로그인하기</button>
+      </div>
+    );
+  }
 
   const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -99,8 +105,17 @@ export function WineReviewWriteMobile() {
   return (
     <form onSubmit={onSubmit} className="space-y-5 font-sans">
       <div className="mx-auto w-full max-w-mobile px-4 pt-4">
-        <div className="text-xs text-muted">대상 와인 ID</div>
-        <div className="text-sm mt-1">{wineId ?? '선택 필요'}</div>
+        <div className="text-xs text-muted mb-1">대상 와인</div>
+        {wineInfo ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{wineInfo.nameKr}</span>
+            {wineInfo.wineType && (
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-bgsubtle text-muted">{wineInfo.wineType}</span>
+            )}
+          </div>
+        ) : (
+          <div className="text-sm text-muted">{wineId ?? '선택 필요'}</div>
+        )}
         {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
       </div>
 
