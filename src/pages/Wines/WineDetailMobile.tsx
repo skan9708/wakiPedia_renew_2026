@@ -32,6 +32,7 @@ export function WineDetailMobile() {
   const [wine, setWine] = useState<WineDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFav, setIsFav] = useState(false);
+  const [imgZoom, setImgZoom] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -67,8 +68,31 @@ export function WineDetailMobile() {
 
   return (
     <div className="space-y-4">
+      {/* 이미지 확대 팝업 */}
+      {imgZoom && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setImgZoom(false)}
+        >
+          <img
+            src={wine.imageUrl ?? defaultWineImg}
+            alt={wine.nameKr}
+            className="max-w-full max-h-full object-contain p-4"
+          />
+          <button
+            className="absolute top-4 right-4 text-white text-3xl leading-none"
+            onClick={() => setImgZoom(false)}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* 이미지 */}
-      <div className="w-full aspect-[16/10] bg-bgsubtle overflow-hidden pt-3">
+      <div
+        className="w-full aspect-[16/10] bg-bgsubtle overflow-hidden pt-3 cursor-zoom-in"
+        onClick={() => setImgZoom(true)}
+      >
         <img src={wine.imageUrl ?? defaultWineImg} alt={wine.nameKr} className="w-full h-full object-cover" />
       </div>
 

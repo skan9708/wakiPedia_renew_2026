@@ -54,8 +54,8 @@ function SearchBar({ placeholder = '와인/품종/지역 검색', onSearch, clas
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
-        const { data } = await api.get(`/wines/?q=${encodeURIComponent(value.trim())}`);
-        setSuggestions((data as Suggestion[]).slice(0, 6));
+        const { data } = await api.get(`/wines/?q=${encodeURIComponent(value.trim())}&limit=6`);
+        setSuggestions(((data.results ?? data) as Suggestion[]).slice(0, 6));
         setShowDropdown(true);
       } catch {
         setSuggestions([]);
