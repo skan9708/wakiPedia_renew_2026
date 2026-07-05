@@ -57,6 +57,8 @@ class WineListSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if obj.image and request:
             return request.build_absolute_uri(obj.image.url)
+        if obj.image_url:
+            return obj.image_url
         return None
 
     def get_ratingAverage(self, obj):
