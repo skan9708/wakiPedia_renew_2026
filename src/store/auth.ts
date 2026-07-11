@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type User = { id: string; nickname: string; email: string; avatarUrl?: string } | null;
+type User = { id: string; nickname: string; email: string; avatarUrl?: string; isStaff?: boolean } | null;
 
 type AuthState = {
   token: string | null;

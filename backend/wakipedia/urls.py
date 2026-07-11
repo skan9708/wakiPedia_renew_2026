@@ -10,6 +10,7 @@ urlpatterns = [
     path("api/reviews/", include("wine.review_urls")),
     path("api/tags/", include("wine.tag_urls")),
     path("api/me/", include("user.me_urls")),
+    path("api/admin/", include("wine.admin_urls")),
 ]
 
 if settings.DEBUG:

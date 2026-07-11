@@ -22,16 +22,28 @@ import MyReviewsFeedMobile from '@/pages/Me/MyReviewsFeedMobile';
 import ChatMobile from '@/pages/Chat/ChatMobile';
 import { useEffect, useState } from 'react';
 import { SupportMobile } from '@/pages/Support/SupportMobile';
+import { AdminApp } from '@/pages/Admin/AdminApp';
 
 export function AppRoutes() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
+
+  const isAdmin = location.pathname.startsWith('/admin-panel');
 
   useEffect(() => {
     const handler = () => setDrawerOpen(true);
     window.addEventListener('open-drawer', handler as EventListener);
     return () => window.removeEventListener('open-drawer', handler as EventListener);
   }, []);
+
+  if (isAdmin) {
+    return (
+      <Routes>
+        <Route path="/admin-panel/*" element={<AdminApp />} />
+      </Routes>
+    );
+  }
+
   return (
     <div className="relative">
       <Header onMenu={() => setDrawerOpen(true)} />

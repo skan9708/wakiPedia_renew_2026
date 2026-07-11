@@ -23,10 +23,11 @@ class UserSerializer(serializers.ModelSerializer):
     reviewCount = serializers.SerializerMethodField()
     likeCount = serializers.SerializerMethodField()
     likeRank = serializers.SerializerMethodField()
+    isStaff = serializers.BooleanField(source="is_staff", read_only=True)
 
     class Meta:
         model = User
-        fields = ("id", "email", "nickname", "avatarUrl", "reviewCount", "likeCount", "likeRank", "created_at")
+        fields = ("id", "email", "nickname", "avatarUrl", "reviewCount", "likeCount", "likeRank", "isStaff", "created_at")
 
     def get_avatarUrl(self, obj):
         request = self.context.get("request")
