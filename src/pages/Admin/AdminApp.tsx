@@ -11,16 +11,18 @@ function AdminLogin() {
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
-  const login = useAuthStore((s) => s.login);
+  const { login, logout, user } = useAuthStore();
   const navigate = useNavigate();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr('');
+    // 기존 세션이 있으면 먼저 로그아웃하고 새로 로그인
+    logout();
     try {
       const { data } = await api.post('/auth/login/', { email, password: pw });
       if (!data.user?.isStaff) {
-        setErr('관리자 계정이 아닙니다.');
+        setErr('관리자 권한이 없는 계정입니다. 관리자 계정으로 다시 시도해주세요.');
         return;
       }
       login(data.access, data.user);
@@ -33,12 +35,22 @@ function AdminLogin() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
-        <h1 className="text-xl font-bold text-center mb-6">Wakipedia 관리자</h1>
+        <h1 className="text-xl font-bold text-center mb-1">Wakipedia 관리자</h1>
+        <p className="text-xs text-gray-400 text-center mb-6">관리자 계정으로만 접근 가능합니다</p>
+
+        {/* 이미 일반 계정으로 로그인된 경우 안내 */}
+        {user && !user.isStaff && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-700">
+            현재 <span className="font-semibold">{user.nickname}</span> 계정으로 로그인되어 있습니다.
+            관리자 계정 정보를 입력하면 자동으로 전환됩니다.
+          </div>
+        )}
+
         {err && <p className="text-red-500 text-sm mb-4 text-center">{err}</p>}
         <form onSubmit={onSubmit} className="space-y-4">
           <input
             type="email"
-            placeholder="이메일"
+            placeholder="관리자 이메일"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#c84b31]"
