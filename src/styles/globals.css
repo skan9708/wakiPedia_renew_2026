@@ -60,4 +60,6 @@ body {
   pointer-events: none;
 }
 
-
+/* 스크롤바 숨기기 (가로 슬라이드 칩 등) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

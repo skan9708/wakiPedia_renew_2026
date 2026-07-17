@@ -56,30 +56,40 @@ export function FilterSheet({ open, onClose, initial, regions, breeds, onApply, 
 
           <div>
             <div className="text-sm font-medium mb-2">원산지</div>
-            <select
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white"
-              value={values.region ?? ''}
-              onChange={(e) => setValues((v) => ({ ...v, region: e.target.value || undefined }))}
-            >
-              <option value="">전체</option>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              <button
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs border whitespace-nowrap ${!values.region ? 'bg-accent text-white border-accent' : 'border-border'}`}
+                onClick={() => setValues((v) => ({ ...v, region: undefined }))}
+              >전체</button>
               {regions.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <button
+                  key={r}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs border whitespace-nowrap ${values.region === r ? 'bg-accent text-white border-accent' : 'border-border'}`}
+                  onClick={() => setValues((v) => ({ ...v, region: v.region === r ? undefined : r }))}
+                >
+                  {r}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           <div>
             <div className="text-sm font-medium mb-2">품종</div>
-            <select
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white"
-              value={values.breed ?? ''}
-              onChange={(e) => setValues((v) => ({ ...v, breed: e.target.value || undefined }))}
-            >
-              <option value="">전체</option>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              <button
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs border whitespace-nowrap ${!values.breed ? 'bg-accent text-white border-accent' : 'border-border'}`}
+                onClick={() => setValues((v) => ({ ...v, breed: undefined }))}
+              >전체</button>
               {breeds.map((b) => (
-                <option key={b} value={b}>{b}</option>
+                <button
+                  key={b}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs border whitespace-nowrap ${values.breed === b ? 'bg-accent text-white border-accent' : 'border-border'}`}
+                  onClick={() => setValues((v) => ({ ...v, breed: v.breed === b ? undefined : b }))}
+                >
+                  {b}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           <div>

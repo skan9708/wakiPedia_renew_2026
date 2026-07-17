@@ -23,7 +23,7 @@ export function MyPageMobile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [likedWines, setLikedWines] = useState<LikedWine[]>([]);
   const [myReviews, setMyReviews] = useState<MyReview[]>([]);
-  const [myTaste, setMyTaste] = useState({ body: 2, sweet: 2, acid: 2, tanin: 2 });
+  const [myTaste, setMyTaste] = useState<{ body: number; sweet: number; acid: number; tanin: number } | null>(null);
   const [keywords, setKeywords] = useState<{ text: string; weight: number }[]>([]);
 
   useEffect(() => {
@@ -141,15 +141,29 @@ export function MyPageMobile() {
         </div>
       </section>
 
-      {/* 내 스타일 게이지 */}
+      {/* 내가 선호하는 스타일 게이지 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-4">내 스타일</h3>
+        <h3 className="text-base font-semibold mb-4">내가 선호하는 스타일</h3>
         <div className="space-y-6">
-          <GaugeRow title="바디" left="매우 가벼움" right="매우 무거움" value={myTaste.body} />
-          <GaugeRow title="당도" left="매우 드라이" right="매우 스윗" value={myTaste.sweet} />
-          <GaugeRow title="산도" left="매우 부드러움" right="매우 시다" value={myTaste.acid} />
-          <GaugeRow title="탄닌" left="매우 부드러움" right="매우 떫음" value={myTaste.tanin} />
+          <GaugeRow title="바디" left="매우 가벼움" right="매우 무거움" value={myTaste?.body ?? null} />
+          <GaugeRow title="당도" left="매우 드라이" right="매우 스윗" value={myTaste?.sweet ?? null} />
+          <GaugeRow title="산도" left="매우 부드러움" right="매우 시다" value={myTaste?.acid ?? null} />
+          <GaugeRow title="탄닌" left="매우 부드러움" right="매우 떫음" value={myTaste?.tanin ?? null} />
         </div>
+        {!myTaste && (
+          <div className="mt-5 flex flex-col items-center gap-2 py-3 rounded-xl bg-neutral-50 border border-dashed border-neutral-200">
+            <span className="text-2xl">🍷</span>
+            <p className="text-sm text-muted text-center leading-snug">
+              리뷰를 작성하면<br />내 취향이 분석됩니다
+            </p>
+            <button
+              className="mt-1 px-4 py-1.5 rounded-full bg-accent text-white text-xs"
+              onClick={() => navigate('/search')}
+            >
+              리뷰 작성하러 가기
+            </button>
+          </div>
+        )}
       </section>
 
       {/* 워드 클라우드 */}
@@ -166,10 +180,11 @@ export function MyPageMobile() {
   );
 }
 
-type GaugeProps = { title: string; left: string; right: string; value: number };
+type GaugeProps = { title: string; left: string; right: string; value: number | null };
 function GaugeRow({ title, left, right, value }: GaugeProps) {
+  const hasData = value !== null;
   const safeVal = value ?? 0;
-  const fillPct = `${(safeVal / 4) * 100}%`;
+  const fillPct = hasData ? `${(safeVal / 4) * 100}%` : '0%';
   return (
     <div className="flex items-center gap-2">
       <div className="w-12 shrink-0 text-sm text-muted">{title}</div>
@@ -178,10 +193,15 @@ function GaugeRow({ title, left, right, value }: GaugeProps) {
           <div className="absolute -top-4 left-0 text-[12px] text-muted">{left}</div>
           <div className="absolute -top-4 right-0 text-[12px] text-muted">{right}</div>
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[5px] bg-neutral-200 rounded-full" />
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[5px] bg-accent rounded-full" style={{ width: fillPct }} />
+          {hasData && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[5px] bg-accent rounded-full" style={{ width: fillPct }} />
+          )}
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between">
             {Array.from({ length: 5 }).map((_, i) => (
-              <span key={i} className={`w-4 h-4 rounded-full border-2 ${i <= safeVal ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`} />
+              <span
+                key={i}
+                className={`w-4 h-4 rounded-full border-2 ${hasData && i <= safeVal ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`}
+              />
             ))}
           </div>
         </div>
@@ -190,54 +210,73 @@ function GaugeRow({ title, left, right, value }: GaugeProps) {
   );
 }
 
-const BUBBLE_CSS = `
-@keyframes wc-float {
-  from { transform: translate(-50%, -50%) translateY(0px); }
-  to   { transform: translate(-50%, -50%) translateY(-8px); }
-}`;
-
 type CloudWord = { text: string; weight: number };
 function WordCloud({ words }: { words: CloudWord[] }) {
-  const sizePxFor = (w: number) => (w >= 10 ? 26 : w >= 8 ? 22 : w >= 5 ? 20 : w >= 3 ? 16 : 14);
-  const classFor = (w: number) => (w >= 8 ? 'text-accent' : w >= 5 ? 'text-fg' : 'text-muted');
-  const list = [...words].sort((a, b) => b.weight - a.weight).slice(0, 10);
+  const list = [...words].sort((a, b) => b.weight - a.weight).slice(0, 8);
+  const maxWeight = list[0]?.weight ?? 1;
+
+  const sizePx = (w: number) => {
+    const r = w / maxWeight;
+    if (r >= 0.7) return 18;
+    if (r >= 0.4) return 15;
+    return 12;
+  };
+  const colorClass = (w: number) => {
+    const r = w / maxWeight;
+    if (r >= 0.7) return '#A7B621';
+    if (r >= 0.4) return '#6B7C0A';
+    return '#9CA3AF';
+  };
+
   const placed: Array<{ x: number; y: number; r: number; text: string; weight: number }> = [];
-  const R = 90;
+  const R = 100;
   list.forEach((w, idx) => {
-    const font = sizePxFor(w.weight);
-    const r = font * 0.7;
-    let angle = idx * 0.6, radius = 10, found = false;
-    for (let iter = 0; iter < 2000 && !found; iter++) {
-      const x = R + radius * Math.cos(angle), y = R + radius * Math.sin(angle);
-      if (Math.hypot(x - R, y - R) + r > R) { angle += 0.25; radius += 1; continue; }
+    const font = sizePx(w.weight);
+    const charW = font * 0.6;
+    const rx = (w.text.length * charW) / 2 + 4;
+    const ry = font / 2 + 4;
+    const pad = Math.max(rx, ry);
+    let angle = idx * 1.1;
+    let radius = idx === 0 ? 0 : 18;
+    let found = false;
+    for (let iter = 0; iter < 3000 && !found; iter++) {
+      const x = R + radius * Math.cos(angle);
+      const y = R + radius * Math.sin(angle);
+      if (x - rx < 4 || x + rx > R * 2 - 4 || y - ry < 4 || y + ry > R * 2 - 4) {
+        angle += 0.2; radius += 0.5; continue;
+      }
       let collide = false;
-      for (const p of placed) { if (Math.hypot(x - p.x, y - p.y) < r + p.r + 6) { collide = true; break; } }
-      if (!collide) { placed.push({ x, y, r, text: w.text, weight: w.weight }); found = true; }
-      else { angle += 0.35; radius += 1; }
+      for (const p of placed) {
+        const ox = (p.text.length * sizePx(p.weight) * 0.6) / 2 + 4;
+        const oy = sizePx(p.weight) / 2 + 4;
+        if (Math.abs(x - p.x) < rx + ox + 6 && Math.abs(y - p.y) < ry + oy + 6) {
+          collide = true; break;
+        }
+      }
+      if (!collide) { placed.push({ x, y, r: pad, text: w.text, weight: w.weight }); found = true; }
+      else { angle += 0.25; radius += 0.8; }
     }
   });
+
   return (
-    <div className="relative mx-auto w-full aspect-square max-w-[320px]">
-      <style>{BUBBLE_CSS}</style>
-      {placed.map((p, i) => {
-        const dur = (2.2 + (i % 5) * 0.45).toFixed(2);
-        const del = ((i * 0.37) % 2.0).toFixed(2);
-        return (
-          <span
-            key={`${p.text}-${i}`}
-            className={`absolute ${classFor(p.weight)} select-none`}
-            style={{
-              left: `${(p.x / (R * 2)) * 100}%`,
-              top: `${(p.y / (R * 2)) * 100}%`,
-              fontSize: sizePxFor(p.weight),
-              animation: `wc-float ${dur}s ease-in-out ${del}s infinite alternate`,
-            }}
-          >
-            {p.text}
-          </span>
-        );
-      })}
+    <div className="relative mx-auto" style={{ width: R * 2, height: R * 2 }}>
       <div className="absolute inset-0 rounded-full ring-1 ring-neutral-200 pointer-events-none" />
+      {placed.map((p) => (
+        <span
+          key={p.text}
+          className="absolute select-none font-semibold leading-none"
+          style={{
+            left: p.x,
+            top: p.y,
+            fontSize: sizePx(p.weight),
+            color: colorClass(p.weight),
+            transform: 'translate(-50%, -50%)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {p.text}
+        </span>
+      ))}
     </div>
   );
 }

@@ -210,59 +210,73 @@ function GaugeRow({ title, left, right, value }: GaugeProps) {
   );
 }
 
-const BUBBLE_CSS = `
-@keyframes wc-float {
-  from { transform: translate(-50%, -50%) translateY(0px); }
-  to   { transform: translate(-50%, -50%) translateY(-8px); }
-}`;
-
 type CloudWord = { text: string; weight: number };
 function WordCloud({ words }: { words: CloudWord[] }) {
-  const sizePxFor = (w: number) => (w >= 10 ? 26 : w >= 8 ? 22 : w >= 5 ? 20 : w >= 3 ? 16 : 14);
-  const classFor = (w: number) => (w >= 8 ? 'text-accent' : w >= 5 ? 'text-fg' : 'text-muted');
-  const list = [...words].sort((a, b) => b.weight - a.weight).slice(0, 10);
+  const list = [...words].sort((a, b) => b.weight - a.weight).slice(0, 8);
+  const maxWeight = list[0]?.weight ?? 1;
+
+  const sizePx = (w: number) => {
+    const r = w / maxWeight;
+    if (r >= 0.7) return 18;
+    if (r >= 0.4) return 15;
+    return 12;
+  };
+  const colorClass = (w: number) => {
+    const r = w / maxWeight;
+    if (r >= 0.7) return '#A7B621';       // accent — 가장 많이 언급
+    if (r >= 0.4) return '#6B7C0A';       // accent 어두운톤
+    return '#9CA3AF';                      // neutral-400 — 적게 언급
+  };
 
   const placed: Array<{ x: number; y: number; r: number; text: string; weight: number }> = [];
-  const R = 90;
+  const R = 100;
   list.forEach((w, idx) => {
-    const font = sizePxFor(w.weight);
-    const r = font * 0.7;
-    let angle = idx * 0.6, radius = 10, found = false;
-    for (let iter = 0; iter < 2000 && !found; iter++) {
+    const font = sizePx(w.weight);
+    const charW = font * 0.6;
+    const rx = (w.text.length * charW) / 2 + 4;
+    const ry = font / 2 + 4;
+    const pad = Math.max(rx, ry);
+    let angle = idx * 1.1;
+    let radius = idx === 0 ? 0 : 18;
+    let found = false;
+    for (let iter = 0; iter < 3000 && !found; iter++) {
       const x = R + radius * Math.cos(angle);
       const y = R + radius * Math.sin(angle);
-      if (Math.hypot(x - R, y - R) + r > R) { angle += 0.25; radius += 1; continue; }
+      if (x - rx < 4 || x + rx > R * 2 - 4 || y - ry < 4 || y + ry > R * 2 - 4) {
+        angle += 0.2; radius += 0.5; continue;
+      }
       let collide = false;
       for (const p of placed) {
-        if (Math.hypot(x - p.x, y - p.y) < r + p.r + 6) { collide = true; break; }
+        const ox = (p.text.length * sizePx(p.weight) * 0.6) / 2 + 4;
+        const oy = sizePx(p.weight) / 2 + 4;
+        if (Math.abs(x - p.x) < rx + ox + 6 && Math.abs(y - p.y) < ry + oy + 6) {
+          collide = true; break;
+        }
       }
-      if (!collide) { placed.push({ x, y, r, text: w.text, weight: w.weight }); found = true; }
-      else { angle += 0.35; radius += 1; }
+      if (!collide) { placed.push({ x, y, r: pad, text: w.text, weight: w.weight }); found = true; }
+      else { angle += 0.25; radius += 0.8; }
     }
   });
 
   return (
-    <div className="relative mx-auto w-full aspect-square max-w-[320px]">
-      <style>{BUBBLE_CSS}</style>
-      {placed.map((p, i) => {
-        const dur = (2.2 + (i % 5) * 0.45).toFixed(2);
-        const del = ((i * 0.37) % 2.0).toFixed(2);
-        return (
-          <span
-            key={`${p.text}-${i}`}
-            className={`absolute ${classFor(p.weight)} select-none`}
-            style={{
-              left: `${(p.x / (R * 2)) * 100}%`,
-              top: `${(p.y / (R * 2)) * 100}%`,
-              fontSize: sizePxFor(p.weight),
-              animation: `wc-float ${dur}s ease-in-out ${del}s infinite alternate`,
-            }}
-          >
-            {p.text}
-          </span>
-        );
-      })}
+    <div className="relative mx-auto" style={{ width: R * 2, height: R * 2 }}>
       <div className="absolute inset-0 rounded-full ring-1 ring-neutral-200 pointer-events-none" />
+      {placed.map((p) => (
+        <span
+          key={p.text}
+          className="absolute select-none font-semibold leading-none"
+          style={{
+            left: p.x,
+            top: p.y,
+            fontSize: sizePx(p.weight),
+            color: colorClass(p.weight),
+            transform: 'translate(-50%, -50%)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {p.text}
+        </span>
+      ))}
     </div>
   );
 }

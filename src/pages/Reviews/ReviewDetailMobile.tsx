@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RatingStars } from '@/components/common/RatingStars';
-import { Heart } from 'lucide-react';
+import { Heart, Share2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import defaultWineImg from '@/assets/default-wine.jpg';
@@ -27,12 +27,13 @@ type ReviewDetail = {
 export function ReviewDetailMobile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const token = useAuthStore((s) => s.token);
+  const { token, user } = useAuthStore((s) => ({ token: s.token, user: s.user }));
   const [review, setReview] = useState<ReviewDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [burst, setBurst] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -57,13 +58,36 @@ export function ReviewDetailMobile() {
     } catch {}
   };
 
-  const copyLink = async () => {
+  const handleDelete = async () => {
+    if (!window.confirm('리뷰를 삭제할까요?')) return;
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      alert('링크가 클립보드에 복사되었습니다.');
-    } catch {
-      alert('주소창의 링크를 직접 복사해 주세요.');
+      await api.delete(`/reviews/${id}/`);
+      navigate(-1);
+    } catch {}
+  };
+
+  const shareReview = async () => {
+    if (!review) return;
+    const url = window.location.href;
+
+    // 클립보드 자동 복사 (조용히)
+    try { await navigator.clipboard.writeText(url); } catch {}
+
+    // Web Share API → 카카오톡 포함 네이티브 공유 시트
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: review.wineName,
+          text: `${review.creator.nickname}님의 ${review.wineName} 리뷰`,
+          url,
+        });
+        return;
+      } catch {}
     }
+
+    // 폴백: 복사 완료 토스트
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (loading) return <div className="p-8 text-center text-muted text-sm">불러오는 중...</div>;
@@ -85,7 +109,21 @@ export function ReviewDetailMobile() {
             <div className="text-lg font-semibold text-fg cursor-pointer" onClick={() => navigate(`/wines/${review.wineId}`)}>
               {review.wineName}
             </div>
-            <div className="text-sm text-muted">{review.creator.nickname}</div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-sm text-muted">{review.creator.nickname}</span>
+              {user && review.creator.id === parseInt(user.id) && (
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => navigate(`/me/reviews/${id}/edit`)}
+                    className="text-[11px] text-muted border border-border rounded-md px-2 py-0.5 active:bg-neutral-100"
+                  >수정</button>
+                  <button
+                    onClick={handleDelete}
+                    className="text-[11px] text-red-400 border border-red-200 rounded-md px-2 py-0.5 active:bg-red-50"
+                  >삭제</button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -137,15 +175,15 @@ export function ReviewDetailMobile() {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={copyLink}
-        className="fixed z-50 bottom-16 left-0 right-0 mx-auto w-full max-w-mobile px-4"
-      >
-        <span className="block w-full py-3 rounded-2xl text-white bg-accent shadow-card filter brightness-90 active:brightness-100">
-          리뷰 공유하기
-        </span>
-      </button>
+      <div className="fixed z-50 bottom-16 left-0 right-0 mx-auto w-full max-w-mobile px-4">
+        <button
+          type="button"
+          onClick={shareReview}
+          className="block w-full py-3 rounded-2xl text-white bg-accent shadow-card active:brightness-90"
+        >
+          {copied ? '링크 복사됨 ✓' : '리뷰 공유하기'}
+        </button>
+      </div>
     </>
   );
 }
