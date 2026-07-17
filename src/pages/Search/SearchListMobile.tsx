@@ -16,6 +16,16 @@ export function SearchListMobile() {
   const [hasNext, setHasNext] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  const [regions, setRegions] = useState<string[]>([]);
+  const [breeds, setBreeds] = useState<string[]>([]);
+
+  useEffect(() => {
+    api.get('/wines/filters/').then(({ data }) => {
+      setRegions(data.countries ?? []);
+      setBreeds(data.breeds ?? []);
+    }).catch(() => {});
+  }, []);
+
   const q = params.get('q') ?? '';
   const current: FilterValues = {
     wineType: (params.get('type') as FilterValues['wineType']) ?? undefined,
@@ -137,8 +147,8 @@ export function SearchListMobile() {
         open={open}
         onClose={() => setOpen(false)}
         initial={current}
-        regions={[]}
-        breeds={[]}
+        regions={regions}
+        breeds={breeds}
         onApply={(v) => {
           const next = new URLSearchParams(params);
           v.wineType ? next.set('type', v.wineType) : next.delete('type');

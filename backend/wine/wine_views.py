@@ -138,6 +138,20 @@ class WineDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class WineFiltersView(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get(self, request):
+        from wine.models import Country, GrapeVariety
+        countries = list(
+            Country.objects.values_list("kor_name", flat=True).order_by("kor_name")
+        )
+        breeds = list(
+            GrapeVariety.objects.values_list("kor_name", flat=True).order_by("kor_name")
+        )
+        return Response({"countries": countries, "breeds": breeds})
+
+
 class WineFavoriteView(APIView):
     permission_classes = [IsAuthenticated]
 
