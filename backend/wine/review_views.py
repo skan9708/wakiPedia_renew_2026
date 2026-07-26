@@ -28,8 +28,22 @@ class ReviewListView(APIView):
         else:
             qs = qs.order_by("-created_at")
 
-        serializer = ReviewSerializer(qs, many=True, context={"request": request})
-        return Response(serializer.data)
+        try:
+            page = max(1, int(request.query_params.get("page", 1)))
+            limit = min(50, max(1, int(request.query_params.get("limit", 10))))
+        except ValueError:
+            page, limit = 1, 10
+
+        total = qs.count()
+        start = (page - 1) * limit
+        end = start + limit
+        serializer = ReviewSerializer(qs[start:end], many=True, context={"request": request})
+        return Response({
+            "results": serializer.data,
+            "total": total,
+            "page": page,
+            "hasNext": end < total,
+        })
 
     def post(self, request):
         # QueryDict repeats keys as separate entries; getlist() collects them all

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CardReview, Review } from '@/components/common/CardReview';
 import { api } from '@/lib/api';
@@ -7,16 +7,53 @@ export function WineReviewListMobile() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const sort = params.get('sort') ?? 'latest';
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
+  // 탭 바뀌면 초기화
   useEffect(() => {
+    setReviews([]);
+    setPage(1);
+    setHasNext(false);
     setLoading(true);
-    api.get(`/reviews/?sort=${sort}`)
-      .then(({ data }) => setReviews(data))
+    api.get(`/reviews/?sort=${sort}&page=1&limit=10`)
+      .then(({ data }) => {
+        setReviews(data.results ?? []);
+        setHasNext(data.hasNext ?? false);
+      })
       .catch(() => setReviews([]))
       .finally(() => setLoading(false));
   }, [sort]);
+
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasNext) return;
+    const next = page + 1;
+    setLoadingMore(true);
+    api.get(`/reviews/?sort=${sort}&page=${next}&limit=10`)
+      .then(({ data }) => {
+        setReviews((prev) => [...prev, ...(data.results ?? [])]);
+        setHasNext(data.hasNext ?? false);
+        setPage(next);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  }, [sort, page, hasNext, loadingMore]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   return (
     <div className="space-y-4">
@@ -54,6 +91,19 @@ export function WineReviewListMobile() {
             <CardReview review={r} />
           </div>
         ))}
+
+        <div ref={sentinelRef} className="h-4" />
+
+        {loadingMore && (
+          <div className="mx-auto w-full max-w-mobile px-4">
+            <p className="text-center text-sm text-muted py-4">불러오는 중...</p>
+          </div>
+        )}
+        {!hasNext && reviews.length > 0 && (
+          <div className="mx-auto w-full max-w-mobile px-4 pb-4">
+            <p className="text-center text-xs text-muted">총 {reviews.length}개의 리뷰</p>
+          </div>
+        )}
       </div>
     </div>
   );
