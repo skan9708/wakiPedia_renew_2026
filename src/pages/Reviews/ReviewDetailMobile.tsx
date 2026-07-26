@@ -66,14 +66,28 @@ export function ReviewDetailMobile() {
     } catch {}
   };
 
+  const copyToClipboard = (text: string) => {
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    // HTTP 환경 폴백
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    return Promise.resolve();
+  };
+
   const shareReview = async () => {
     if (!review) return;
     const url = window.location.href;
 
-    // 클립보드 자동 복사 (조용히)
-    try { await navigator.clipboard.writeText(url); } catch {}
+    await copyToClipboard(url).catch(() => {});
 
-    // Web Share API → 카카오톡 포함 네이티브 공유 시트
     if (navigator.share) {
       try {
         await navigator.share({
@@ -85,7 +99,6 @@ export function ReviewDetailMobile() {
       } catch {}
     }
 
-    // 폴백: 복사 완료 토스트
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
