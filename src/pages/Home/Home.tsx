@@ -131,16 +131,18 @@ export function Home() {
       <footer className="mt-auto px-6 py-8 border-t border-slate-700 page-container">
         <div className="text-center space-y-2">
           <div className="text-slate-400 text-xs space-y-1">
-            <p>상호명: (주)와키피디아</p>
-            <p>대표자: 홍길동</p>
-            <p>사업자등록번호: 123-45-67890</p>
-            <p>통신판매업신고번호: 제2024-서울강남-1234호</p>
-            <p>주소: 서울특별시 강남구 테헤란로 123, 4층</p>
-            <p>고객센터: 1588-1234 (평일 09:00~18:00)</p>
-            <p>이메일: contact@wakipedia.co.kr</p>
+            <p>상호: 와키피디아</p>
+            <p>대표자: 정지웅</p>
+            <p>사업자등록번호: 516-37-01311</p>
+            <p>사업장 소재지: 경기도 화성시 동탄중심상가2길 8, 4층 401-자32호</p>
+            <p>이메일: wakipedia1682@gmail.com</p>
           </div>
-          <div className="pt-4 text-slate-500 text-xs">
-            <p>© 2024 Wakipedia. All rights reserved.</p>
+          <div className="pt-3 flex justify-center gap-4 text-slate-500 text-xs">
+            <a href="/terms" className="underline underline-offset-2 hover:text-slate-300">이용약관</a>
+            <a href="/privacy" className="underline underline-offset-2 hover:text-slate-300">개인정보처리방침</a>
+          </div>
+          <div className="pt-2 text-slate-500 text-xs">
+            <p>© 2026 Wakipedia. All rights reserved.</p>
           </div>
         </div>
       </footer>

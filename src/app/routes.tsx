@@ -23,6 +23,8 @@ import ChatMobile from '@/pages/Chat/ChatMobile';
 import { useEffect, useState } from 'react';
 import { SupportMobile } from '@/pages/Support/SupportMobile';
 import { AdminApp } from '@/pages/Admin/AdminApp';
+import { PrivacyPolicyMobile } from '@/pages/Legal/PrivacyPolicyMobile';
+import { TermsOfServiceMobile } from '@/pages/Legal/TermsOfServiceMobile';
 
 export function AppRoutes() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -69,6 +71,8 @@ export function AppRoutes() {
           <Route path="/me/reviews" element={<MyReviewsFeedMobile />} />
           <Route path="/chat" element={<ChatMobile />} />
           <Route path="/support" element={<SupportMobile />} />
+          <Route path="/terms" element={<TermsOfServiceMobile />} />
+          <Route path="/privacy" element={<PrivacyPolicyMobile />} />
         </Routes>
       </main>
       <BottomNav />
