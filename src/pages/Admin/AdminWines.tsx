@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 
-type Wine = {
+export type Wine = {
   id: number;
   korName: string;
   engName: string;
@@ -12,13 +13,13 @@ type Wine = {
   createdAt: string;
 };
 
-const TYPE_LABELS: Record<string, string> = {
+export const TYPE_LABELS: Record<string, string> = {
   red: '레드', white: '화이트', sparkling: '스파클링', rose: '로제', '': '미분류',
 };
 
 const EMPTY_FORM = { korName: '', engName: '', type: '', country: '', imageUrl: '', bubbleAvgRating: '' };
 
-function WineModal({
+export function WineModal({
   wine,
   onClose,
   onSaved,
@@ -125,6 +126,7 @@ export function AdminWines() {
   const [showModal, setShowModal] = useState(false);
   const [editWine, setEditWine] = useState<Wine | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   const limit = 20;
 
@@ -215,7 +217,7 @@ export function AdminWines() {
             ) : wines.length === 0 ? (
               <tr><td colSpan={8} className="text-center py-10 text-gray-400">데이터 없음</td></tr>
             ) : wines.map((w) => (
-              <tr key={w.id} className="hover:bg-gray-50/50">
+              <tr key={w.id} onClick={() => navigate(`/admin-panel/wines/${w.id}`)} className="hover:bg-gray-50/50 cursor-pointer">
                 <td className="px-4 py-3 text-gray-400">{w.id}</td>
                 <td className="px-4 py-3 font-medium max-w-[160px]">
                   <div className="truncate">{w.korName}</div>
@@ -238,7 +240,7 @@ export function AdminWines() {
                 <td className="px-4 py-3 text-gray-500">{w.bubbleAvgRating != null ? `${w.bubbleAvgRating}` : '-'}</td>
                 <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{w.createdAt.slice(0, 10)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-2 whitespace-nowrap">
+                  <div className="flex gap-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => { setEditWine(w); setShowModal(true); }} className="text-xs text-blue-500 hover:underline">수정</button>
                     <button onClick={() => setDelId(w.id)} className="text-xs text-red-400 hover:underline">삭제</button>
                   </div>

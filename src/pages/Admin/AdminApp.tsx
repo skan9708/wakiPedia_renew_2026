@@ -7,6 +7,7 @@ import { AdminUsers } from './AdminUsers';
 import { AdminTags } from './AdminTags';
 import { AdminReviewDetail } from './AdminReviewDetail';
 import { AdminUserDetail } from './AdminUserDetail';
+import { AdminWineDetail } from './AdminWineDetail';
 import { api } from '@/lib/api';
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -161,6 +162,7 @@ function AdminLayout() {
       <main className="flex-1 overflow-auto">
         <Routes>
           <Route path="wines" element={<AdminWines />} />
+          <Route path="wines/:id" element={<AdminWineDetail />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="reviews/:id" element={<AdminReviewDetail />} />
           <Route path="users" element={<AdminUsers />} />

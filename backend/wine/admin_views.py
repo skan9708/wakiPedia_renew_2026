@@ -114,16 +114,52 @@ class AdminWineDetailView(APIView):
         err = require_staff(request)
         if err:
             return err
+        from django.db.models import Avg, Count
         w = self._wine(pk)
+        reviews = w.reviews.select_related("user").annotate(like_count=Count("likes")).order_by("-created_at")
+        public = w.reviews.filter(is_public=True)
+        avg = public.aggregate(
+            rating=Avg("rating"), body=Avg("body"), acidity=Avg("acidity"),
+            sweetness=Avg("sweetness"), tannin=Avg("tannin"),
+        )
+        round1 = lambda v, d=1: round(v / d, 1) if v is not None else None
+        uploaded = request.build_absolute_uri(w.image.url) if w.image else None
         return Response({
             "id": w.id,
             "korName": w.kor_name,
             "engName": w.eng_name,
             "type": w.type,
             "country": w.country.kor_name if w.country else "",
+            "countryEng": w.country.eng_name if w.country else "",
             "imageUrl": w.image_url or "",
+            "uploadedImageUrl": uploaded,
+            # 서비스 화면은 업로드 이미지를 우선 사용한다 (WineListSerializer.get_imageUrl 과 같은 순서)
+            "displayImageUrl": uploaded or w.image_url or None,
+            "grapeVarieties": [g.kor_name for g in w.grape_varieties.all()],
             "bubbleAvgRating": w.bubble_avg_rating,
+            "reviewAvgRating": round1(avg["rating"], 10),
+            "tasteAvg": {k: round1(avg[k]) for k in ("body", "sweetness", "acidity", "tannin")},
+            "reviewCount": reviews.count(),
+            "publicReviewCount": public.count(),
+            "favoriteCount": w.favorite_users.count(),
+            "registeredBy": (
+                {"id": w.registered_by_id, "nickname": w.registered_by.nickname} if w.registered_by else None
+            ),
             "createdAt": w.created_at.isoformat(),
+            "updatedAt": w.updated_at.isoformat(),
+            "reviews": [
+                {
+                    "id": r.id,
+                    "userId": r.user_id,
+                    "userNickname": r.user.nickname,
+                    "rating": round(r.rating / 10, 1),
+                    "text": r.text,
+                    "isPublic": r.is_public,
+                    "likeCount": r.like_count,
+                    "createdAt": r.created_at.isoformat(),
+                }
+                for r in reviews[:100]
+            ],
         })
 
     def put(self, request, pk):
