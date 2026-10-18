@@ -22,6 +22,19 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    const config = err?.config as any;
+    const sentAuth = config?.headers?.get?.('Authorization') ?? config?.headers?.Authorization;
+    // 만료/무효 토큰이 붙으면 공개 API도 401이 되므로, 토큰을 지우고 비로그인 상태로 한 번 재시도
+    if (err?.response?.status === 401 && sentAuth && !config._retriedWithoutAuth) {
+      useAuthStore.getState().logout();
+      config._retriedWithoutAuth = true;
+      if (typeof config.headers?.delete === 'function') {
+        config.headers.delete('Authorization');
+      } else {
+        delete config.headers.Authorization;
+      }
+      return api.request(config);
+    }
     return Promise.reject(err);
   }
 );

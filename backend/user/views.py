@@ -100,18 +100,26 @@ class KakaoLoginView(APIView):
         user_info = user_res.json()
         kakao_id = str(user_info["id"])
         kakao_account = user_info.get("kakao_account", {})
-        email = kakao_account.get("email") or f"kakao_{kakao_id}@kakao.local"
+        kakao_email = kakao_account.get("email") or ""
+        email_verified = bool(kakao_email) and kakao_account.get("is_email_verified", False)
         nickname = (
             kakao_account.get("profile", {}).get("nickname")
             or f"kakao_{kakao_id[:6]}"
         )
 
         # 3. 기존 유저 조회 or 생성
-        user, created = User.objects.get_or_create(
-            kakao_id=kakao_id,
-            defaults={"email": email, "nickname": nickname},
-        )
-        if created:
+        user = User.objects.filter(kakao_id=kakao_id).first()
+        if not user and email_verified:
+            # 같은 이메일로 이미 가입한 계정이 있으면 그 계정에 카카오를 연결
+            user = User.objects.filter(email__iexact=kakao_email, kakao_id__isnull=True).first()
+            if user:
+                user.kakao_id = kakao_id
+                user.save(update_fields=["kakao_id"])
+        if not user:
+            email = kakao_email
+            if not email or User.objects.filter(email__iexact=email).exists():
+                email = f"kakao_{kakao_id}@kakao.local"
+            user = User(kakao_id=kakao_id, email=email, nickname=nickname)
             user.set_unusable_password()
             user.save()
 

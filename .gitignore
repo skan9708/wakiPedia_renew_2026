@@ -34,3 +34,7 @@ backend/media/
 backend/staticfiles/
 backend/*.egg-info/
 
+
+# Keys
+*.pem
+*.tsbuildinfo

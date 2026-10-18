@@ -79,6 +79,25 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# AWS_STORAGE_BUCKET_NAME이 설정되면 업로드 파일을 S3에 저장 (없으면 로컬 media/ 사용)
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "")
+if AWS_STORAGE_BUCKET_NAME:
+    INSTALLED_APPS += ["storages"]
+    AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "ap-northeast-2")
+    # CloudFront 등을 붙일 때 도메인만 지정 (예: cdn.example.com)
+    AWS_S3_CUSTOM_DOMAIN = (
+        os.environ.get("AWS_S3_CUSTOM_DOMAIN")
+        or f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
+    )
+    AWS_LOCATION = "media"
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_FILE_OVERWRITE = False
+    STORAGES = {
+        "default": {"BACKEND": "storages.backends.s3.S3Storage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "user.User"
 
@@ -131,3 +150,11 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 
 KAKAO_REST_API_KEY = os.environ.get("KAKAO_REST_API_KEY", "")
+
+# 500 오류의 traceback을 콘솔(journalctl -u waki)로 출력
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {"django.request": {"handlers": ["console"], "level": "ERROR"}},
+}
