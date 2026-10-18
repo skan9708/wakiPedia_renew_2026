@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 
-type Review = {
+export type Review = {
   id: number;
   wineId: number;
   wineKorName: string;
@@ -186,7 +187,7 @@ function ReviewCreateModal({ onClose, onSaved }: { onClose: () => void; onSaved:
   );
 }
 
-function ReviewModal({
+export function ReviewModal({
   review, onClose, onSaved,
 }: {
   review: Review; onClose: () => void; onSaved: () => void;
@@ -261,6 +262,7 @@ export function AdminReviews() {
   const [modal, setModal] = useState<Review | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [delId, setDelId] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   const limit = 20;
 
@@ -319,15 +321,15 @@ export function AdminReviews() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs">
             <tr>
-              <th className="text-left px-4 py-3 w-10">ID</th>
-              <th className="text-left px-4 py-3">와인</th>
-              <th className="text-left px-4 py-3 w-24">작성자</th>
-              <th className="text-left px-4 py-3 w-16">평점</th>
-              <th className="text-left px-4 py-3">내용</th>
-              <th className="text-left px-4 py-3 w-14">공개</th>
-              <th className="text-left px-4 py-3 w-14">좋아요</th>
-              <th className="text-left px-4 py-3 w-24">날짜</th>
-              <th className="text-left px-4 py-3 w-20">관리</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-10">ID</th>
+              <th className="whitespace-nowrap text-left px-4 py-3">와인</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-24">작성자</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-16">평점</th>
+              <th className="whitespace-nowrap text-left px-4 py-3">내용</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-14">공개</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-14">좋아요</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-24">날짜</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-20">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -336,7 +338,7 @@ export function AdminReviews() {
             ) : reviews.length === 0 ? (
               <tr><td colSpan={9} className="text-center py-10 text-gray-400">데이터 없음</td></tr>
             ) : reviews.map((r) => (
-              <tr key={r.id} className="hover:bg-gray-50/50">
+              <tr key={r.id} onClick={() => navigate(`/admin-panel/reviews/${r.id}`)} className="hover:bg-gray-50/50 cursor-pointer">
                 <td className="px-4 py-3 text-gray-400">{r.id}</td>
                 <td className="px-4 py-3 font-medium max-w-[160px]">
                   <div className="truncate">{r.wineKorName}</div>
@@ -349,14 +351,14 @@ export function AdminReviews() {
                   <div className="truncate text-xs">{r.text}</div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${r.isPublic ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${r.isPublic ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
                     {r.isPublic ? '공개' : '비공개'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-gray-400 text-xs">{r.likeCount}</td>
-                <td className="px-4 py-3 text-gray-400 text-xs">{r.createdAt.slice(0, 10)}</td>
+                <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{r.likeCount}</td>
+                <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{r.createdAt.slice(0, 10)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => setModal(r)} className="text-xs text-blue-500 hover:underline">수정</button>
                     <button onClick={() => setDelId(r.id)} className="text-xs text-red-400 hover:underline">삭제</button>
                   </div>

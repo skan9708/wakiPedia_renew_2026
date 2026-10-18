@@ -186,10 +186,10 @@ export function AdminTags() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs">
               <tr>
-                <th className="text-left px-4 py-3 w-10">ID</th>
-                <th className="text-left px-4 py-3">태그명</th>
-                <th className="text-left px-4 py-3 w-36">카테고리</th>
-                <th className="text-left px-4 py-3 w-20">관리</th>
+                <th className="whitespace-nowrap text-left px-4 py-3 w-10">ID</th>
+                <th className="whitespace-nowrap text-left px-4 py-3">태그명</th>
+                <th className="whitespace-nowrap text-left px-4 py-3 w-36">카테고리</th>
+                <th className="whitespace-nowrap text-left px-4 py-3 w-20">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -200,12 +200,12 @@ export function AdminTags() {
                   <td className="px-4 py-3 text-gray-400">{t.id}</td>
                   <td className="px-4 py-3 font-medium">{t.name}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${CAT_COLOR[t.category] ?? 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${CAT_COLOR[t.category] ?? 'bg-gray-100 text-gray-500'}`}>
                       {CATEGORIES.find((c) => c.value === t.category)?.label ?? t.category}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 whitespace-nowrap">
                       <button onClick={() => { setEditTag(t); setShowModal(true); }} className="text-xs text-blue-500 hover:underline">수정</button>
                       <button onClick={() => setDelId(t.id)} className="text-xs text-red-400 hover:underline">삭제</button>
                     </div>

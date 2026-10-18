@@ -5,6 +5,8 @@ import { AdminWines } from './AdminWines';
 import { AdminReviews } from './AdminReviews';
 import { AdminUsers } from './AdminUsers';
 import { AdminTags } from './AdminTags';
+import { AdminReviewDetail } from './AdminReviewDetail';
+import { AdminUserDetail } from './AdminUserDetail';
 import { api } from '@/lib/api';
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -160,7 +162,9 @@ function AdminLayout() {
         <Routes>
           <Route path="wines" element={<AdminWines />} />
           <Route path="reviews" element={<AdminReviews />} />
+          <Route path="reviews/:id" element={<AdminReviewDetail />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="users/:id" element={<AdminUserDetail />} />
           <Route path="tags" element={<AdminTags />} />
           <Route path="*" element={<Navigate to="/admin-panel/wines" replace />} />
         </Routes>

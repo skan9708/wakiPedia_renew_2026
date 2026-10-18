@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 
 type AdminUser = {
@@ -26,7 +27,6 @@ function UserModal({
     nickname: user?.nickname ?? '',
     password: '',
     isActive: user?.isActive ?? true,
-    isStaff: user?.isStaff ?? false,
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -42,13 +42,11 @@ function UserModal({
           email: form.email,
           nickname: form.nickname,
           password: form.password,
-          isStaff: form.isStaff,
         });
       } else {
         const payload: any = {
           nickname: form.nickname,
           isActive: form.isActive,
-          isStaff: form.isStaff,
         };
         if (form.password) payload.password = form.password;
         await api.put(`/admin/users/${user!.id}/`, payload);
@@ -107,15 +105,6 @@ function UserModal({
               />
               활성 계정
             </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.isStaff}
-                onChange={(e) => set('isStaff', e.target.checked)}
-                className="accent-[#c84b31]"
-              />
-              관리자 권한
-            </label>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
@@ -139,6 +128,7 @@ export function AdminUsers() {
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   const limit = 20;
 
@@ -197,14 +187,14 @@ export function AdminUsers() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs">
             <tr>
-              <th className="text-left px-4 py-3 w-10">ID</th>
-              <th className="text-left px-4 py-3">이메일</th>
-              <th className="text-left px-4 py-3 w-28">닉네임</th>
-              <th className="text-left px-4 py-3 w-16">리뷰수</th>
-              <th className="text-left px-4 py-3 w-16">상태</th>
-              <th className="text-left px-4 py-3 w-16">권한</th>
-              <th className="text-left px-4 py-3 w-24">가입일</th>
-              <th className="text-left px-4 py-3 w-20">관리</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-10">ID</th>
+              <th className="whitespace-nowrap text-left px-4 py-3">이메일</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-28">닉네임</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-16">리뷰수</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-16">상태</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-16">권한</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-24">가입일</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-20">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -213,7 +203,7 @@ export function AdminUsers() {
             ) : users.length === 0 ? (
               <tr><td colSpan={8} className="text-center py-10 text-gray-400">데이터 없음</td></tr>
             ) : users.map((u) => (
-              <tr key={u.id} className="hover:bg-gray-50/50">
+              <tr key={u.id} onClick={() => navigate(`/admin-panel/users/${u.id}`)} className="hover:bg-gray-50/50 cursor-pointer">
                 <td className="px-4 py-3 text-gray-400">{u.id}</td>
                 <td className="px-4 py-3 max-w-[200px]">
                   <div className="truncate">{u.email}</div>
@@ -221,18 +211,18 @@ export function AdminUsers() {
                 <td className="px-4 py-3 font-medium">{u.nickname}</td>
                 <td className="px-4 py-3 text-gray-500">{u.reviewCount}</td>
                 <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-400'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${u.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-400'}`}>
                     {u.isActive ? '활성' : '비활성'}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   {u.isStaff && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">관리자</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-purple-50 text-purple-600">관리자</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-gray-400 text-xs">{u.createdAt.slice(0, 10)}</td>
+                <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{u.createdAt.slice(0, 10)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => { setEditUser(u); setShowModal(true); }} className="text-xs text-blue-500 hover:underline">수정</button>
                     <button onClick={() => setDelId(u.id)} className="text-xs text-red-400 hover:underline">삭제</button>
                   </div>

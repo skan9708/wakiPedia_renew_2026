@@ -263,8 +263,10 @@ class AdminReviewDetailView(APIView):
             "id": r.id,
             "wineId": r.wine_id,
             "wineKorName": r.wine.kor_name,
+            "wineEngName": r.wine.eng_name,
             "userId": r.user_id,
             "userNickname": r.user.nickname,
+            "userEmail": r.user.email,
             "rating": round(r.rating / 10, 1),
             "text": r.text,
             "body": r.body,
@@ -272,7 +274,15 @@ class AdminReviewDetailView(APIView):
             "sweetness": r.sweetness,
             "tannin": r.tannin,
             "isPublic": r.is_public,
+            "feels": list(r.tags.values_list("name", flat=True)),
+            "images": [
+                {"id": img.id, "url": request.build_absolute_uri(img.image.url), "createdAt": img.created_at.isoformat()}
+                for img in r.images.all()
+            ],
+            "likeCount": r.likes.count(),
+            "likedBy": [{"id": u.id, "nickname": u.nickname} for u in r.likes.all()],
             "createdAt": r.created_at.isoformat(),
+            "updatedAt": r.updated_at.isoformat(),
         })
 
     def put(self, request, pk):

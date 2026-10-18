@@ -1,6 +1,7 @@
 import requests as http_requests
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import update_last_login
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -14,6 +15,8 @@ from user.serializers import (
 
 
 def get_tokens_for_user(user):
+    """로그인 토큰 발급 (마지막 로그인 시각도 함께 기록)"""
+    update_last_login(None, user)
     refresh = RefreshToken.for_user(user)
     return {
         "refresh": str(refresh),

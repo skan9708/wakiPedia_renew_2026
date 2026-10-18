@@ -199,14 +199,14 @@ export function AdminWines() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs">
             <tr>
-              <th className="text-left px-4 py-3 w-10">ID</th>
-              <th className="text-left px-4 py-3">한글명</th>
-              <th className="text-left px-4 py-3">영문명</th>
-              <th className="text-left px-4 py-3 w-20">타입</th>
-              <th className="text-left px-4 py-3 w-24">국가</th>
-              <th className="text-left px-4 py-3 w-20">평점</th>
-              <th className="text-left px-4 py-3 w-28">등록일</th>
-              <th className="text-left px-4 py-3 w-20">관리</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-10">ID</th>
+              <th className="whitespace-nowrap text-left px-4 py-3">한글명</th>
+              <th className="whitespace-nowrap text-left px-4 py-3">영문명</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-20">타입</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-24">국가</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-20">평점</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-28">등록일</th>
+              <th className="whitespace-nowrap text-left px-4 py-3 w-20">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -224,7 +224,7 @@ export function AdminWines() {
                   <div className="truncate">{w.engName}</div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
                     w.type === 'red' ? 'bg-red-50 text-red-600' :
                     w.type === 'white' ? 'bg-yellow-50 text-yellow-700' :
                     w.type === 'sparkling' ? 'bg-blue-50 text-blue-600' :
@@ -236,9 +236,9 @@ export function AdminWines() {
                 </td>
                 <td className="px-4 py-3 text-gray-500">{w.country || '-'}</td>
                 <td className="px-4 py-3 text-gray-500">{w.bubbleAvgRating != null ? `${w.bubbleAvgRating}` : '-'}</td>
-                <td className="px-4 py-3 text-gray-400 text-xs">{w.createdAt.slice(0, 10)}</td>
+                <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{w.createdAt.slice(0, 10)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 whitespace-nowrap">
                     <button onClick={() => { setEditWine(w); setShowModal(true); }} className="text-xs text-blue-500 hover:underline">수정</button>
                     <button onClick={() => setDelId(w.id)} className="text-xs text-red-400 hover:underline">삭제</button>
                   </div>
