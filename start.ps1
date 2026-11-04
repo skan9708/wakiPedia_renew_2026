@@ -1,18 +1,46 @@
-# Wakipedia 개발 서버 시작 스크립트
-# 실행: .\start.ps1
+# Build and preview the frontend alongside the local Django API.
+$ErrorActionPreference = 'Stop'
+$root = $PSScriptRoot
+$python = Join-Path $root 'backend/.venv/Scripts/python.exe'
 
-Write-Host "Django 백엔드 시작 중 (포트 8000)..." -ForegroundColor Green
-Start-Process -FilePath "python" -ArgumentList "backend\manage.py runserver 8000" -WorkingDirectory $PSScriptRoot -WindowStyle Normal
+if (-not (Test-Path $python)) {
+    throw 'Python virtual environment is missing. See README.md for setup steps.'
+}
 
-Start-Sleep -Seconds 2
+$npm = Get-Command npm.cmd -ErrorAction SilentlyContinue
+if (-not $npm) {
+    $nodePackage = Join-Path $env:LOCALAPPDATA 'Microsoft/WinGet/Packages/OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe'
+    $nodeDirectory = Get-ChildItem $nodePackage -Directory -Filter 'node-*-win-x64' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($nodeDirectory) {
+        $env:PATH = "$($nodeDirectory.FullName);$env:PATH"
+        $npm = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    }
+}
+if (-not $npm) {
+    throw 'Node.js and npm are missing. See README.md for setup steps.'
+}
 
-Write-Host "Vite 프론트엔드 시작 중 (포트 5175)..." -ForegroundColor Green
-Start-Process -FilePath "npx" -ArgumentList "vite --port 5175" -WorkingDirectory $PSScriptRoot -WindowStyle Normal
+& $npm.Source run build
+if ($LASTEXITCODE -ne 0) {
+    throw 'Frontend build failed.'
+}
 
-Write-Host ""
-Write-Host "서버가 시작되었습니다!" -ForegroundColor Cyan
-Write-Host "  프론트엔드: http://localhost:5175" -ForegroundColor Yellow
-Write-Host "  백엔드 API: http://localhost:8000/api/" -ForegroundColor Yellow
-Write-Host "  Swagger:   http://localhost:8000/api/swagger/" -ForegroundColor Yellow
-Write-Host "  Admin:     http://localhost:8000/admin/" -ForegroundColor Yellow
-Write-Host "             (admin@waki.kr / admin1234)" -ForegroundColor Yellow
+$logOut = Join-Path $root 'backend/.venv/dev-server.out.log'
+$logErr = Join-Path $root 'backend/.venv/dev-server.err.log'
+$api = Start-Process -FilePath $python -ArgumentList @('backend/manage.py', 'runserver', '127.0.0.1:8000', '--noreload') -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput $logOut -RedirectStandardError $logErr
+
+try {
+    Start-Sleep -Seconds 2
+    if ($api.HasExited) {
+        Get-Content $logErr -ErrorAction SilentlyContinue
+        throw 'Django did not start.'
+    }
+    Write-Host 'Frontend preview: http://127.0.0.1:5175/'
+    Write-Host 'API:      http://127.0.0.1:8000/api/'
+    Write-Host 'Swagger:  http://127.0.0.1:8000/api/swagger/'
+    Write-Host 'Press Ctrl+C to stop both servers.'
+    & $npm.Source run preview -- --host 127.0.0.1
+}
+finally {
+    if (-not $api.HasExited) { Stop-Process -Id $api.Id }
+}

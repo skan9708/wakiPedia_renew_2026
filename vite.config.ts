@@ -6,7 +6,20 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5175,
-    open: true,
+    open: false,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/media': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
+  },
+  preview: {
+    port: 5175,
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
@@ -24,5 +37,3 @@ export default defineConfig({
     },
   },
 });
-
-
