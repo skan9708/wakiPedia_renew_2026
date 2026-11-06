@@ -1,8 +1,39 @@
+from importlib import import_module
+from types import SimpleNamespace
+
+from django.apps import apps
+from django.db import connection
 from django.test import TestCase
 from rest_framework.test import APIClient
 
 from user.models import User
-from wine.models import Wine, WineReview, WineReviewImage
+from wine.models import Tag, Wine, WineReview, WineReviewImage
+
+
+class TobaccoTagMigrationTests(TestCase):
+    def test_existing_reviews_keep_tobacco_aroma_when_tags_are_merged(self):
+        user = User.objects.create_user(
+            email="tobacco-migration@example.com", password="test-password", nickname="Reviewer",
+        )
+        wine = Wine.objects.create(kor_name="Test wine", eng_name="Test wine", type="red")
+        reviews = [
+            WineReview.objects.create(
+                wine=wine, user=user, text="Review", rating=40,
+                body=2, acidity=2, sweetness=2, tannin=2,
+            )
+            for _ in range(2)
+        ]
+        old_tag = Tag.objects.create(name="토바코", category="vegetal")
+        new_tag = Tag.objects.get(name="담배향")
+        reviews[0].tags.add(old_tag)
+        reviews[1].tags.add(old_tag, new_tag)
+
+        migration = import_module("wine.migrations.0008_merge_tobacco_tags")
+        migration.merge_tobacco_tags(apps, SimpleNamespace(connection=connection))
+
+        self.assertFalse(Tag.objects.filter(name="토바코").exists())
+        for review in reviews:
+            self.assertEqual(list(review.tags.values_list("name", flat=True)), ["담배향"])
 
 
 class ReviewCoverImageTests(TestCase):
