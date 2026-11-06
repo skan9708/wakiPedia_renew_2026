@@ -1,10 +1,12 @@
 from django.shortcuts import get_object_or_404
+from django.db.models import OuterRef, Subquery
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
 from wine.models import Wine, WineReview, Tag, Country
+from wine.image_utils import public_review_image_names, wine_display_image_url
 
 
 def require_staff(request):
@@ -41,13 +43,12 @@ class AdminWineListView(APIView):
         total = qs.count()
         start = (page - 1) * limit
         end = start + limit
+        page_wines = qs[start:end].annotate(
+            review_cover_image=Subquery(public_review_image_names(OuterRef("pk"))[:1])
+        )
         results = []
-        for w in qs[start:end]:
-            img = ""
-            if w.image_url:
-                img = w.image_url
-            elif w.image:
-                img = request.build_absolute_uri(w.image.url)
+        for w in page_wines:
+            img = wine_display_image_url(w, request) or ""
             results.append({
                 "id": w.id,
                 "korName": w.kor_name,
@@ -133,8 +134,7 @@ class AdminWineDetailView(APIView):
             "countryEng": w.country.eng_name if w.country else "",
             "imageUrl": w.image_url or "",
             "uploadedImageUrl": uploaded,
-            # 서비스 화면은 업로드 이미지를 우선 사용한다 (WineListSerializer.get_imageUrl 과 같은 순서)
-            "displayImageUrl": uploaded or w.image_url or None,
+            "displayImageUrl": wine_display_image_url(w, request),
             "grapeVarieties": [g.kor_name for g in w.grape_varieties.all()],
             "bubbleAvgRating": w.bubble_avg_rating,
             "reviewAvgRating": round1(avg["rating"], 10),

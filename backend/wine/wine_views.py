@@ -3,9 +3,10 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import Q
+from django.db.models import OuterRef, Q, Subquery
 
 from wine.models import Wine, Country, GrapeVariety
+from wine.image_utils import public_review_image_names
 from wine.serializers import WineListSerializer, WineDetailSerializer
 
 
@@ -55,7 +56,10 @@ class WineListView(APIView):
         total = qs.count()
         start = (page - 1) * limit
         end = start + limit
-        serializer = WineListSerializer(qs[start:end], many=True, context={"request": request})
+        page_wines = qs[start:end].annotate(
+            review_cover_image=Subquery(public_review_image_names(OuterRef("pk"))[:1])
+        )
+        serializer = WineListSerializer(page_wines, many=True, context={"request": request})
         return Response({
             "results": serializer.data,
             "total": total,

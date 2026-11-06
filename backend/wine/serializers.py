@@ -2,6 +2,7 @@ from django.db.models import Avg, Count
 from rest_framework import serializers
 
 from wine.models import Wine, WineReview, WineReviewImage, Tag, Country, GrapeVariety
+from wine.image_utils import wine_display_image_url
 from user.serializers import UserMiniSerializer
 
 
@@ -54,12 +55,7 @@ class WineListSerializer(serializers.ModelSerializer):
         return ", ".join(v.kor_name for v in varieties)
 
     def get_imageUrl(self, obj):
-        request = self.context.get("request")
-        if obj.image and request:
-            return request.build_absolute_uri(obj.image.url)
-        if obj.image_url:
-            return obj.image_url
-        return None
+        return wine_display_image_url(obj, self.context.get("request"))
 
     def get_ratingAverage(self, obj):
         avg = obj.reviews.filter(is_public=True).aggregate(Avg("rating"))["rating__avg"]
