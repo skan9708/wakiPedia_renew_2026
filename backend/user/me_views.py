@@ -39,7 +39,7 @@ class MyLikesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        wines = request.user.favorite_wines.all()
+        wines = request.user.favorite_wines.filter(catalog_visible=True)
         from wine.serializers import WineListSerializer
         data = WineListSerializer(wines, many=True, context={"request": request}).data
         return Response(data)

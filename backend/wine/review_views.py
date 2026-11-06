@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from wine.models import WineReview
+from wine.models import Wine, WineReview
 from wine.serializers import ReviewSerializer, ReviewCreateSerializer
 
 
@@ -20,6 +20,11 @@ class ReviewListView(APIView):
         sort = request.query_params.get("sort", "latest")
 
         if wine_id:
+            try:
+                legacy_wine = Wine.objects.only("canonical_wine_id").get(pk=wine_id)
+                wine_id = legacy_wine.canonical_wine_id or legacy_wine.id
+            except (Wine.DoesNotExist, ValueError):
+                pass
             qs = qs.filter(wine_id=wine_id)
 
         if sort == "popular":

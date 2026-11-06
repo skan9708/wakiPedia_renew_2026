@@ -57,6 +57,11 @@ class Tag(BaseModel):
 
 class Wine(BaseModel):
     TYPES = (
+        ("주정강화", "주정강화"),
+        ("맥주", "맥주"),
+        ("증류주", "증류주"),
+        ("시드르", "시드르"),
+        ("과실주", "과실주"),
         ("red", "레드 (Red)"),
         ("white", "화이트 (White)"),
         ("sparkling", "스파클링 (Sparkling)"),
@@ -70,6 +75,16 @@ class Wine(BaseModel):
     image = models.ImageField("와인 이미지", upload_to="wines/", null=True, blank=True)
     image_url = models.URLField("외부 이미지 URL", blank=True, default="")
     bubble_avg_rating = models.FloatField("버블 평균 평점", null=True, blank=True)
+    catalog_visible = models.BooleanField(default=True, db_index=True)
+    canonical_wine = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="legacy_wines",
+    )
+    search_aliases = models.TextField(blank=True, default="")
+    source_body = models.PositiveSmallIntegerField(null=True, blank=True)
+    source_sweetness = models.PositiveSmallIntegerField(null=True, blank=True)
+    source_acidity = models.PositiveSmallIntegerField(null=True, blank=True)
+    source_tannin = models.PositiveSmallIntegerField(null=True, blank=True)
     registered_by = models.ForeignKey(
         "user.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="registered_wines"
     )

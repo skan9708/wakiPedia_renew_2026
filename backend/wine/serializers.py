@@ -153,6 +153,9 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("평점은 0~5 사이여야 합니다.")
         return raw
 
+    def validate_wine(self, wine):
+        return wine.canonical_wine or wine
+
     def validate_body(self, value):
         if not (0 <= value <= 4):
             raise serializers.ValidationError("바디는 0~4 사이여야 합니다.")
@@ -209,6 +212,13 @@ class WineDetailSerializer(WineListSerializer):
     def _public_reviews(self, obj):
         return obj.reviews.filter(is_public=True)
 
+    def _taste_average(self, obj, field):
+        avg = self._public_reviews(obj).aggregate(Avg(field))[f"{field}__avg"]
+        if avg is not None:
+            return round(avg, 1)
+        source = getattr(obj, f"source_{field}")
+        return source - 1 if source is not None else None
+
     def get_ratingDistribution(self, obj):
         counts = [0] * 5
         reviews = self._public_reviews(obj)
@@ -223,20 +233,16 @@ class WineDetailSerializer(WineListSerializer):
         return counts
 
     def get_avgBody(self, obj):
-        avg = self._public_reviews(obj).aggregate(Avg("body"))["body__avg"]
-        return round(avg, 1) if avg is not None else None
+        return self._taste_average(obj, "body")
 
     def get_avgAcidity(self, obj):
-        avg = self._public_reviews(obj).aggregate(Avg("acidity"))["acidity__avg"]
-        return round(avg, 1) if avg is not None else None
+        return self._taste_average(obj, "acidity")
 
     def get_avgSweetness(self, obj):
-        avg = self._public_reviews(obj).aggregate(Avg("sweetness"))["sweetness__avg"]
-        return round(avg, 1) if avg is not None else None
+        return self._taste_average(obj, "sweetness")
 
     def get_avgTannin(self, obj):
-        avg = self._public_reviews(obj).aggregate(Avg("tannin"))["tannin__avg"]
-        return round(avg, 1) if avg is not None else None
+        return self._taste_average(obj, "tannin")
 
     def get_keywords(self, obj):
         tag_counts = (

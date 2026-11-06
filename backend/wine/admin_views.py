@@ -23,7 +23,7 @@ class AdminWineListView(APIView):
         if err:
             return err
 
-        qs = Wine.objects.select_related("country").order_by("-created_at")
+        qs = Wine.objects.filter(catalog_visible=True).select_related("country").order_by("-created_at")
 
         q = request.query_params.get("q", "")
         wine_type = request.query_params.get("type", "")

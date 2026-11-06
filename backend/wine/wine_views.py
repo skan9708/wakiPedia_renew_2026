@@ -3,6 +3,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db.models import Q
 
 from wine.models import Wine, Country, GrapeVariety
 from wine.serializers import WineListSerializer, WineDetailSerializer
@@ -12,7 +13,7 @@ class WineListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get(self, request):
-        qs = Wine.objects.select_related("country").prefetch_related("grape_varieties")
+        qs = Wine.objects.filter(catalog_visible=True).select_related("country").prefetch_related("grape_varieties")
 
         q = request.query_params.get("q")
         wine_type = request.query_params.get("type")
@@ -21,7 +22,11 @@ class WineListView(APIView):
         sort = request.query_params.get("sort", "latest")
 
         if q:
-            qs = qs.filter(kor_name__icontains=q) | qs.filter(eng_name__icontains=q)
+            qs = qs.filter(
+                Q(kor_name__icontains=q)
+                | Q(eng_name__icontains=q)
+                | Q(search_aliases__icontains=q)
+            )
         if wine_type:
             type_map = {"Red": "red", "White": "white", "Sparkling": "sparkling", "Rose": "rose"}
             qs = qs.filter(type=type_map.get(wine_type, wine_type.lower()))
@@ -104,9 +109,10 @@ class WineDetailView(APIView):
 
     def _get_wine(self, pk):
         from django.shortcuts import get_object_or_404
-        return get_object_or_404(
+        wine = get_object_or_404(
             Wine.objects.select_related("country").prefetch_related("grape_varieties"), pk=pk
         )
+        return wine.canonical_wine or wine
 
     def get(self, request, pk):
         wine = self._get_wine(pk)
@@ -144,10 +150,10 @@ class WineFiltersView(APIView):
     def get(self, request):
         from wine.models import Country, GrapeVariety
         countries = list(
-            Country.objects.values_list("kor_name", flat=True).order_by("kor_name")
+            Country.objects.filter(wines__catalog_visible=True).values_list("kor_name", flat=True).distinct().order_by("kor_name")
         )
         breeds = list(
-            GrapeVariety.objects.values_list("kor_name", flat=True).order_by("kor_name")
+            GrapeVariety.objects.filter(wines__catalog_visible=True).values_list("kor_name", flat=True).distinct().order_by("kor_name")
         )
         return Response({"countries": countries, "breeds": breeds})
 
@@ -158,6 +164,7 @@ class WineFavoriteView(APIView):
     def post(self, request, pk):
         from django.shortcuts import get_object_or_404
         wine = get_object_or_404(Wine, pk=pk)
+        wine = wine.canonical_wine or wine
         user = request.user
         if user.favorite_wines.filter(id=wine.id).exists():
             user.favorite_wines.remove(wine)
