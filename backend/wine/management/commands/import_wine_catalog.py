@@ -22,6 +22,10 @@ TYPE_MAP = {
     "시드르": "시드르", "과실주": "과실주",
 }
 
+# The source export left this pair separate. Wine 6063 has a bottle photo that
+# clearly reads "PRIVATE BIN"; the owner confirmed merging it into 5521.
+REPRESENTATIVE_MERGES = {6063: 5521}
+
 
 def normalized_name(value):
     return "".join(
@@ -77,6 +81,23 @@ def load_export(path):
     return data, mapping, hashlib.sha256(raw).hexdigest()
 
 
+def apply_reviewed_merges(data, mapping):
+    by_id = {item["id"]: item for item in data["wines"]}
+    for source, target in REPRESENTATIVE_MERGES.items():
+        if (source not in by_id or target not in by_id
+                or source == target or target in REPRESENTATIVE_MERGES
+                or mapping.get(source) != source or mapping.get(target) != target):
+            raise CommandError(f"Invalid reviewed representative merge {source}:{target}.")
+        original, representative = by_id[source], by_id[target]
+        if any(original[field] != representative[field] for field in ("country", "type", "grapesRaw")):
+            raise CommandError(f"Reviewed merge {source}:{target} has conflicting wine details.")
+        if original["nameEn"].casefold() not in representative["searchAliasesRaw"].casefold():
+            raise CommandError(f"Reviewed merge {source}:{target} is absent from search aliases.")
+    representatives = [item for item in data["wines"] if item["id"] not in REPRESENTATIVE_MERGES]
+    mapping = {source: REPRESENTATIVE_MERGES.get(target, target) for source, target in mapping.items()}
+    return representatives, mapping
+
+
 class Command(BaseCommand):
     help = "Preview or apply a representative-wine JSON export while preserving live reviews."
 
@@ -96,7 +117,8 @@ class Command(BaseCommand):
             raise CommandError("Export checksum does not match --expected-sha256.")
         if options["apply"] and (not options["expected_sha256"] or not options["backup_path"]):
             raise CommandError("--apply requires --expected-sha256 and --backup-path.")
-        canonical_ids = set(item["id"] for item in data["wines"])
+        representatives, mapping = apply_reviewed_merges(data, mapping)
+        canonical_ids = set(item["id"] for item in representatives)
         all_wines = Wine.objects.in_bulk()
         missing = set(mapping) - set(all_wines)
         if missing:
@@ -181,7 +203,7 @@ class Command(BaseCommand):
         previous_review_count = summary["existing_reviews"]
         with transaction.atomic():
             countries = {country.kor_name: country for country in Country.objects.all()}
-            for item in data["wines"]:
+            for item in representatives:
                 country_name = item.get("country") or ""
                 if country_name and country_name not in countries:
                     countries[country_name] = Country.objects.create(
@@ -189,7 +211,7 @@ class Command(BaseCommand):
                     )
             now = datetime.now()
             updates = []
-            for item in data["wines"]:
+            for item in representatives:
                 wine = all_wines[item["id"]]
                 wine.eng_name = item["nameEn"]
                 wine.kor_name = item["nameKo"]
@@ -215,7 +237,7 @@ class Command(BaseCommand):
             grape_lookup = {}
             for grape in GrapeVariety.objects.order_by("id"):
                 grape_lookup.setdefault(grape.kor_name, grape)
-            for item in data["wines"]:
+            for item in representatives:
                 names = dict.fromkeys(
                     name.strip() for name in (item.get("grapesRaw") or "").split(",")
                     if name.strip()
