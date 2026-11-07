@@ -1,4 +1,4 @@
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { SideDrawer } from '@/components/layout/SideDrawer';
@@ -70,7 +70,8 @@ export function AppRoutes() {
           <Route path="/me/likes" element={<LikesFeedMobile />} />
           <Route path="/me/reviews" element={<MyReviewsFeedMobile />} />
           <Route path="/chat" element={<ChatMobile />} />
-          <Route path="/support" element={<SupportMobile />} />
+          <Route path="/feedback" element={<SupportMobile />} />
+          <Route path="/support" element={<Navigate to="/feedback" replace />} />
           <Route path="/terms" element={<TermsOfServiceMobile />} />
           <Route path="/privacy" element={<PrivacyPolicyMobile />} />
         </Routes>

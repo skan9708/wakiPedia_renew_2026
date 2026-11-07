@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/auth';
 import { AdminWines } from './AdminWines';
 import { AdminReviews } from './AdminReviews';
 import { AdminUsers } from './AdminUsers';
+import { AdminFeedback } from './AdminFeedback';
 import { AdminTags } from './AdminTags';
 import { AdminReviewDetail } from './AdminReviewDetail';
 import { AdminUserDetail } from './AdminUserDetail';
@@ -107,6 +108,7 @@ function AdminLogin() {
 }
 
 const NAV_ITEMS = [
+  { to: '/admin-panel/feedback', label: '피드백 관리', icon: '💬' },
   { to: '/admin-panel/wines', label: '와인 관리', icon: '🍷' },
   { to: '/admin-panel/reviews', label: '리뷰 관리', icon: '📝' },
   { to: '/admin-panel/users', label: '유저 관리', icon: '👤' },
@@ -168,6 +170,7 @@ function AdminLayout() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="users/:id" element={<AdminUserDetail />} />
           <Route path="tags" element={<AdminTags />} />
+          <Route path="feedback" element={<AdminFeedback />} />
           <Route path="*" element={<Navigate to="/admin-panel/wines" replace />} />
         </Routes>
       </main>

@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "user",
     "wine",
+    "feedback",
 ]
 
 if DEBUG:
@@ -102,6 +103,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "user.User"
 
 REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_RATES": {"feedback": "5/hour"},
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
