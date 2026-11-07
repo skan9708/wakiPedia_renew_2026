@@ -13,7 +13,7 @@
 
 ## Connect the site
 
-The public measurement ID is tracked in `.env.production`, so a production Vite build includes it automatically. Supply the existing `VITE_KAKAO_REST_API_KEY` in the build environment, then build and deploy `dist/`. Never commit the Kakao key or server credentials.
+The public measurement ID is tracked in `.env.production`, so a production Vite build includes it automatically. The `VITE_GA_STREAM_READY` flag stays `false` until the web stream settings above are confirmed; set it to `true` and rebuild to enable collection. Supply the existing `VITE_KAKAO_REST_API_KEY` in the build environment, then build and deploy `dist/`. Never commit the Kakao key or server credentials.
 
 The Analytics script is inserted into `<head>` only after a visitor agrees to the optional analytics prompt. A visitor can change their choice on `/privacy`. Admin pages and the Kakao login callback are excluded from page views. Page URLs sent as manual `page_view` events include only the path and safe `utm_*` campaign parameters; search terms and login codes are omitted from URLs sent to GA.
 
@@ -29,7 +29,7 @@ Events sent after consent:
 
 Only wine-matched search terms are sent, and email addresses, phone-like values, URLs, review text, and account identifiers are excluded. The Kakao callback response distinguishes newly created accounts from existing logins. No historical events are sent when consent is granted later.
 
-The updated privacy policy is announced on **2026-11-07** and states an effective date of **2026-11-14**. The frontend prevents measurement before **2026-11-14 00:00 KST**, even if the measurement ID is configured earlier.
+The updated privacy policy is announced on **2026-11-07** and states an effective date of **2026-11-14**. The frontend prevents measurement before **2026-11-14 00:00 KST** or until the web stream settings are confirmed, even if the measurement ID is configured earlier.
 
 ## Check collection
 

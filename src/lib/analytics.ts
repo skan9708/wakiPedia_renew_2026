@@ -1,7 +1,8 @@
 const configuredId = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim() ?? '';
+const streamReady = import.meta.env.VITE_GA_STREAM_READY === 'true';
 const announcedActivationTime = Date.parse('2026-11-14T00:00:00+09:00');
 export const gaMeasurementId =
-  /^G-[A-Z0-9]+$/.test(configuredId) && Date.now() >= announcedActivationTime
+  /^G-[A-Z0-9]+$/.test(configuredId) && streamReady && Date.now() >= announcedActivationTime
     ? configuredId
     : null;
 

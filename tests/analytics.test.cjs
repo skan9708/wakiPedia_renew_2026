@@ -7,7 +7,7 @@ const ts = require('typescript');
 
 const source = fs.readFileSync(path.join(__dirname, '../src/lib/analytics.ts'), 'utf8');
 
-function loadAnalytics(now) {
+function loadAnalytics(now, streamReady = true) {
   const storage = new Map();
   const scripts = [];
   const location = {
@@ -29,7 +29,9 @@ function loadAnalytics(now) {
     static now() { return now; }
   }
   const js = ts.transpileModule(
-    source.replace('import.meta.env.VITE_GA_MEASUREMENT_ID', "'G-TEST1234'"),
+    source
+      .replace('import.meta.env.VITE_GA_MEASUREMENT_ID', "'G-TEST1234'")
+      .replace('import.meta.env.VITE_GA_STREAM_READY', streamReady ? "'true'" : "'false'"),
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } },
   ).outputText;
   const module = { exports: {} };
@@ -51,6 +53,14 @@ function loadAnalytics(now) {
 
 test('analytics stays inactive before the announced date', () => {
   const { analytics, scripts } = loadAnalytics(Date.parse('2026-11-13T00:00:00+09:00'));
+  analytics.saveAnalyticsConsent('granted');
+  analytics.trackPageView('/');
+  assert.equal(analytics.gaMeasurementId, null);
+  assert.equal(scripts.length, 0);
+});
+
+test('analytics stays inactive until the GA4 stream settings are confirmed', () => {
+  const { analytics, scripts } = loadAnalytics(Date.parse('2026-11-14T00:00:00+09:00'), false);
   analytics.saveAnalyticsConsent('granted');
   analytics.trackPageView('/');
   assert.equal(analytics.gaMeasurementId, null);
