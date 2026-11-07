@@ -111,6 +111,7 @@ class KakaoLoginView(APIView):
         )
 
         # 3. 기존 유저 조회 or 생성
+        is_new_user = False
         user = User.objects.filter(kakao_id=kakao_id).first()
         if not user and email_verified:
             # 같은 이메일로 이미 가입한 계정이 있으면 그 계정에 카카오를 연결
@@ -125,8 +126,9 @@ class KakaoLoginView(APIView):
             user = User(kakao_id=kakao_id, email=email, nickname=nickname)
             user.set_unusable_password()
             user.save()
+            is_new_user = True
 
         tokens = get_tokens_for_user(user)
         return Response(
-            {**tokens, "user": UserSerializer(user, context={"request": request}).data}
+            {**tokens, "user": UserSerializer(user, context={"request": request}).data, "isNewUser": is_new_user}
         )

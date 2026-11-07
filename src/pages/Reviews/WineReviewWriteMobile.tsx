@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { trackReviewCreated } from '@/lib/analytics';
 
 type TasteOption = string;
 
@@ -88,6 +89,7 @@ export function WineReviewWriteMobile() {
       images.forEach((img) => form.append('images', img));
 
       const { data } = await api.post('/reviews/', form);
+      trackReviewCreated(wineId!, visibility);
       navigate(`/reviews/${data.id}`);
     } catch (err: any) {
       const errData = err.response?.data;

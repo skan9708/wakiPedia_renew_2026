@@ -4,6 +4,7 @@ import { SearchBar } from '@/components/common/SearchBar';
 import { CardWine, Wine } from '@/components/common/CardWine';
 import FilterSheet, { FilterValues } from '@/components/search/FilterSheet';
 import { api } from '@/lib/api';
+import { trackWineSearch } from '@/lib/analytics';
 
 export function SearchListMobile() {
   const [params] = useSearchParams();
@@ -15,6 +16,7 @@ export function SearchListMobile() {
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const lastTrackedSearchRef = useRef('');
 
   const [regions, setRegions] = useState<string[]>([]);
   const [breeds, setBreeds] = useState<string[]>([]);
@@ -48,18 +50,25 @@ export function SearchListMobile() {
 
   // 필터 변경 시 초기화
   useEffect(() => {
+    let active = true;
     setWines([]);
     setPage(1);
     setHasNext(false);
     setLoading(true);
     api.get(`/wines/?${buildQuery(1)}`)
       .then(({ data }) => {
-        setWines(data.results ?? []);
+        if (!active) return;
+        const results: Wine[] = data.results ?? [];
+        setWines(results);
         setHasNext(data.hasNext ?? false);
         setPage(1);
+        if (q && lastTrackedSearchRef.current !== q && trackWineSearch(q, results)) {
+          lastTrackedSearchRef.current = q;
+        }
       })
-      .catch(() => setWines([]))
-      .finally(() => setLoading(false));
+      .catch(() => { if (active) setWines([]); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [params.toString()]);
 
   // 다음 페이지 로드

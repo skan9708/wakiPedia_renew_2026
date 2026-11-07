@@ -15,8 +15,8 @@ export function AnalyticsTracker() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
-    if (consent === 'granted') trackPageView(location.pathname);
-  }, [consent, location.pathname]);
+    if (consent === 'granted') trackPageView(location.pathname, location.search);
+  }, [consent, location.pathname, location.search]);
 
   useEffect(() => {
     const openSettings = () => setSettingsOpen(true);

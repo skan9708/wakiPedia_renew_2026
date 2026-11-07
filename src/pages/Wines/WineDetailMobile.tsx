@@ -4,11 +4,13 @@ import { CardReview, Review } from '@/components/common/CardReview';
 import { RatingStars } from '@/components/common/RatingStars';
 import { Heart } from 'lucide-react';
 import { api } from '@/lib/api';
+import { trackWineDetail } from '@/lib/analytics';
 import { useAuthStore } from '@/store/auth';
 import defaultWineImg from '@/assets/default-wine.jpg';
 
 type WineDetail = {
   id: number;
+  wineType?: string;
   nameKr: string;
   nameEng: string;
   regions: string | null;
@@ -36,13 +38,18 @@ export function WineDetailMobile() {
 
   useEffect(() => {
     if (!id) return;
+    let active = true;
+    setLoading(true);
     api.get(`/wines/${id}/`)
       .then(({ data }) => {
+        if (!active) return;
         setWine(data);
         setIsFav(data.isFavorite);
+        trackWineDetail(data);
       })
-      .catch(() => setWine(null))
-      .finally(() => setLoading(false));
+      .catch(() => { if (active) setWine(null); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [id]);
 
   const toggleFav = async () => {

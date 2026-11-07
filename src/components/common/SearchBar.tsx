@@ -2,6 +2,7 @@ import { Search } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import { trackWineSearch } from '@/lib/analytics';
 
 type Suggestion = {
   id: number;
@@ -75,6 +76,7 @@ function SearchBar({ placeholder = '와인/품종/지역 검색', onSearch, clas
   const onSelectSuggestion = (wine: Suggestion) => {
     setShowDropdown(false);
     setQ(wine.nameKr);
+    trackWineSearch(q, [wine]);
     navigate(`/wines/${wine.id}`);
   };
 

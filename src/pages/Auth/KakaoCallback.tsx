@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { trackSignUp } from '@/lib/analytics';
 
 export function KakaoCallback() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export function KakaoCallback() {
     })
       .then(({ data }) => {
         login(data.access, data.user);
+        if (data.isNewUser === true) trackSignUp('kakao');
         navigate('/');
       })
       .catch(() => {

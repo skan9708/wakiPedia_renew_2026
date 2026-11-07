@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { trackSignUp } from '@/lib/analytics';
 
 const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY ?? '';
 
@@ -38,6 +39,7 @@ export function SignupMobile() {
         passwordConfirm: confirm,
       });
       login(data.access, data.user);
+      trackSignUp('email');
       navigate('/');
     } catch (err: any) {
       const errData = err.response?.data;

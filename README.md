@@ -24,4 +24,4 @@ The development database starts empty. To use the Django admin locally, create a
 
 Kakao login needs both `VITE_KAKAO_REST_API_KEY` (for Vite) and `KAKAO_REST_API_KEY` (for Django). Set these only in your local shell or ignored `.env` files when you have the development key and a registered local redirect URI. Leave `AWS_STORAGE_BUCKET_NAME` unset to keep uploads in local `backend/media/`. The production `/etc/waki.env`, EC2 SSH key, database backup, and administrator password are not needed for normal local development.
 
-Google Analytics 4 is optional and inactive unless `VITE_GA_MEASUREMENT_ID` is set during the frontend build. See [docs/analytics-setup.md](docs/analytics-setup.md) for property settings, consent behavior, and verification.
+The production frontend uses the public GA4 measurement ID in `.env.production`. Local development remains untracked unless `VITE_GA_MEASUREMENT_ID` is set explicitly. Analytics loads only after visitor consent and the announced 2026-11-14 start date. See [docs/analytics-setup.md](docs/analytics-setup.md) for web stream settings and reports.
