@@ -1,8 +1,10 @@
+import { gaMeasurementId } from '@/lib/analytics';
+
 export function PrivacyPolicyMobile() {
   return (
     <div className="mx-auto w-full max-w-mobile px-4 py-6 space-y-5 text-sm leading-relaxed">
       <h1 className="text-xl font-bold">개인정보처리방침</h1>
-      <p className="text-muted text-xs">공고일: 2026년 7월 28일 · 시행일: 2026년 8월 1일</p>
+      <p className="text-muted text-xs">공고일: 2026년 11월 7일 · 시행일: 2026년 11월 14일</p>
 
       <p>
         와키피디아(이하 "운영자")는 이용자의 개인정보를 중요하게 생각하며 「개인정보 보호법」 등 관계 법령을 준수합니다.
@@ -50,7 +52,7 @@ export function PrivacyPolicyMobile() {
         <SubTitle>6. 서비스 이용 과정에서 자동으로 생성되는 정보</SubTitle>
         <p><b>처리 목적:</b> 로그인 상태 유지, 서비스 이용환경 개선, 이용 통계 분석, 오류 및 장애 분석, 서비스 보안, 부정 이용과 비정상 접근 방지</p>
         <p><b>처리 항목:</b> IP 주소, 쿠키, 브라우저 및 운영체제 정보, 기기 정보, 접속 일시, 접속 및 서비스 이용 기록, 오류 기록, 유입 경로, 비정상 이용 및 보안 관련 기록</p>
-        <p><b>보유기간:</b> 생성일부터 3개월</p>
+        <p><b>보유기간:</b> 운영자가 직접 보관하는 접속·보안 기록은 생성일부터 3개월. 동의 후 Google Analytics로 처리하는 통계 정보는 제8조의 기준을 따릅니다.</p>
       </Section>
 
       <Section title="제3조 회원 콘텐츠와 개인정보의 공개">
@@ -73,11 +75,17 @@ export function PrivacyPolicyMobile() {
         <SubTitle>2. Google LLC</SubTitle>
         <p><b>위탁 업무:</b> 고객지원 이메일 수신, 고객 문의와 첨부자료의 저장 및 관리 (Gmail)</p>
         <p><b>보유기간:</b> 문의 처리 완료일부터 1년 또는 고객지원 계정에서 해당 이메일이 삭제될 때까지</p>
+
+        <SubTitle>3. Google LLC (Google Analytics 4)</SubTitle>
+        <p><b>위탁 업무:</b> 이용자가 별도로 동의한 경우 방문·페이지 조회 통계 분석</p>
+        <p><b>처리 항목:</b> 방문 페이지, 접속 시각, 유입 경로, 브라우저·기기 정보, 분석 쿠키 식별자</p>
+        <p><b>보유기간:</b> 분석 쿠키는 최초 설정일부터 최대 90일, Google Analytics의 사용자·이벤트별 세부 자료는 2개월로 설정합니다. 집계된 표준 보고서의 보유기간은 이 설정과 다를 수 있습니다.</p>
       </Section>
 
       <Section title="제6조 개인정보의 국외 이전">
         <p>와키피디아는 주요 회원정보, 리뷰 및 업로드 사진을 AWS 아시아 태평양 서울 리전에서 저장·처리하는 것을 원칙으로 합니다.</p>
         <p>이용자가 wakipedia1682@gmail.com으로 이메일을 발송하는 경우 Google LLC 및 Google의 계열사가 위치한 국가(미국 등)로 개인정보가 이전될 수 있습니다.</p>
+        <p>이용자가 방문 통계 사용에 동의하면, 웹브라우저가 제5조에 기재한 통계 정보를 Google LLC의 분석 서버(미국 등)로 HTTPS를 통해 전송할 수 있습니다. 통계 사용을 거부하거나 나중에 동의를 철회해도 서비스 이용에는 영향이 없습니다.</p>
         <p>국외 이전을 원하지 않는 이용자는 이메일을 발송하지 않을 수 있습니다. 다만 별도의 서비스 내 문의 기능이 제공되지 않는 경우 고객 문의 처리가 제한될 수 있습니다.</p>
       </Section>
 
@@ -88,8 +96,14 @@ export function PrivacyPolicyMobile() {
       </Section>
 
       <Section title="제8조 쿠키 및 자동수집장치">
-        <p>와키피디아는 로그인 상태 유지, 이용자 환경 설정, 보안 및 서비스 이용 통계 분석을 위해 쿠키를 사용할 수 있습니다.</p>
+        <p>와키피디아는 로그인 상태 유지, 이용자 환경 설정 및 보안을 위해 쿠키를 사용할 수 있습니다. Google Analytics 4 분석 쿠키는 별도로 동의한 경우에만 사용하며, 동의 전에는 Google Analytics 스크립트를 불러오지 않습니다.</p>
         <p>이용자는 웹브라우저 설정을 통해 쿠키의 저장을 허용하거나 차단할 수 있습니다. 필수 쿠키를 차단하면 로그인, 리뷰 작성 및 계정 관리 등 서비스의 일부 기능이 정상적으로 작동하지 않을 수 있습니다.</p>
+        <p>분석 쿠키 동의는 아래 버튼에서 언제든 변경할 수 있습니다. 동의를 철회하면 이후 방문 통계 수집을 중단하고 이 사이트의 Google Analytics 쿠키를 삭제합니다.</p>
+        {gaMeasurementId && (
+          <button type="button" className="underline" onClick={() => window.dispatchEvent(new Event('open-analytics-settings'))}>
+            방문 통계 쿠키 설정 변경
+          </button>
+        )}
         <p>와키피디아는 현재 이용자의 법적 권리나 의무에 중대한 영향을 미치는 맞춤형 광고를 위해 개인정보를 처리하지 않습니다.</p>
       </Section>
 
