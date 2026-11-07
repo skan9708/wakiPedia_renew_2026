@@ -13,7 +13,7 @@
 
 ## Connect the site
 
-The public measurement ID is tracked in `.env.production`, so a production Vite build includes it automatically. The `VITE_GA_STREAM_READY` flag stays `false` until the web stream settings above are confirmed; set it to `true` and rebuild to enable collection. Supply the existing `VITE_KAKAO_REST_API_KEY` in the build environment, then build and deploy `dist/`. Never commit the Kakao key or server credentials.
+The public measurement ID is tracked in `.env.production`, so a production Vite build includes it automatically. The site owner confirmed the web stream settings above on 2026-11-07, and `VITE_GA_STREAM_READY` is now `true`. Supply the existing `VITE_KAKAO_REST_API_KEY` in the build environment, then build and deploy `dist/`. Never commit the Kakao key or server credentials.
 
 The Analytics script is inserted into `<head>` only after a visitor agrees to the optional analytics prompt. A visitor can change their choice on `/privacy`. Admin pages and the Kakao login callback are excluded from page views. Page URLs sent as manual `page_view` events include only the path and safe `utm_*` campaign parameters; search terms and login codes are omitted from URLs sent to GA.
 
