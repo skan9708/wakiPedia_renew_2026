@@ -147,4 +147,5 @@ class Command(BaseCommand):
             raise CommandError("Backup path must be a new file in an existing directory.")
         with sqlite3.connect(source) as src, sqlite3.connect(target) as dst:
             src.backup(dst)
+        target.chmod(0o600)
         self.stdout.write("BACKUP: " + str(target))
