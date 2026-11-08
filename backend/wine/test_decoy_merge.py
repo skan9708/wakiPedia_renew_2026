@@ -5,6 +5,7 @@ from django.test import SimpleTestCase, TestCase
 
 from user.models import User
 from wine.management.commands.merge_reviewed_decoy_wines import Command
+from wine.management.commands import import_wine_catalog
 from wine.management.commands.import_wine_catalog import apply_reviewed_merges
 from wine.models import Country, GrapeVariety, Wine, WineReview, WineReviewImage
 
@@ -27,7 +28,19 @@ class ReviewedExportMergeTests(SimpleTestCase):
             wine(8437, "Decoy Cabernet Sauvignon", "디코이 카베르네 소비뇽", "미국", "레드", "카베르네 소비뇽"),
         ]
         mapping = {item["id"]: item["id"] for item in wines}
-        representatives, mapping = apply_reviewed_merges({"wines": wines}, mapping)
+        previous_sources = {6063, 5803, 8010}
+        with (
+            patch.object(import_wine_catalog, "REPRESENTATIVE_MERGES", {
+                source: target for source, target in import_wine_catalog.REPRESENTATIVE_MERGES.items()
+                if source in previous_sources
+            }),
+            patch.object(import_wine_catalog, "REPRESENTATIVE_MERGE_NAMES", {
+                source: names for source, names in import_wine_catalog.REPRESENTATIVE_MERGE_NAMES.items()
+                if source in previous_sources
+            }),
+            patch.object(import_wine_catalog, "CANONICAL_ENGLISH_NAMES", {}),
+        ):
+            representatives, mapping = apply_reviewed_merges({"wines": wines}, mapping)
         by_id = {item["id"]: item for item in representatives}
 
         self.assertEqual(mapping[5803], 4816)

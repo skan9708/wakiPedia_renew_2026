@@ -14,6 +14,12 @@ from django.db.models import Count
 
 from user.models import User
 from wine.models import Country, GrapeVariety, Wine, WineReview
+from wine.verified_catalog_merges import (
+    CANONICAL_ENGLISH_NAMES,
+    EXCLUDE_SOURCE_ALIASES,
+    PHOTO_VERIFIED_MAP,
+    PHOTO_VERIFIED_NAMES,
+)
 
 
 TYPE_MAP = {
@@ -25,11 +31,12 @@ TYPE_MAP = {
 # These representative pairs were verified against bottle labels. The 2019
 # Decoy Merlot photos match; wine 8010's photo reads Cabernet Sauvignon.
 # This catalog groups vintages of the same named wine together.
-REPRESENTATIVE_MERGES = {6063: 5521, 5803: 4816, 8010: 8437}
+REPRESENTATIVE_MERGES = {6063: 5521, 5803: 4816, 8010: 8437, **PHOTO_VERIFIED_MAP}
 REPRESENTATIVE_MERGE_NAMES = {
     6063: ("Villa Maria Sauvignon Blanc", "Villa Maria,Private Bin Sauvignon Blanc"),
     5803: ("Decoy sonoma county Merlot", "Duckhorn Decoy Merlot"),
     8010: ("decoy", "Decoy Cabernet Sauvignon"),
+    **PHOTO_VERIFIED_NAMES,
 }
 
 
@@ -103,15 +110,22 @@ def apply_reviewed_merges(data, mapping):
             raise CommandError(f"Reviewed merge {source}:{target} has conflicting wine details.")
         source_grapes = {name.strip() for name in (original.get("grapesRaw") or "").split(",") if name.strip()}
         target_grapes = {name.strip() for name in (representative.get("grapesRaw") or "").split(",") if name.strip()}
-        if not source_grapes.issubset(target_grapes):
+        if not source_grapes.issubset(target_grapes) and (
+            source not in PHOTO_VERIFIED_MAP or not source_grapes & target_grapes
+        ):
             raise CommandError(f"Reviewed merge {source}:{target} has conflicting grapes.")
         aliases = representative.get("searchAliasesRaw") or ""
-        for name in (original["nameEn"], original["nameKo"], original.get("searchAliasesRaw") or ""):
+        source_aliases = () if source in EXCLUDE_SOURCE_ALIASES else (
+            original["nameEn"], original["nameKo"], original.get("searchAliasesRaw") or ""
+        )
+        for name in source_aliases:
             if name and name.casefold() not in aliases.casefold():
                 aliases = f"{aliases}, {name}" if aliases else name
         representative["searchAliasesRaw"] = aliases
     by_id[4816]["nameEn"] = "Decoy Merlot"
     by_id[4816]["nameKo"] = "디코이 메를로"
+    for target, corrected_name in CANONICAL_ENGLISH_NAMES.items():
+        by_id[target]["nameEn"] = corrected_name
     representatives = [item for item in data["wines"] if item["id"] not in REPRESENTATIVE_MERGES]
     mapping = {source: REPRESENTATIVE_MERGES.get(target, target) for source, target in mapping.items()}
     return representatives, mapping
