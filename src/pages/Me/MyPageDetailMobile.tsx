@@ -183,6 +183,7 @@ export function MyPageDetailMobile() {
             <p className="text-sm font-medium">휴대폰 인증</p>
             <p className="text-xs text-muted">아이디를 잊었을 때 기존 기록을 찾으려면 번호를 인증해 등록해주세요. 선택 사항이며, 광고 문자에는 사용하지 않습니다.</p>
             <p className="text-xs text-muted">수집 항목: 휴대폰 번호 · 보유 기간: 삭제 요청 또는 탈퇴 시까지 · 동의 거부 시 아이디 찾기를 사용할 수 없습니다.</p>
+            <p className="text-xs text-muted">인증번호는 5분간 유효합니다. 재발송은 1분 후 가능하며, 번호당 24시간 최대 5회까지 요청할 수 있습니다.</p>
             {phoneEnabled && <label className="flex items-start gap-2 text-xs">
               <input type="checkbox" checked={phoneConsent} onChange={e => setPhoneConsent(e.target.checked)} />
               휴대폰 번호 수집·이용에 동의합니다 (선택)
