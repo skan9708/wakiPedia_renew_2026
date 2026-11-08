@@ -7,7 +7,7 @@ from user.models import User
 from wine.management.commands import import_wine_catalog, merge_verified_catalog_wines
 from wine.models import Country, GrapeVariety, Wine, WineReview, WineReviewImage
 from wine.photo_metadata_exceptions import PHOTO_METADATA_EXCEPTIONS
-from wine.verified_catalog_merges import CANONICAL_ENGLISH_NAMES, PHOTO_VERIFIED_MERGES
+from wine.verified_catalog_merges import CANONICAL_ENGLISH_NAMES, VERIFIED_CATALOG_MERGES
 
 
 class ReviewedCatalogImportTests(SimpleTestCase):
@@ -44,6 +44,9 @@ class ReviewedCatalogImportTests(SimpleTestCase):
             self.assertNotIn(source, by_id)
         self.assertEqual(by_id[4874]["nameEn"], CANONICAL_ENGLISH_NAMES[4874])
         self.assertNotIn("Brut Nature", by_id[4874]["searchAliasesRaw"])
+        self.assertIn("dom perignon magnum", by_id[6170]["searchAliasesRaw"])
+        self.assertIn("Henkell Trocken Piccolo", by_id[4813]["searchAliasesRaw"])
+        self.assertIn("Henkell Trocken Dry Sec", by_id[4813]["searchAliasesRaw"])
 
 
 class VerifiedCatalogMergeTests(TestCase):
@@ -91,10 +94,10 @@ class VerifiedCatalogMergeTests(TestCase):
 
     def test_merge_preserves_reviews_favorites_images_and_redirects(self):
         chosen = tuple(
-            entry for entry in PHOTO_VERIFIED_MERGES if entry[0] in {6322, 9182}
+            entry for entry in VERIFIED_CATALOG_MERGES if entry[0] in {6322, 9182}
         )
         with (
-            patch.object(merge_verified_catalog_wines, "PHOTO_VERIFIED_MERGES", chosen),
+            patch.object(merge_verified_catalog_wines, "VERIFIED_CATALOG_MERGES", chosen),
             patch.object(merge_verified_catalog_wines.Command, "_backup") as backup,
         ):
             call_command("merge_verified_catalog_wines", "--apply", "--backup-path", "unused-test-backup.sqlite3")
@@ -164,7 +167,7 @@ class PreviouslyMergedRedirectTests(TestCase):
             (7004, 7001, "Example Pinot Noir", "Example Pinot Noir"),
         )
         with (
-            patch.object(merge_verified_catalog_wines, "PHOTO_VERIFIED_MERGES", chosen),
+            patch.object(merge_verified_catalog_wines, "VERIFIED_CATALOG_MERGES", chosen),
             patch.object(merge_verified_catalog_wines.Command, "_backup") as backup,
         ):
             call_command("merge_verified_catalog_wines", "--apply", "--backup-path", "unused-test-backup.sqlite3")
@@ -179,3 +182,85 @@ class PreviouslyMergedRedirectTests(TestCase):
         self.assertEqual(WineReviewImage.objects.count(), 4)
         self.assertEqual(set(user.favorite_wines.values_list("id", flat=True)), {target.id})
         self.assertIn("Example Pinot Noir", Wine.objects.get(id=target.id).search_aliases)
+
+
+class ResearchVerifiedMergeTests(TestCase):
+    def test_researched_pair_keeps_target_photo_and_moves_review(self):
+        country = Country.objects.create(kor_name="United States", eng_name="United States")
+        cabernet = GrapeVariety.objects.create(kor_name="Cabernet Sauvignon", eng_name="Cabernet Sauvignon")
+        merlot = GrapeVariety.objects.create(kor_name="Merlot", eng_name="Merlot")
+        source = Wine.objects.create(
+            id=7948, eng_name="Textbook Cabernet Sauvignon", kor_name="Textbook",
+            type="red", country=country, image_url="https://example.com/source.jpg",
+        )
+        target = Wine.objects.create(
+            id=6095, eng_name="Textbook Cabernet sauvignon", kor_name="Textbook Cabernet",
+            type="red", country=country, image_url="https://example.com/target.jpg",
+        )
+        source.grape_varieties.add(cabernet, merlot)
+        target.grape_varieties.add(cabernet)
+        user = User.objects.create_user(
+            email="research-merge-test@example.com", password="test-password", nickname="Research merge"
+        )
+        review = WineReview.objects.create(
+            wine=source, user=user, text="Review", rating=40,
+            body=2, acidity=2, sweetness=2, tannin=2,
+        )
+        WineReviewImage.objects.create(review=review, image="review_images/textbook.jpg")
+        user.favorite_wines.add(source)
+        chosen = tuple(entry for entry in VERIFIED_CATALOG_MERGES if entry[0] == source.id)
+
+        with (
+            patch.object(merge_verified_catalog_wines, "VERIFIED_CATALOG_MERGES", chosen),
+            patch.object(merge_verified_catalog_wines.Command, "_backup"),
+        ):
+            call_command("merge_verified_catalog_wines", "--apply", "--backup-path", "unused-test-backup.sqlite3")
+
+        source.refresh_from_db()
+        target.refresh_from_db()
+        self.assertFalse(source.catalog_visible)
+        self.assertEqual(source.canonical_wine_id, target.id)
+        self.assertEqual(target.image_url, "https://example.com/target.jpg")
+        self.assertEqual(WineReview.objects.get(pk=review.id).wine_id, target.id)
+        self.assertEqual(WineReviewImage.objects.count(), 1)
+        self.assertEqual(set(user.favorite_wines.values_list("id", flat=True)), {target.id})
+
+    def test_testamatta_keeps_verified_photo_when_source_photo_is_wrong(self):
+        country = Country.objects.create(kor_name="Italy", eng_name="Italy")
+        sangiovese = GrapeVariety.objects.create(kor_name="Sangiovese", eng_name="Sangiovese")
+        correct_photo = merge_verified_catalog_wines.EXPECTED_REPRESENTATIVE_IMAGE_URLS[9105]
+        source = Wine.objects.create(
+            id=5953, eng_name="Bibi Graetz, Testamatta Rosso", kor_name="Testamatta",
+            type="red", country=country, image_url="https://example.com/wrong-colore.jpg",
+        )
+        target = Wine.objects.create(
+            id=9105, eng_name="Bibi Graetz, Testamatta Rosso 20th Anniversary",
+            kor_name="Testamatta 20th", type="red", country=country, image_url=correct_photo,
+        )
+        source.grape_varieties.add(sangiovese)
+        target.grape_varieties.add(sangiovese)
+        user = User.objects.create_user(
+            email="testamatta-merge-test@example.com", password="test-password", nickname="Testamatta"
+        )
+        review = WineReview.objects.create(
+            wine=source, user=user, text="Testamatta review", rating=40,
+            body=2, acidity=2, sweetness=2, tannin=2,
+        )
+        WineReviewImage.objects.create(review=review, image="review_images/testamatta.jpg")
+        chosen = tuple(entry for entry in VERIFIED_CATALOG_MERGES if entry[0] == source.id)
+
+        with (
+            patch.object(merge_verified_catalog_wines, "VERIFIED_CATALOG_MERGES", chosen),
+            patch.object(merge_verified_catalog_wines.Command, "_backup"),
+        ):
+            call_command("merge_verified_catalog_wines", "--apply", "--backup-path", "unused-test-backup.sqlite3")
+
+        target.refresh_from_db()
+        source.refresh_from_db()
+        self.assertFalse(source.catalog_visible)
+        self.assertEqual(source.canonical_wine_id, target.id)
+        self.assertEqual(target.eng_name, "Bibi Graetz Testamatta Rosso")
+        self.assertEqual(target.kor_name, "비비 그라츠 테스타마타 로쏘")
+        self.assertEqual(target.image_url, correct_photo)
+        self.assertEqual(WineReview.objects.get(pk=review.id).wine_id, target.id)
+        self.assertEqual(WineReviewImage.objects.count(), 1)

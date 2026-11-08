@@ -19,8 +19,8 @@ from wine.verified_catalog_merges import (
     CANONICAL_ENGLISH_NAMES,
     CANONICAL_KOREAN_NAMES,
     EXCLUDE_SOURCE_ALIASES,
-    PHOTO_VERIFIED_MAP,
-    PHOTO_VERIFIED_NAMES,
+    VERIFIED_CATALOG_MAP,
+    VERIFIED_CATALOG_NAMES,
 )
 
 
@@ -33,12 +33,12 @@ TYPE_MAP = {
 # These representative pairs were verified against bottle labels. The 2019
 # Decoy Merlot photos match; wine 8010's photo reads Cabernet Sauvignon.
 # This catalog groups vintages of the same named wine together.
-REPRESENTATIVE_MERGES = {6063: 5521, 5803: 4816, 8010: 8437, **PHOTO_VERIFIED_MAP}
+REPRESENTATIVE_MERGES = {6063: 5521, 5803: 4816, 8010: 8437, **VERIFIED_CATALOG_MAP}
 REPRESENTATIVE_MERGE_NAMES = {
     6063: ("Villa Maria Sauvignon Blanc", "Villa Maria,Private Bin Sauvignon Blanc"),
     5803: ("Decoy sonoma county Merlot", "Duckhorn Decoy Merlot"),
     8010: ("decoy", "Decoy Cabernet Sauvignon"),
-    **PHOTO_VERIFIED_NAMES,
+    **VERIFIED_CATALOG_NAMES,
 }
 
 
@@ -128,12 +128,12 @@ def apply_reviewed_merges(data, mapping):
                 raise CommandError(f"Reviewed merge {source}:{target} has conflicting wine details.")
             grapes_conflict = (
                 source_grapes and target_grapes and not source_grapes & target_grapes
-                if source in PHOTO_VERIFIED_MAP
+                if source in VERIFIED_CATALOG_MAP
                 else not source_grapes.issubset(target_grapes)
             )
             if grapes_conflict:
                 raise CommandError(f"Reviewed merge {source}:{target} has conflicting grapes.")
-            if source in PHOTO_VERIFIED_MAP and source_grapes and not target_grapes:
+            if source in VERIFIED_CATALOG_MAP and source_grapes and not target_grapes:
                 representative["grapesRaw"] = original["grapesRaw"]
         aliases = representative.get("searchAliasesRaw") or ""
         source_aliases = () if source in EXCLUDE_SOURCE_ALIASES else (

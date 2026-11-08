@@ -1,4 +1,4 @@
-"""Apply the 2026-11-08 bottle-label verified catalog merges."""
+"""Apply the 2026-11-08 reviewed catalog merges."""
 
 import json
 import sqlite3
@@ -16,8 +16,15 @@ from wine.verified_catalog_merges import (
     CANONICAL_ENGLISH_NAMES,
     CANONICAL_KOREAN_NAMES,
     EXCLUDE_SOURCE_ALIASES,
-    PHOTO_VERIFIED_MERGES,
+    VERIFIED_CATALOG_MERGES,
 )
+
+
+# Source 5953 has a Colore photo despite its Testamatta name and reviews.
+# Preserve the correctly photographed representative 9105.
+EXPECTED_REPRESENTATIVE_IMAGE_URLS = {
+    9105: "https://wakipedia-media.s3.ap-northeast-2.amazonaws.com/media/wines/bubble/f1745496103202x582497231354581800.png",
+}
 
 
 def normalized_name(value):
@@ -42,7 +49,7 @@ def remove_incorrect_aliases(aliases, incorrect):
 
 
 class Command(BaseCommand):
-    help = "Preview or apply bottle-label verified source-to-representative merges."
+    help = "Preview or apply reviewed source-to-representative catalog merges."
 
     def add_arguments(self, parser):
         parser.add_argument("--apply", action="store_true")
@@ -52,13 +59,13 @@ class Command(BaseCommand):
         if options["apply"] and not options["backup_path"]:
             raise CommandError("--apply requires --backup-path.")
 
-        planned_targets = {source: target for source, target, _, _ in PHOTO_VERIFIED_MERGES}
-        if len(planned_targets) != len(PHOTO_VERIFIED_MERGES):
+        planned_targets = {source: target for source, target, _, _ in VERIFIED_CATALOG_MERGES}
+        if len(planned_targets) != len(VERIFIED_CATALOG_MERGES):
             raise CommandError("A verified source appears more than once.")
         if any(source == target or target in planned_targets for source, target in planned_targets.items()):
             raise CommandError("Verified merges must point directly to an unmerged representative.")
 
-        ids = {wine_id for source, target, _, _ in PHOTO_VERIFIED_MERGES for wine_id in (source, target)}
+        ids = {wine_id for source, target, _, _ in VERIFIED_CATALOG_MERGES for wine_id in (source, target)}
         wines = Wine.objects.in_bulk(ids)
         if set(wines) != ids:
             raise CommandError("A verified source or representative is missing.")
@@ -85,7 +92,7 @@ class Command(BaseCommand):
         favorites = User.favorite_wines.through
         pending = []
         summary = []
-        for source_id, target_id, source_name, target_name in PHOTO_VERIFIED_MERGES:
+        for source_id, target_id, source_name, target_name in VERIFIED_CATALOG_MERGES:
             source, target = wines[source_id], wines[target_id]
             if normalized_name(source.eng_name) != normalized_name(source_name):
                 raise CommandError(f"Source {source_id} has an unexpected name.")
@@ -96,6 +103,9 @@ class Command(BaseCommand):
                 raise CommandError(f"Representative {target_id} has an unexpected name.")
             if not target.catalog_visible or target.canonical_wine_id is not None:
                 raise CommandError(f"Representative {target_id} is not active.")
+            expected_image_url = EXPECTED_REPRESENTATIVE_IMAGE_URLS.get(target_id)
+            if expected_image_url and target.image_url != expected_image_url:
+                raise CommandError(f"Representative {target_id} has an unexpected image URL.")
             source_grapes = set(source.grape_varieties.values_list("id", flat=True))
             target_grapes = set(target.grape_varieties.values_list("id", flat=True))
             if source_id in PHOTO_METADATA_EXCEPTIONS:
@@ -229,7 +239,7 @@ class Command(BaseCommand):
             active_sources = sum(was_visible for _, _, was_visible in pending)
             if Wine.objects.filter(catalog_visible=True).count() != original_visible_count - active_sources:
                 raise CommandError("Visible wine count changed unexpectedly; rolling back.")
-        self.stdout.write(self.style.SUCCESS("APPLIED: bottle-label verified catalog merges"))
+        self.stdout.write(self.style.SUCCESS("APPLIED: reviewed catalog merges"))
 
     def _backup(self, destination):
         if connection.vendor != "sqlite":

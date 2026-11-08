@@ -1,4 +1,4 @@
-"""Bottle-label verified catalog merges approved on 2026-11-08.
+"""Reviewed catalog merges approved on 2026-11-08.
 
 Each entry is (source ID, representative ID, expected source name, expected
 representative name). Vintages of the same named product share one wine page.
@@ -95,6 +95,39 @@ PHOTO_VERIFIED_MERGES = (
     (9541, 6706, 'Caymus C/S', 'Caymus Cabernet Sauvignon'),
 )
 
+# These additional pairs were verified from the photographed labels together
+# with producer/product information or a corrected catalog name. The source
+# name may be vague or describe an alternate bottle size.
+RESEARCH_VERIFIED_MERGES = (
+    (5052, 6170, "Dom Perignon", "Dom Perignon Vintage"),
+    (5106, 6170, "dom perignon magnum", "Dom Perignon Vintage"),
+    (5223, 5069, "chateau Talbot", "Chateau Talbot saint julien"),
+    (5511, 4834, "Bohigas Cava", "Bohigas Cava Brut Reserva"),
+    (5668, 5670, "Freixenet Cordon Negro Gran Selection Cava", "Freixenet, Cordon Negro Cava Brut"),
+    (5953, 9105, "Bibi Graetz, Testamatta Rosso", "Bibi Graetz, Testamatta Rosso 20th Anniversary"),
+    (6419, 7220, "MUCHO MÁS", "Mucho Mas White"),
+    (6871, 8062, "Cloudy bay", "Cloudy bay"),
+    (7032, 5030, "Andre Clouet Brut", "Andre Clouet, Grande Reserve Brut"),
+    (7223, 4813, "Henkell Trocken Piccolo", "Henkell Trocken"),
+    (7295, 4813, "Henkell Trocken Dry Sec", "Henkell Trocken"),
+    (7415, 5007, "Piper-Heidsieck, Brut", "Piper Heidsieck Cuvee Brut"),
+    (7550, 6336, "San Pedro, 1865 Selected Vineyard Sauvignon Blanc", "1865 Selected Vineyards Sauvignon Blanc"),
+    (7948, 6095, "Textbook Cabernet Sauvignon", "Textbook Cabernet sauvignon"),
+    (8057, 4876, "Piper Heidsieck Brut Vintage", "PIPER-HEIDSIECK"),
+    (8282, 5703, "southern ocean", "SOUTHERN OCEAN SAUVIGNON BLANC SOUTH AFRICA"),
+    (8292, 6926, "Volver Single Vineyard Special Edition", "Volver Single Vineyard"),
+    (8425, 6985, "Louis Roederer Collection 243", "Louis Roederer Collection"),
+    (8677, 8062, "CLOUDY BAY", "Cloudy bay"),
+    (9085, 6284, "black stallion", "Black Stallion Cabernet Sauvignon"),
+)
+
+VERIFIED_CATALOG_MERGES = PHOTO_VERIFIED_MERGES + RESEARCH_VERIFIED_MERGES
+VERIFIED_CATALOG_MAP = {source: target for source, target, _, _ in VERIFIED_CATALOG_MERGES}
+VERIFIED_CATALOG_NAMES = {
+    source: (source_name, target_name)
+    for source, target, source_name, target_name in VERIFIED_CATALOG_MERGES
+}
+
 PHOTO_VERIFIED_MAP = {source: target for source, target, _, _ in PHOTO_VERIFIED_MERGES}
 PHOTO_VERIFIED_NAMES = {
     source: (source_name, target_name)
@@ -113,10 +146,12 @@ CANONICAL_ENGLISH_NAMES = {
     5777: "Federico Paternina Cava Organic",
     6027: "Rue de la Soif",
     8369: "Federico Paternina Banda Azul Vintage Brut Cava",
+    9105: "Bibi Graetz Testamatta Rosso",
 }
 
 CANONICAL_KOREAN_NAMES = {
     5658: "펜폴즈 쿠눈가 힐 쉬라즈 카베르네",
     5777: "페데리코 파테르니나 까바 오가닉",
     8369: "페데리코 파테르니나 반다 아줄 빈티지 브뤼 까바",
+    9105: "비비 그라츠 테스타마타 로쏘",
 }
