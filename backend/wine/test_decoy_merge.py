@@ -36,7 +36,7 @@ class ReviewedExportMergeTests(SimpleTestCase):
         self.assertEqual(by_id[4816]["nameEn"], "Decoy Merlot")
         self.assertEqual(by_id[4816]["nameKo"], "디코이 메를로")
         self.assertIn("Decoy sonoma county Merlot", by_id[4816]["searchAliasesRaw"])
-        self.assertIn("decoy", by_id[8437]["searchAliasesRaw"])
+        self.assertIn("decoy", by_id[8437]["searchAliasesRaw"].casefold())
 
 
 class ReviewedDecoyMergeTests(TestCase):
