@@ -13,9 +13,11 @@ from django.db import connection, transaction
 from django.db.models import Count
 
 from user.models import User
+from wine.photo_metadata_exceptions import PHOTO_METADATA_EXCEPTIONS
 from wine.models import Country, GrapeVariety, Wine, WineReview
 from wine.verified_catalog_merges import (
     CANONICAL_ENGLISH_NAMES,
+    CANONICAL_KOREAN_NAMES,
     EXCLUDE_SOURCE_ALIASES,
     PHOTO_VERIFIED_MAP,
     PHOTO_VERIFIED_NAMES,
@@ -106,14 +108,33 @@ def apply_reviewed_merges(data, mapping):
         if (normalized_name(original["nameEn"]) != normalized_name(expected_source)
                 or normalized_name(representative["nameEn"]) != normalized_name(expected_target)):
             raise CommandError(f"Reviewed merge {source}:{target} has unexpected wine names.")
-        if any(original[field] != representative[field] for field in ("country", "type")):
-            raise CommandError(f"Reviewed merge {source}:{target} has conflicting wine details.")
         source_grapes = {name.strip() for name in (original.get("grapesRaw") or "").split(",") if name.strip()}
         target_grapes = {name.strip() for name in (representative.get("grapesRaw") or "").split(",") if name.strip()}
-        if not source_grapes.issubset(target_grapes) and (
-            source not in PHOTO_VERIFIED_MAP or not source_grapes & target_grapes
-        ):
-            raise CommandError(f"Reviewed merge {source}:{target} has conflicting grapes.")
+        if source in PHOTO_METADATA_EXCEPTIONS:
+            source_details = {
+                "name": original["nameEn"], "type": original["type"],
+                "country": original["country"], "image_url": None,
+            }
+            target_details = {
+                "name": representative["nameEn"], "type": representative["type"],
+                "country": representative["country"], "image_url": None,
+            }
+            if not PHOTO_METADATA_EXCEPTIONS[source](
+                source, target, source_details, target_details, source_grapes, target_grapes,
+            ):
+                raise CommandError(f"Reviewed photographed merge {source}:{target} changed metadata.")
+        else:
+            if any(original[field] != representative[field] for field in ("country", "type")):
+                raise CommandError(f"Reviewed merge {source}:{target} has conflicting wine details.")
+            grapes_conflict = (
+                source_grapes and target_grapes and not source_grapes & target_grapes
+                if source in PHOTO_VERIFIED_MAP
+                else not source_grapes.issubset(target_grapes)
+            )
+            if grapes_conflict:
+                raise CommandError(f"Reviewed merge {source}:{target} has conflicting grapes.")
+            if source in PHOTO_VERIFIED_MAP and source_grapes and not target_grapes:
+                representative["grapesRaw"] = original["grapesRaw"]
         aliases = representative.get("searchAliasesRaw") or ""
         source_aliases = () if source in EXCLUDE_SOURCE_ALIASES else (
             original["nameEn"], original["nameKo"], original.get("searchAliasesRaw") or ""
@@ -125,7 +146,20 @@ def apply_reviewed_merges(data, mapping):
     by_id[4816]["nameEn"] = "Decoy Merlot"
     by_id[4816]["nameKo"] = "디코이 메를로"
     for target, corrected_name in CANONICAL_ENGLISH_NAMES.items():
-        by_id[target]["nameEn"] = corrected_name
+        if target in by_id:
+            by_id[target]["nameEn"] = corrected_name
+    for target, corrected_name in CANONICAL_KOREAN_NAMES.items():
+        if target in by_id:
+            by_id[target]["nameKo"] = corrected_name
+    for source_id in (5658, 5777):
+        if source_id not in by_id:
+            continue
+        by_id[source_id]["searchAliasesRaw"] = (
+            f"{by_id[source_id]['nameEn']}, {by_id[source_id]['nameKo']}"
+        )
+    # Wine 5658's old export wrongly omits the Cabernet Sauvignon component.
+    if 5658 in by_id:
+        by_id[5658]["grapesRaw"] = "쉬라, 까베르네소비뇽"
     representatives = [item for item in data["wines"] if item["id"] not in REPRESENTATIVE_MERGES]
     mapping = {source: REPRESENTATIVE_MERGES.get(target, target) for source, target in mapping.items()}
     return representatives, mapping

@@ -3,15 +3,18 @@
 import json
 import sqlite3
 import unicodedata
+from contextlib import closing
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
 
 from user.models import User
-from wine.models import Wine, WineReview
+from wine.models import Wine, WineReview, WineReviewImage
+from wine.photo_metadata_exceptions import PHOTO_METADATA_EXCEPTIONS
 from wine.verified_catalog_merges import (
     CANONICAL_ENGLISH_NAMES,
+    CANONICAL_KOREAN_NAMES,
     EXCLUDE_SOURCE_ALIASES,
     PHOTO_VERIFIED_MERGES,
 )
@@ -24,8 +27,22 @@ def normalized_name(value):
     )
 
 
+# A previous merge added a source name that its bottle label disproves.
+INCORRECT_EXISTING_ALIASES = {
+    4821: {"Bread & Butter Napa Pinot Noir", "브레드 앤 버터 나파 피노누아"},
+}
+
+
+def remove_incorrect_aliases(aliases, incorrect):
+    incorrect_keys = {name.casefold() for name in incorrect}
+    return ", ".join(
+        name.strip() for name in aliases.split(",")
+        if name.strip() and name.strip().casefold() not in incorrect_keys
+    )
+
+
 class Command(BaseCommand):
-    help = "Preview or apply the 25 source-to-representative bottle-label verified merges."
+    help = "Preview or apply bottle-label verified source-to-representative merges."
 
     def add_arguments(self, parser):
         parser.add_argument("--apply", action="store_true")
@@ -35,10 +52,35 @@ class Command(BaseCommand):
         if options["apply"] and not options["backup_path"]:
             raise CommandError("--apply requires --backup-path.")
 
+        planned_targets = {source: target for source, target, _, _ in PHOTO_VERIFIED_MERGES}
+        if len(planned_targets) != len(PHOTO_VERIFIED_MERGES):
+            raise CommandError("A verified source appears more than once.")
+        if any(source == target or target in planned_targets for source, target in planned_targets.items()):
+            raise CommandError("Verified merges must point directly to an unmerged representative.")
+
         ids = {wine_id for source, target, _, _ in PHOTO_VERIFIED_MERGES for wine_id in (source, target)}
         wines = Wine.objects.in_bulk(ids)
         if set(wines) != ids:
             raise CommandError("A verified source or representative is missing.")
+        alias_cleanup = {
+            wine_id: remove_incorrect_aliases(wines[wine_id].search_aliases, incorrect)
+            for wine_id, incorrect in INCORRECT_EXISTING_ALIASES.items()
+            if wine_id in wines
+            if remove_incorrect_aliases(wines[wine_id].search_aliases, incorrect)
+            != wines[wine_id].search_aliases
+        }
+
+        def current_root(source):
+            seen = set()
+            current = source
+            while current.canonical_wine_id is not None:
+                if current.id in seen:
+                    raise CommandError(f"Canonical redirect cycle at wine {source.id}.")
+                seen.add(current.id)
+                current = Wine.objects.filter(pk=current.canonical_wine_id).first()
+                if current is None:
+                    raise CommandError(f"Broken canonical redirect at wine {source.id}.")
+            return current
 
         favorites = User.favorite_wines.through
         pending = []
@@ -54,27 +96,58 @@ class Command(BaseCommand):
                 raise CommandError(f"Representative {target_id} has an unexpected name.")
             if not target.catalog_visible or target.canonical_wine_id is not None:
                 raise CommandError(f"Representative {target_id} is not active.")
-            if source.type != target.type or source.country_id != target.country_id:
-                raise CommandError(f"Wine details conflict for {source_id}:{target_id}.")
             source_grapes = set(source.grape_varieties.values_list("id", flat=True))
             target_grapes = set(target.grape_varieties.values_list("id", flat=True))
-            if source_grapes and target_grapes and not source_grapes & target_grapes:
-                raise CommandError(f"Grapes conflict for {source_id}:{target_id}.")
+            if source_id in PHOTO_METADATA_EXCEPTIONS:
+                source_details = {
+                    "name": source.eng_name, "type": source.type,
+                    "country": source.country.kor_name if source.country else None,
+                    "image_url": source.image_url,
+                }
+                target_details = {
+                    "name": target.eng_name, "type": target.type,
+                    "country": target.country.kor_name if target.country else None,
+                    "image_url": target.image_url,
+                }
+                source_grape_names = set(source.grape_varieties.values_list("kor_name", flat=True))
+                target_grape_names = set(target.grape_varieties.values_list("kor_name", flat=True))
+                if not PHOTO_METADATA_EXCEPTIONS[source_id](
+                    source_id, target_id, source_details, target_details,
+                    source_grape_names, target_grape_names,
+                ):
+                    raise CommandError(f"Unexpected metadata for photographed wine {source_id}:{target_id}.")
+            else:
+                if source.type != target.type or source.country_id != target.country_id:
+                    raise CommandError(f"Wine details conflict for {source_id}:{target_id}.")
+                if source_grapes and target_grapes and not source_grapes & target_grapes:
+                    raise CommandError(f"Grapes conflict for {source_id}:{target_id}.")
 
             descendants = list(Wine.objects.filter(canonical_wine_id=source_id))
             if any(item.catalog_visible for item in descendants):
                 raise CommandError(f"A descendant of {source_id} is visible.")
+            if any(
+                descendant.id in planned_targets and planned_targets[descendant.id] != target_id
+                for descendant in descendants
+            ):
+                raise CommandError(f"A descendant of {source_id} has a conflicting representative.")
             move_ids = [source_id, *(item.id for item in descendants)]
             review_count = WineReview.objects.filter(wine_id__in=move_ids).count()
             favorite_count = favorites.objects.filter(wine_id__in=move_ids).count()
-            already_merged = not source.catalog_visible and source.canonical_wine_id == target_id
-            if already_merged:
-                if descendants or review_count or favorite_count:
-                    raise CommandError(f"Merge {source_id}:{target_id} is only partly applied.")
-            elif not source.catalog_visible or source.canonical_wine_id is not None:
-                raise CommandError(f"Source {source_id} is not an active representative.")
+            if source.catalog_visible:
+                if source.canonical_wine_id is not None:
+                    raise CommandError(f"Visible source {source_id} has a canonical redirect.")
             else:
-                pending.append((source_id, target_id))
+                root = current_root(source)
+                if root.id != target_id and planned_targets.get(root.id) != target_id:
+                    raise CommandError(
+                        f"Archived source {source_id} redirects outside its verified merge group."
+                    )
+            already_merged = (
+                not source.catalog_visible and source.canonical_wine_id == target_id
+                and not descendants and not review_count and not favorite_count
+            )
+            if not already_merged:
+                pending.append((source_id, target_id, source.catalog_visible))
             summary.append({
                 "source": source_id, "target": target_id,
                 "reviews_to_move": review_count,
@@ -84,18 +157,20 @@ class Command(BaseCommand):
             })
 
         self.stdout.write(json.dumps(summary, ensure_ascii=False))
+        self.stdout.write(json.dumps({"alias_cleanup_ids": sorted(alias_cleanup)}))
         if not options["apply"]:
             self.stdout.write("DRY RUN: no database changes")
             return
-        if not pending:
+        if not pending and not alias_cleanup:
             self.stdout.write("Already applied: no database changes")
             return
 
         self._backup(options["backup_path"])
         original_review_count = WineReview.objects.count()
+        original_review_image_count = WineReviewImage.objects.count()
         original_visible_count = Wine.objects.filter(catalog_visible=True).count()
         with transaction.atomic():
-            for source_id, target_id in pending:
+            for source_id, target_id, _ in pending:
                 source = Wine.objects.get(pk=source_id)
                 target = Wine.objects.get(pk=target_id)
                 descendant_ids = list(Wine.objects.filter(canonical_wine_id=source_id).values_list("id", flat=True))
@@ -119,10 +194,16 @@ class Command(BaseCommand):
                 target.search_aliases = aliases
                 if target_id in CANONICAL_ENGLISH_NAMES:
                     target.eng_name = CANONICAL_ENGLISH_NAMES[target_id]
+                if target_id in CANONICAL_KOREAN_NAMES:
+                    target.kor_name = CANONICAL_KOREAN_NAMES[target_id]
                 if not target.image and not target.image_url:
                     target.image = source.image
                     target.image_url = source.image_url
-                target.save(update_fields=["search_aliases", "eng_name", "image", "image_url", "updated_at"])
+                target.save(update_fields=[
+                    "search_aliases", "eng_name", "kor_name", "image", "image_url", "updated_at",
+                ])
+                if not target.grape_varieties.exists():
+                    target.grape_varieties.set(source.grape_varieties.all())
 
                 Wine.objects.filter(canonical_wine_id=source_id).update(canonical_wine_id=target_id)
                 source.catalog_visible = False
@@ -132,9 +213,21 @@ class Command(BaseCommand):
                 if WineReview.objects.filter(wine_id__in=move_ids).exists():
                     raise CommandError(f"Reviews still point to merged wine {source_id}.")
 
+            for wine_id, incorrect in INCORRECT_EXISTING_ALIASES.items():
+                if wine_id not in wines:
+                    continue
+                target = Wine.objects.get(pk=wine_id)
+                cleaned = remove_incorrect_aliases(target.search_aliases, incorrect)
+                if cleaned != target.search_aliases:
+                    target.search_aliases = cleaned
+                    target.save(update_fields=["search_aliases", "updated_at"])
+
             if WineReview.objects.count() != original_review_count:
                 raise CommandError("Review count changed; rolling back.")
-            if Wine.objects.filter(catalog_visible=True).count() != original_visible_count - len(pending):
+            if WineReviewImage.objects.count() != original_review_image_count:
+                raise CommandError("Review image count changed; rolling back.")
+            active_sources = sum(was_visible for _, _, was_visible in pending)
+            if Wine.objects.filter(catalog_visible=True).count() != original_visible_count - active_sources:
                 raise CommandError("Visible wine count changed unexpectedly; rolling back.")
         self.stdout.write(self.style.SUCCESS("APPLIED: bottle-label verified catalog merges"))
 
@@ -145,7 +238,7 @@ class Command(BaseCommand):
         target = Path(destination).expanduser().resolve()
         if not target.parent.is_dir() or target.exists() or target == source:
             raise CommandError("Backup path must be a new file in an existing directory.")
-        with sqlite3.connect(source) as src, sqlite3.connect(target) as dst:
+        with closing(sqlite3.connect(source)) as src, closing(sqlite3.connect(target)) as dst:
             src.backup(dst)
         target.chmod(0o600)
         self.stdout.write("BACKUP: " + str(target))
