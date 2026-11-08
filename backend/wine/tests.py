@@ -99,3 +99,84 @@ class ReviewCoverImageTests(TestCase):
         self.wine.image = "wines/uploaded.jpg"
         self.wine.save(update_fields=["image"])
         self.assertTrue(self.detail_image().endswith("/media/wines/uploaded.jpg"))
+
+
+class ReviewPrivacyAndWinePermissionTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            email="owner@example.com", password="test-password", nickname="Owner",
+        )
+        self.other = User.objects.create_user(
+            email="other@example.com", password="test-password", nickname="Other",
+        )
+        self.staff = User.objects.create_user(
+            email="staff@example.com", password="test-password", nickname="Staff",
+            is_staff=True,
+        )
+        self.wine = Wine.objects.create(
+            kor_name="등록 와인", eng_name="Registered Wine", type="red",
+            registered_by=self.owner,
+        )
+        self.private_review = WineReview.objects.create(
+            wine=self.wine, user=self.owner, text="비공개 기록", rating=40,
+            body=2, acidity=2, sweetness=2, tannin=2, is_public=False,
+        )
+        self.public_review = WineReview.objects.create(
+            wine=self.wine, user=self.owner, text="공개 기록", rating=35,
+            body=2, acidity=2, sweetness=2, tannin=2, is_public=True,
+        )
+        self.owner_client = APIClient()
+        self.owner_client.force_authenticate(user=self.owner)
+        self.other_client = APIClient()
+        self.other_client.force_authenticate(user=self.other)
+        self.staff_client = APIClient()
+        self.staff_client.force_authenticate(user=self.staff)
+
+    def test_private_review_detail_is_only_visible_to_its_author(self):
+        private_url = f"/api/reviews/{self.private_review.id}/"
+        public_url = f"/api/reviews/{self.public_review.id}/"
+
+        self.assertEqual(self.client.get(private_url).status_code, 404)
+        self.assertEqual(self.other_client.get(private_url).status_code, 404)
+        self.assertEqual(self.staff_client.get(private_url).status_code, 404)
+        self.assertEqual(self.owner_client.get(private_url).status_code, 200)
+        self.assertEqual(self.client.get(public_url).status_code, 200)
+
+    def test_private_review_cannot_be_liked_or_changed_by_another_user(self):
+        private_url = f"/api/reviews/{self.private_review.id}/"
+        like_url = f"{private_url}like/"
+
+        self.assertEqual(self.other_client.post(like_url).status_code, 404)
+        self.assertEqual(self.owner_client.post(like_url).status_code, 404)
+        self.assertEqual(self.other_client.patch(private_url, {"text": "changed"}).status_code, 404)
+        self.assertEqual(self.other_client.delete(private_url).status_code, 404)
+        self.private_review.refresh_from_db()
+        self.assertEqual(self.private_review.text, "비공개 기록")
+        self.assertEqual(self.private_review.likes.count(), 0)
+        self.assertEqual(self.owner_client.patch(private_url, {"text": "수정한 기록"}).status_code, 200)
+        self.assertEqual(self.owner_client.delete(private_url).status_code, 204)
+
+    def test_wine_changes_require_owner_or_staff_and_deletion_requires_staff(self):
+        wine_url = f"/api/wines/{self.wine.id}/"
+        self.assertEqual(self.other_client.patch(wine_url, {"nameKr": "다른 이름"}).status_code, 403)
+        self.assertEqual(self.other_client.delete(wine_url).status_code, 403)
+        self.wine.refresh_from_db()
+        self.assertEqual(self.wine.kor_name, "등록 와인")
+
+        self.assertEqual(self.owner_client.patch(wine_url, {"nameKr": "수정한 이름"}).status_code, 200)
+        self.assertEqual(self.owner_client.delete(wine_url).status_code, 403)
+        self.assertEqual(self.staff_client.patch(wine_url, {"nameKr": "관리자 수정"}).status_code, 200)
+        self.assertEqual(self.staff_client.delete(wine_url).status_code, 204)
+        self.assertFalse(Wine.objects.filter(pk=self.wine.id).exists())
+
+    def test_legacy_wine_id_does_not_grant_access_to_canonical_wine(self):
+        legacy_wine = Wine.objects.create(
+            kor_name="이전 와인", eng_name="Legacy Wine", type="red",
+            registered_by=self.other, canonical_wine=self.wine, catalog_visible=False,
+        )
+        legacy_url = f"/api/wines/{legacy_wine.id}/"
+
+        self.assertEqual(self.other_client.patch(legacy_url, {"nameKr": "변경 시도"}).status_code, 403)
+        self.assertEqual(self.other_client.delete(legacy_url).status_code, 403)
+        self.wine.refresh_from_db()
+        self.assertEqual(self.wine.kor_name, "등록 와인")

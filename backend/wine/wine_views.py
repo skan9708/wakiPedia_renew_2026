@@ -125,6 +125,8 @@ class WineDetailView(APIView):
 
     def patch(self, request, pk):
         wine = self._get_wine(pk)
+        if not (request.user.is_staff or wine.registered_by_id == request.user.pk):
+            return Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
         if request.data.get("nameKr"):
             wine.kor_name = request.data["nameKr"]
         if request.data.get("nameEng"):
@@ -144,6 +146,8 @@ class WineDetailView(APIView):
 
     def delete(self, request, pk):
         wine = self._get_wine(pk)
+        if not request.user.is_staff:
+            return Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
         wine.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

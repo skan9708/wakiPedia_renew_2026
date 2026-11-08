@@ -1,3 +1,4 @@
+from django.http import Http404
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -74,22 +75,25 @@ class ReviewListView(APIView):
 class ReviewDetailView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-    def _get_review(self, pk):
+    def _get_review(self, request, pk):
         from django.shortcuts import get_object_or_404
-        return get_object_or_404(
+        review = get_object_or_404(
             WineReview.objects.select_related("wine", "user").prefetch_related(
                 "tags", "images", "likes"
             ),
             pk=pk,
         )
+        if not review.is_public and review.user_id != request.user.pk:
+            raise Http404
+        return review
 
     def get(self, request, pk):
-        review = self._get_review(pk)
+        review = self._get_review(request, pk)
         serializer = ReviewSerializer(review, context={"request": request})
         return Response(serializer.data)
 
     def patch(self, request, pk):
-        review = self._get_review(pk)
+        review = self._get_review(request, pk)
         if review.user != request.user:
             return Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -120,7 +124,7 @@ class ReviewDetailView(APIView):
         return Response(ReviewSerializer(review, context={"request": request}).data)
 
     def delete(self, request, pk):
-        review = self._get_review(pk)
+        review = self._get_review(request, pk)
         if review.user != request.user:
             return Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
         review.delete()
@@ -132,7 +136,7 @@ class ReviewLikeView(APIView):
 
     def post(self, request, pk):
         from django.shortcuts import get_object_or_404
-        review = get_object_or_404(WineReview, pk=pk)
+        review = get_object_or_404(WineReview, pk=pk, is_public=True)
         user = request.user
         if review.likes.filter(id=user.id).exists():
             review.likes.remove(user)

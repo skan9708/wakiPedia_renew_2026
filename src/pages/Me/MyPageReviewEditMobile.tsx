@@ -38,7 +38,7 @@ export function MyPageReviewEditMobile() {
         setSweetLevel(data.sweetRating ?? 2);
         setAcidLevel(data.acidityRating ?? 2);
         setTaninLevel(data.taninRating ?? 2);
-        setVisibility(data.isPublic ? 'public' : 'private');
+        setVisibility(data.is_public ? 'public' : 'private');
         setFeels(data.feels ?? []);
       })
       .catch(() => navigate(-1))
