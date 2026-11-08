@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
 import { Mail, MessageCircle, Send, CheckCircle2 } from 'lucide-react';
 import { api } from '@/lib/api';
 
@@ -14,8 +13,6 @@ type Category = (typeof categories)[number]['value'];
 export function SupportMobile() {
   const [category, setCategory] = useState<Category>('idea');
   const [message, setMessage] = useState('');
-  const [email, setEmail] = useState('');
-  const [replyConsent, setReplyConsent] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
@@ -27,22 +24,14 @@ export function SupportMobile() {
       setError('의견을 10자 이상 적어 주세요.');
       return;
     }
-    if (email.trim() && !replyConsent) {
-      setError('답변용 이메일 수집에 동의해 주세요.');
-      return;
-    }
     setSending(true);
     try {
       await api.post('/feedback/', {
         category,
         message: message.trim(),
-        email: email.trim(),
-        replyConsent: Boolean(email.trim() && replyConsent),
       });
       setSent(true);
       setMessage('');
-      setEmail('');
-      setReplyConsent(false);
     } catch (err: any) {
       setError(err.response?.status === 429
         ? '잠시 후 다시 보내 주세요. 한 시간에 최대 5번 제출할 수 있습니다.'
@@ -88,17 +77,6 @@ export function SupportMobile() {
               <label htmlFor="feedback-message" className="block text-sm font-semibold mb-2">의견을 들려주세요</label>
               <textarea id="feedback-message" value={message} onChange={(event) => setMessage(event.target.value)} minLength={10} maxLength={2000} required rows={6} placeholder="불편했던 점이나 추가되었으면 하는 기능을 자유롭게 적어 주세요." className="w-full rounded-xl border border-border bg-transparent px-3 py-3 text-sm outline-none focus:border-accent resize-y" />
               <p className="text-xs text-muted mt-1">10~2,000자 · 개인정보나 비밀번호는 적지 마세요.</p>
-            </div>
-
-            <div>
-              <label htmlFor="feedback-email" className="block text-sm font-semibold mb-2">답변받을 이메일 <span className="font-normal text-muted">(선택)</span></label>
-              <input id="feedback-email" type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="답변이 필요한 경우에만 적어 주세요" className="w-full rounded-xl border border-border bg-transparent px-3 py-3 text-sm outline-none focus:border-accent" />
-              {email.trim() && (
-                <label className="flex items-start gap-2 mt-3 text-xs leading-relaxed text-muted">
-                  <input type="checkbox" checked={replyConsent} onChange={(event) => setReplyConsent(event.target.checked)} className="mt-0.5 accent-accent" />
-                  <span>답변을 위해 이메일 주소를 수집·이용하는 데 동의합니다. 답변이 필요하지 않다면 이메일을 비워 주세요. <Link to="/privacy" className="underline">개인정보처리방침</Link></span>
-                </label>
-              )}
             </div>
 
             {error && <p role="alert" className="text-sm text-red-600">{error}</p>}

@@ -17,13 +17,12 @@ class FeedbackApiTests(TestCase):
         self.assertEqual(item.category, "idea")
         self.assertEqual(item.email, "")
 
-    def test_email_requires_explicit_reply_consent(self):
+    def test_email_is_not_accepted(self):
         payload = {**self.payload, "email": "reader@example.com"}
         self.assertEqual(self.client.post("/api/feedback/", payload, format="json").status_code, 400)
         self.assertEqual(Feedback.objects.count(), 0)
-        response = self.client.post("/api/feedback/", {**payload, "replyConsent": True}, format="json")
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(Feedback.objects.get().email, "reader@example.com")
+        self.assertEqual(self.client.post("/api/feedback/", {**self.payload, "replyConsent": True}, format="json").status_code, 400)
+        self.assertEqual(Feedback.objects.count(), 0)
 
     def test_invalid_category_and_short_message_are_rejected(self):
         response = self.client.post("/api/feedback/", {"category": "invalid", "message": "짧음"}, format="json")
