@@ -80,7 +80,7 @@ export function MyPageReviewEditMobile() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5 font-sans">
+    <form onSubmit={onSubmit} className="review-form space-y-5 font-sans">
       <div className="mx-auto w-full max-w-mobile px-4 pt-4">
         <div className="text-xs text-muted mb-1">대상 와인</div>
         <div className="text-sm font-medium">{wineName}</div>
@@ -129,9 +129,8 @@ export function MyPageReviewEditMobile() {
       </section>
 
       {/* 맛 상세 */}
-      <section className="mx-auto w-full max-w-mobile px-4">
+      <section className="review-taste-section mx-auto w-full max-w-mobile px-4">
         <h3 className="text-base font-semibold mb-2">와인 상세기록 <span className="text-sm text-muted font-normal">선택</span></h3>
-        <p className="mb-6 text-xs text-muted">모르는 항목은 건너뛰어도 됩니다.</p>
         <div className="space-y-5">
           <TasteScaleRow title="바디" leftLabel="매우 가벼움" rightLabel="매우 무거움" value={bodyLevel} onChange={setBodyLevel} />
           <TasteScaleRow title="당도" leftLabel="매우 드라이" rightLabel="매우 스윗" value={sweetLevel} onChange={setSweetLevel} />
