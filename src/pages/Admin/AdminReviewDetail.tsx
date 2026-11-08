@@ -13,10 +13,10 @@ type ReviewDetail = {
   userEmail: string;
   rating: number;
   text: string;
-  body: number;
-  acidity: number;
-  sweetness: number;
-  tannin: number;
+  body: number | null;
+  acidity: number | null;
+  sweetness: number | null;
+  tannin: number | null;
   isPublic: boolean;
   feels: string[];
   images: { id: number; url: string; createdAt: string }[];
@@ -119,7 +119,7 @@ export function AdminReviewDetail() {
         <InfoRow label="맛 (0~4)">
           <div className="flex gap-4">
             {TASTE.map(({ key, label }) => (
-              <span key={key}>{label} <b>{review[key]}</b></span>
+              <span key={key}>{label} <b>{review[key] ?? '미입력'}</b></span>
             ))}
           </div>
         </InfoRow>

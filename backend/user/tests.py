@@ -150,3 +150,66 @@ class AccountRecoveryTests(APITestCase):
         self.assertEqual(request_ip(request), "203.0.113.2")
         request.META["REMOTE_ADDR"] = "198.51.100.4"
         self.assertEqual(request_ip(request), "198.51.100.4")
+
+
+class KakaoAccountLinkTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="member@example.com", password="existing-password123", nickname="기존 회원"
+        )
+
+    def kakao_login(self, *, email="member@example.com", verified=True, kakao_id=12345):
+        with patch("user.views.http_requests.post") as token_post, patch("user.views.http_requests.get") as profile_get:
+            token_post.return_value.status_code = 200
+            token_post.return_value.json.return_value = {"access_token": "test-kakao-access"}
+            profile_get.return_value.status_code = 200
+            profile_get.return_value.json.return_value = {
+                "id": kakao_id,
+                "kakao_account": {
+                    "email": email,
+                    "is_email_verified": verified,
+                    "profile": {"nickname": "카카오 회원"},
+                },
+            }
+            return self.client.post("/api/auth/kakao/", {
+                "code": "test-code", "redirect_uri": "https://wakipedia.co.kr/auth/kakao/callback",
+            })
+
+    @override_settings(KAKAO_REST_API_KEY="test-key")
+    def test_matching_email_needs_existing_password_before_linking(self):
+        challenge = self.kakao_login()
+        self.assertEqual(challenge.status_code, 409)
+        self.assertTrue(challenge.data["linkRequired"])
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.kakao_id)
+
+        payload = {"linkToken": challenge.data["linkToken"], "password": "wrong-password"}
+        self.assertEqual(self.client.post("/api/auth/kakao/link/", payload).status_code, 400)
+        RecoveryRequest.objects.update(created_at=timezone.now() - timedelta(minutes=2))
+        payload["password"] = "existing-password123"
+        linked = self.client.post("/api/auth/kakao/link/", payload)
+        self.assertEqual(linked.status_code, 200)
+        self.assertEqual(linked.data["user"]["id"], self.user.pk)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.kakao_id, "12345")
+        self.assertEqual(self.client.post("/api/auth/kakao/link/", payload).status_code, 400)
+        self.assertEqual(self.kakao_login().status_code, 200)
+        self.assertEqual(self.client.post("/api/auth/login/", {
+            "email": self.user.email, "password": "existing-password123",
+        }).status_code, 200)
+
+    @override_settings(KAKAO_REST_API_KEY="test-key")
+    def test_unverified_kakao_email_does_not_link_existing_account(self):
+        result = self.kakao_login(verified=False)
+        self.assertEqual(result.status_code, 200)
+        self.assertTrue(result.data["isNewUser"])
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.kakao_id)
+        self.assertEqual(User.objects.count(), 2)
+
+    @override_settings(KAKAO_REST_API_KEY="test-key")
+    def test_inactive_linked_account_cannot_log_in_with_kakao(self):
+        self.user.kakao_id = "12345"
+        self.user.is_active = False
+        self.user.save(update_fields=["kakao_id", "is_active"])
+        self.assertEqual(self.kakao_login().status_code, 403)

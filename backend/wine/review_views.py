@@ -109,14 +109,10 @@ class ReviewDetailView(APIView):
             review.text = request.data["text"]
         if request.data.get("rating") is not None:
             review.rating = round(float(request.data["rating"]) * 10)
-        if request.data.get("body") is not None:
-            review.body = int(request.data["body"])
-        if request.data.get("acidity") is not None:
-            review.acidity = int(request.data["acidity"])
-        if request.data.get("sweetness") is not None:
-            review.sweetness = int(request.data["sweetness"])
-        if request.data.get("tannin") is not None:
-            review.tannin = int(request.data["tannin"])
+        for field in ("body", "acidity", "sweetness", "tannin"):
+            if field in request.data:
+                value = serializers.IntegerField(min_value=0, max_value=4, allow_null=True).run_validation(request.data[field])
+                setattr(review, field, value)
         if "is_public" in request.data:
             review.is_public = is_public
         review.save()

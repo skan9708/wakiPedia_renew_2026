@@ -23,7 +23,7 @@ export function MyPageMobile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [likedWines, setLikedWines] = useState<LikedWine[]>([]);
   const [myReviews, setMyReviews] = useState<MyReview[]>([]);
-  const [myTaste, setMyTaste] = useState<{ body: number; sweet: number; acid: number; tanin: number } | null>(null);
+  const [myTaste, setMyTaste] = useState<{ body: number | null; sweet: number | null; acid: number | null; tanin: number | null } | null>(null);
   const [keywords, setKeywords] = useState<{ text: string; weight: number }[]>([]);
 
   useEffect(() => {
@@ -33,12 +33,15 @@ export function MyPageMobile() {
     api.get('/me/reviews/').then(({ data }) => {
       setMyReviews(data);
       if (data.length > 0) {
-        const total = data.length;
-        const avgBody = data.reduce((s: number, r: any) => s + (r.bodyRating ?? 2), 0) / total;
-        const avgSweet = data.reduce((s: number, r: any) => s + (r.sweetRating ?? 2), 0) / total;
-        const avgAcid = data.reduce((s: number, r: any) => s + (r.acidityRating ?? 2), 0) / total;
-        const avgTanin = data.reduce((s: number, r: any) => s + (r.taninRating ?? 2), 0) / total;
-        setMyTaste({ body: Math.round(avgBody), sweet: Math.round(avgSweet), acid: Math.round(avgAcid), tanin: Math.round(avgTanin) });
+        const averageOf = (key: string): number | null => {
+          const values = data.map((review: any) => review[key]).filter((value: unknown): value is number => typeof value === 'number');
+          return values.length ? Math.round(values.reduce((sum: number, value: number) => sum + value, 0) / values.length) : null;
+        };
+        const taste = {
+          body: averageOf('bodyRating'), sweet: averageOf('sweetRating'),
+          acid: averageOf('acidityRating'), tanin: averageOf('taninRating'),
+        };
+        setMyTaste(Object.values(taste).some((value) => value !== null) ? taste : null);
 
         const counts: Record<string, number> = {};
         data.forEach((r: any) => (r.feels ?? []).forEach((f: string) => { counts[f] = (counts[f] ?? 0) + 1; }));
@@ -154,7 +157,7 @@ export function MyPageMobile() {
           <div className="mt-5 flex flex-col items-center gap-2 py-3 rounded-xl bg-neutral-50 border border-dashed border-neutral-200">
             <span className="text-2xl">🍷</span>
             <p className="text-sm text-muted text-center leading-snug">
-              리뷰를 작성하면<br />내 취향이 분석됩니다
+              리뷰에 와인 상세기록을 남기면<br />내 취향이 분석됩니다
             </p>
             <button
               className="mt-1 px-4 py-1.5 rounded-full bg-accent text-white text-xs"

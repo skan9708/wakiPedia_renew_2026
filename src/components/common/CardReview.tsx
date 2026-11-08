@@ -7,7 +7,7 @@ export type Review = {
   wineName?: string;
   creator: { id: string; nickname: string; avatarUrl?: string };
   rating: number;
-  bodyRating?: number; sweetRating?: number; taninRating?: number; acidityRating?: number;
+  bodyRating?: number | null; sweetRating?: number | null; taninRating?: number | null; acidityRating?: number | null;
   text: string;
   likeCount: number;
   createdAt: string;

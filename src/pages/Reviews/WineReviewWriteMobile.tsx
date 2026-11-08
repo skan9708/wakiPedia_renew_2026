@@ -29,10 +29,10 @@ export function WineReviewWriteMobile() {
   const [content, setContent] = useState<string>('');
   const [images, setImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [bodyLevel, setBodyLevel] = useState<number>(2);
-  const [sweetLevel, setSweetLevel] = useState<number>(2);
-  const [acidLevel, setAcidLevel] = useState<number>(2);
-  const [taninLevel, setTaninLevel] = useState<number>(2);
+  const [bodyLevel, setBodyLevel] = useState<number | null>(null);
+  const [sweetLevel, setSweetLevel] = useState<number | null>(null);
+  const [acidLevel, setAcidLevel] = useState<number | null>(null);
+  const [taninLevel, setTaninLevel] = useState<number | null>(null);
   const [visibility, setVisibility] = useState<'private' | 'public'>('public');
   const [feels, setFeels] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,10 +83,10 @@ export function WineReviewWriteMobile() {
       form.append('wine', wineId!);
       form.append('rating', String(rating));
       form.append('text', content);
-      form.append('body', String(bodyLevel));
-      form.append('acidity', String(acidLevel));
-      form.append('sweetness', String(sweetLevel));
-      form.append('tannin', String(taninLevel));
+      if (bodyLevel !== null) form.append('body', String(bodyLevel));
+      if (acidLevel !== null) form.append('acidity', String(acidLevel));
+      if (sweetLevel !== null) form.append('sweetness', String(sweetLevel));
+      if (taninLevel !== null) form.append('tannin', String(taninLevel));
       form.append('is_public', visibility === 'public' ? 'true' : 'false');
       feels.forEach((f) => form.append('feels', f));
       images.forEach((img) => form.append('images', img));
@@ -122,11 +122,12 @@ export function WineReviewWriteMobile() {
           <div className="text-sm text-muted">{wineId ?? '선택 필요'}</div>
         )}
         {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
+        <p className="mt-2 text-xs text-muted">별점과 짧은 후기만 적으면 등록할 수 있어요. 나머지는 선택 사항입니다.</p>
       </div>
 
       {/* 별점 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-2">별점</h3>
+        <h3 className="text-base font-semibold mb-2">별점 <span className="text-sm text-accent">필수</span></h3>
         <div className="card p-4">
           <div className="flex items-center gap-2 text-2xl">
             {Array.from({ length: 5 }).map((_, i) => {
@@ -153,7 +154,7 @@ export function WineReviewWriteMobile() {
 
       {/* 리뷰 본문 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-2">리뷰 작성</h3>
+        <h3 className="text-base font-semibold mb-2">리뷰 작성 <span className="text-sm text-accent">필수</span></h3>
         <div className="card p-4">
           <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={5} placeholder="와인의 색상, 향, 맛과 기억하고 싶은 노트를 기록해 보세요." className="w-full resize-none bg-transparent outline-none text-sm placeholder:text-muted" />
         </div>
@@ -161,7 +162,7 @@ export function WineReviewWriteMobile() {
 
       {/* 이미지 업로드 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-2">사진 선택</h3>
+        <h3 className="text-base font-semibold mb-2">사진 <span className="text-sm text-muted font-normal">선택</span></h3>
         <div className="card p-4">
           <div className="grid grid-cols-4 gap-3">
             <button type="button" disabled={visibility === 'private'} onClick={() => fileRef.current?.click()} className="aspect-square rounded-xl bg-bgsubtle text-muted grid place-items-center text-xs disabled:opacity-50">와인 사진 업로드</button>
@@ -179,7 +180,8 @@ export function WineReviewWriteMobile() {
 
       {/* 맛 상세 기록 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-6">와인 상세기록</h3>
+        <h3 className="text-base font-semibold mb-2">와인 상세기록 <span className="text-sm text-muted font-normal">선택</span></h3>
+        <p className="mb-6 text-xs text-muted">모르는 항목은 건너뛰어도 됩니다.</p>
         <div className="mt-0 space-y-5">
           <TasteScaleRow title="바디" leftLabel="매우 가벼움" rightLabel="매우 무거움" value={bodyLevel} onChange={setBodyLevel} />
           <TasteScaleRow title="당도" leftLabel="매우 드라이" rightLabel="매우 스윗" value={sweetLevel} onChange={setSweetLevel} />
@@ -190,7 +192,7 @@ export function WineReviewWriteMobile() {
 
       {/* 느낌 태그 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-2">느낌</h3>
+        <h3 className="text-base font-semibold mb-2">느낌 <span className="text-sm text-muted font-normal">선택</span></h3>
         <FeelGroup title="과일 (Fruity)" items={FEEL_FRUITY} selected={feels} onToggle={toggleFeel} />
         <FeelGroup title="꽃 (Floral)" items={FEEL_FLORAL} selected={feels} onToggle={toggleFeel} />
         <FeelGroup title="오크 (Oaky)" items={FEEL_OAKY} selected={feels} onToggle={toggleFeel} />
@@ -199,7 +201,7 @@ export function WineReviewWriteMobile() {
 
       {/* 공개 범위 */}
       <section className="mx-auto w-full max-w-mobile px-4 pb-12">
-        <h3 className="text-base font-semibold mb-2">공개 범위</h3>
+        <h3 className="text-base font-semibold mb-2">공개 범위 <span className="text-sm text-muted font-normal">선택 · 기본 전체 공개</span></h3>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className={`py-2 rounded-xl border ${visibility === 'public' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('public')}>전체 공개</button>
           <button type="button" className={`py-2 rounded-xl border ${visibility === 'private' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('private')}>나만 보기</button>
@@ -235,9 +237,9 @@ function FeelGroup({ title, items, selected, onToggle }: FeelGroupProps) {
   );
 }
 
-type TasteScaleRowProps = { title: string; leftLabel: string; rightLabel: string; value: number; onChange: (v: number) => void };
+type TasteScaleRowProps = { title: string; leftLabel: string; rightLabel: string; value: number | null; onChange: (v: number | null) => void };
 function TasteScaleRow({ title, leftLabel, rightLabel, value, onChange }: TasteScaleRowProps) {
-  const fillPct = `${(value / 4) * 100}%`;
+  const fillPct = `${((value ?? 0) / 4) * 100}%`;
   return (
     <div className="flex items-center gap-2">
       <div className="w-12 shrink-0 text-sm text-muted">{title}</div>
@@ -249,10 +251,11 @@ function TasteScaleRow({ title, leftLabel, rightLabel, value, onChange }: TasteS
           <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[5px] bg-accent rounded-full" style={{ width: fillPct }} />
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between">
             {Array.from({ length: 5 }).map((_, i) => (
-              <button key={i} type="button" onClick={() => onChange(i)} className={`w-5 h-5 rounded-full border-2 ${i <= value ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`} />
+              <button key={i} type="button" aria-label={`${title} ${i + 1}단계`} onClick={() => onChange(i)} className={`w-5 h-5 rounded-full border-2 ${value !== null && i <= value ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`} />
             ))}
           </div>
         </div>
+        <button type="button" onClick={() => onChange(null)} className="text-xs text-muted underline">선택 안 함</button>
       </div>
     </div>
   );

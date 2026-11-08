@@ -13,6 +13,7 @@ urlpatterns = [
     path("signup/", views.SignupView.as_view(), name="signup"),
     path("login/", views.LoginView.as_view(), name="login"),
     path("kakao/", views.KakaoLoginView.as_view(), name="kakao-login"),
+    path("kakao/link/", views.KakaoLinkView.as_view(), name="kakao-link"),
     path("token/refresh/", EpochTokenRefreshView.as_view(), name="token-refresh"),
     path("recovery/status/", recovery_views.RecoveryStatusView.as_view()),
     path("signup/phone/send/", recovery_views.SignupPhoneSendView.as_view()),

@@ -109,10 +109,10 @@ class WineReview(BaseModel):
         validators=[MinValueValidator(0), MaxValueValidator(50), validate_multiple_of_five],
     )
 
-    body = models.IntegerField("바디", validators=[MinValueValidator(0), MaxValueValidator(4)])
-    acidity = models.IntegerField("산도", validators=[MinValueValidator(0), MaxValueValidator(4)])
-    sweetness = models.IntegerField("당도", validators=[MinValueValidator(0), MaxValueValidator(4)])
-    tannin = models.IntegerField("탄닌", validators=[MinValueValidator(0), MaxValueValidator(4)])
+    body = models.IntegerField("바디", validators=[MinValueValidator(0), MaxValueValidator(4)], null=True, blank=True)
+    acidity = models.IntegerField("산도", validators=[MinValueValidator(0), MaxValueValidator(4)], null=True, blank=True)
+    sweetness = models.IntegerField("당도", validators=[MinValueValidator(0), MaxValueValidator(4)], null=True, blank=True)
+    tannin = models.IntegerField("탄닌", validators=[MinValueValidator(0), MaxValueValidator(4)], null=True, blank=True)
 
     is_public = models.BooleanField("공개 여부", default=True)
 

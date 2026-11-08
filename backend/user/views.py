@@ -2,6 +2,7 @@ import requests as http_requests
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
+from django.core import signing
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import status
@@ -12,7 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from user.models import User
 from user.models import PhoneChallenge
-from user.recovery import consume_phone_challenge
+from user.recovery import consume_phone_challenge, rate_limited
 from user.serializers import (
     SignupSerializer, LoginSerializer, UserSerializer, ProfileUpdateSerializer
 )
@@ -135,15 +136,26 @@ class KakaoLoginView(APIView):
             or f"kakao_{kakao_id[:6]}"
         )
 
-        # 3. 기존 유저 조회 or 생성
+        # 3. 기존 유저 조회 or 생성. 같은 이메일만으로는 계정을 연결하지 않는다.
         is_new_user = False
         user = User.objects.filter(kakao_id=kakao_id).first()
         if not user and email_verified:
-            # 같은 이메일로 이미 가입한 계정이 있으면 그 계정에 카카오를 연결
-            user = User.objects.filter(email__iexact=kakao_email, kakao_id__isnull=True).first()
-            if user:
-                user.kakao_id = kakao_id
-                user.save(update_fields=["kakao_id"])
+            existing = User.objects.filter(email__iexact=kakao_email).first()
+            if existing:
+                if not existing.is_active:
+                    return Response({"detail": "비활성 계정은 로그인할 수 없습니다."}, status=403)
+                if existing.kakao_id or not existing.has_usable_password():
+                    return Response({"detail": "이 이메일은 이미 다른 로그인 계정에 연결되어 있습니다. 고객센터에 문의해주세요."}, status=409)
+                link_token = signing.dumps(
+                    {"user_id": existing.pk, "email": existing.email, "kakao_id": kakao_id},
+                    salt="kakao-account-link",
+                )
+                return Response({
+                    "linkRequired": True,
+                    "linkToken": link_token,
+                    "email": existing.email,
+                    "detail": "기존 이메일 계정의 비밀번호를 확인하면 카카오 로그인을 연결할 수 있습니다.",
+                }, status=409)
         if not user:
             email = kakao_email
             if not email or User.objects.filter(email__iexact=email).exists():
@@ -153,7 +165,45 @@ class KakaoLoginView(APIView):
             user.save()
             is_new_user = True
 
+        if not user.is_active:
+            return Response({"detail": "비활성 계정은 로그인할 수 없습니다."}, status=403)
+
         tokens = get_tokens_for_user(user)
         return Response(
             {**tokens, "user": UserSerializer(user, context={"request": request}).data, "isNewUser": is_new_user}
         )
+
+
+class KakaoLinkView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        link_token = request.data.get("linkToken")
+        password = request.data.get("password")
+        if not isinstance(link_token, str) or not isinstance(password, str) or not password:
+            return Response({"detail": "연동 정보와 기존 계정 비밀번호를 입력해주세요."}, status=400)
+        try:
+            payload = signing.loads(link_token, salt="kakao-account-link", max_age=600)
+            user = User.objects.get(pk=payload["user_id"], email__iexact=payload["email"])
+        except (signing.BadSignature, KeyError, ValueError, TypeError, User.DoesNotExist):
+            return Response({"detail": "카카오 연동 요청이 만료되었습니다. 다시 시도해주세요."}, status=400)
+
+        if not user.is_active or user.kakao_id or not user.has_usable_password():
+            return Response({"detail": "이 계정은 카카오 연동을 진행할 수 없습니다."}, status=400)
+        if rate_limited("kakao_link", user.email, request):
+            return Response({"detail": "연동 시도가 너무 많습니다. 잠시 후 다시 시도해주세요."}, status=429)
+        if not user.check_password(password):
+            return Response({"detail": "기존 계정 비밀번호가 올바르지 않습니다."}, status=400)
+
+        try:
+            with transaction.atomic():
+                updated = User.objects.filter(pk=user.pk, kakao_id__isnull=True, is_active=True).update(
+                    kakao_id=payload["kakao_id"]
+                )
+                if not updated:
+                    return Response({"detail": "이미 연결된 계정입니다. 다시 로그인해주세요."}, status=409)
+        except IntegrityError:
+            return Response({"detail": "이미 다른 계정에 연결된 카카오 계정입니다."}, status=409)
+        user.refresh_from_db()
+        tokens = get_tokens_for_user(user)
+        return Response({**tokens, "user": UserSerializer(user, context={"request": request}).data, "isNewUser": False})

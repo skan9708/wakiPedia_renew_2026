@@ -17,10 +17,10 @@ export function MyPageReviewEditMobile() {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [content, setContent] = useState('');
-  const [bodyLevel, setBodyLevel] = useState(2);
-  const [sweetLevel, setSweetLevel] = useState(2);
-  const [acidLevel, setAcidLevel] = useState(2);
-  const [taninLevel, setTaninLevel] = useState(2);
+  const [bodyLevel, setBodyLevel] = useState<number | null>(null);
+  const [sweetLevel, setSweetLevel] = useState<number | null>(null);
+  const [acidLevel, setAcidLevel] = useState<number | null>(null);
+  const [taninLevel, setTaninLevel] = useState<number | null>(null);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [hasImages, setHasImages] = useState(false);
   const [feels, setFeels] = useState<string[]>([]);
@@ -35,10 +35,10 @@ export function MyPageReviewEditMobile() {
         setWineName(data.wineName ?? '');
         setRating(data.rating ?? 0);
         setContent(data.text ?? '');
-        setBodyLevel(data.bodyRating ?? 2);
-        setSweetLevel(data.sweetRating ?? 2);
-        setAcidLevel(data.acidityRating ?? 2);
-        setTaninLevel(data.taninRating ?? 2);
+        setBodyLevel(data.bodyRating ?? null);
+        setSweetLevel(data.sweetRating ?? null);
+        setAcidLevel(data.acidityRating ?? null);
+        setTaninLevel(data.taninRating ?? null);
         setVisibility(data.is_public ? 'public' : 'private');
         setHasImages((data.images?.length ?? 0) > 0);
         setFeels(data.feels ?? []);
@@ -89,7 +89,7 @@ export function MyPageReviewEditMobile() {
 
       {/* 별점 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-2">별점</h3>
+        <h3 className="text-base font-semibold mb-2">별점 <span className="text-sm text-accent">필수</span></h3>
         <div className="card p-4">
           <div className="flex items-center gap-2 text-2xl">
             {Array.from({ length: 5 }).map((_, i) => {
@@ -116,7 +116,7 @@ export function MyPageReviewEditMobile() {
 
       {/* 리뷰 본문 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-2">리뷰</h3>
+        <h3 className="text-base font-semibold mb-2">리뷰 <span className="text-sm text-accent">필수</span></h3>
         <div className="card p-4">
           <textarea
             value={content}
@@ -130,7 +130,8 @@ export function MyPageReviewEditMobile() {
 
       {/* 맛 상세 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-6">와인 상세기록</h3>
+        <h3 className="text-base font-semibold mb-2">와인 상세기록 <span className="text-sm text-muted font-normal">선택</span></h3>
+        <p className="mb-6 text-xs text-muted">모르는 항목은 건너뛰어도 됩니다.</p>
         <div className="space-y-5">
           <TasteScaleRow title="바디" leftLabel="매우 가벼움" rightLabel="매우 무거움" value={bodyLevel} onChange={setBodyLevel} />
           <TasteScaleRow title="당도" leftLabel="매우 드라이" rightLabel="매우 스윗" value={sweetLevel} onChange={setSweetLevel} />
@@ -141,7 +142,7 @@ export function MyPageReviewEditMobile() {
 
       {/* 느낌 태그 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-2">느낌</h3>
+        <h3 className="text-base font-semibold mb-2">느낌 <span className="text-sm text-muted font-normal">선택</span></h3>
         <FeelGroup title="과일 (Fruity)" items={FEEL_FRUITY} selected={feels} onToggle={toggleFeel} />
         <FeelGroup title="꽃 (Floral)" items={FEEL_FLORAL} selected={feels} onToggle={toggleFeel} />
         <FeelGroup title="오크 (Oaky)" items={FEEL_OAKY} selected={feels} onToggle={toggleFeel} />
@@ -150,7 +151,7 @@ export function MyPageReviewEditMobile() {
 
       {/* 공개 범위 */}
       <section className="mx-auto w-full max-w-mobile px-4 pb-12">
-        <h3 className="text-base font-semibold mb-2">공개 범위</h3>
+        <h3 className="text-base font-semibold mb-2">공개 범위 <span className="text-sm text-muted font-normal">선택</span></h3>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className={`py-2 rounded-xl border ${visibility === 'public' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('public')}>전체 공개</button>
           <button type="button" disabled={hasImages} className={`py-2 rounded-xl border disabled:opacity-50 ${visibility === 'private' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('private')}>나만 보기</button>
@@ -185,9 +186,9 @@ function FeelGroup({ title, items, selected, onToggle }: FeelGroupProps) {
   );
 }
 
-type TasteScaleRowProps = { title: string; leftLabel: string; rightLabel: string; value: number; onChange: (v: number) => void };
+type TasteScaleRowProps = { title: string; leftLabel: string; rightLabel: string; value: number | null; onChange: (v: number | null) => void };
 function TasteScaleRow({ title, leftLabel, rightLabel, value, onChange }: TasteScaleRowProps) {
-  const fillPct = `${(value / 4) * 100}%`;
+  const fillPct = `${((value ?? 0) / 4) * 100}%`;
   return (
     <div className="flex items-center gap-2">
       <div className="w-12 shrink-0 text-sm text-muted">{title}</div>
@@ -199,12 +200,13 @@ function TasteScaleRow({ title, leftLabel, rightLabel, value, onChange }: TasteS
           <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[5px] bg-accent rounded-full" style={{ width: fillPct }} />
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between">
             {Array.from({ length: 5 }).map((_, i) => (
-              <button key={i} type="button" onClick={() => onChange(i)}
-                className={`w-5 h-5 rounded-full border-2 ${i <= value ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`}
+              <button key={i} type="button" aria-label={`${title} ${i + 1}단계`} onClick={() => onChange(i)}
+                className={`w-5 h-5 rounded-full border-2 ${value !== null && i <= value ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`}
               />
             ))}
           </div>
         </div>
+        <button type="button" onClick={() => onChange(null)} className="text-xs text-muted underline">선택 안 함</button>
       </div>
     </div>
   );

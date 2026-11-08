@@ -12,10 +12,10 @@ type ReviewDetail = {
   wineName: string;
   creator: { id: number; nickname: string; avatarUrl: string | null };
   rating: number;
-  bodyRating: number;
-  sweetRating: number;
-  taninRating: number;
-  acidityRating: number;
+  bodyRating: number | null;
+  sweetRating: number | null;
+  taninRating: number | null;
+  acidityRating: number | null;
   text: string;
   likeCount: number;
   isLiked: boolean;
@@ -177,15 +177,16 @@ export function ReviewDetailMobile() {
         )}
 
         {/* 특징 게이지 */}
-        <div className="px-4 pb-36">
+        {(review.bodyRating !== null || review.sweetRating !== null || review.acidityRating !== null || review.taninRating !== null) && <div className="px-4 pb-36">
           <h3 className="text-base font-semibold mb-2">특징</h3>
           <div className="space-y-4">
-            <DetailGauge title="바디" left="매우 가벼움" right="매우 무거움" value={review.bodyRating} />
-            <DetailGauge title="당도" left="매우 드라이" right="매우 스윗" value={review.sweetRating} />
-            <DetailGauge title="산도" left="매우 부드러움" right="매우 시다" value={review.acidityRating} />
-            <DetailGauge title="탄닌" left="매우 부드러움" right="매우 떫음" value={review.taninRating} />
+            {review.bodyRating !== null && <DetailGauge title="바디" left="매우 가벼움" right="매우 무거움" value={review.bodyRating} />}
+            {review.sweetRating !== null && <DetailGauge title="당도" left="매우 드라이" right="매우 스윗" value={review.sweetRating} />}
+            {review.acidityRating !== null && <DetailGauge title="산도" left="매우 부드러움" right="매우 시다" value={review.acidityRating} />}
+            {review.taninRating !== null && <DetailGauge title="탄닌" left="매우 부드러움" right="매우 떫음" value={review.taninRating} />}
           </div>
-        </div>
+        </div>}
+        {review.bodyRating === null && review.sweetRating === null && review.acidityRating === null && review.taninRating === null && <div className="h-36" />}
       </div>
 
       <div className="fixed z-50 bottom-16 left-0 right-0 mx-auto w-full max-w-mobile px-4">

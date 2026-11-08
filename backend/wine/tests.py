@@ -11,6 +11,35 @@ from user.models import User
 from wine.models import Tag, Wine, WineReview, WineReviewImage
 
 
+class OptionalReviewTasteTests(TestCase):
+    def test_review_can_omit_taste_values_and_clear_them_later(self):
+        user = User.objects.create_user(
+            email="optional-taste@example.com", password="test-password", nickname="Reviewer",
+        )
+        wine = Wine.objects.create(kor_name="선택 기록 테스트", eng_name="Optional Taste", type="red")
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        created = client.post("/api/reviews/", {
+            "wine": wine.pk, "rating": 4.5, "text": "짧은 후기",
+        }, format="json")
+        self.assertEqual(created.status_code, 201)
+        review = WineReview.objects.get(pk=created.data["id"])
+        self.assertIsNone(review.body)
+        self.assertIsNone(review.acidity)
+        self.assertIsNone(review.sweetness)
+        self.assertIsNone(review.tannin)
+        self.assertIsNone(created.data["bodyRating"])
+        self.assertIsNone(client.get(f"/api/wines/{wine.pk}/").data["avgBody"])
+
+        updated = client.patch(f"/api/reviews/{review.pk}/", {"body": 3}, format="json")
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.data["bodyRating"], 3)
+        cleared = client.patch(f"/api/reviews/{review.pk}/", {"body": None}, format="json")
+        self.assertEqual(cleared.status_code, 200)
+        self.assertIsNone(cleared.data["bodyRating"])
+
+
 class TobaccoTagMigrationTests(TestCase):
     def test_existing_reviews_keep_tobacco_aroma_when_tags_are_merged(self):
         user = User.objects.create_user(
