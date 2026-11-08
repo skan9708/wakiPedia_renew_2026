@@ -2,6 +2,8 @@ import requests as http_requests
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
+from django.db import IntegrityError, transaction
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -9,6 +11,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from user.models import User
+from user.models import PhoneChallenge
+from user.recovery import consume_phone_challenge
 from user.serializers import (
     SignupSerializer, LoginSerializer, UserSerializer, ProfileUpdateSerializer
 )
@@ -18,6 +22,7 @@ def get_tokens_for_user(user):
     """로그인 토큰 발급 (마지막 로그인 시각도 함께 기록)"""
     update_last_login(None, user)
     refresh = RefreshToken.for_user(user)
+    refresh["auth_epoch"] = user.auth_epoch
     return {
         "refresh": str(refresh),
         "access": str(refresh.access_token),
@@ -30,7 +35,27 @@ class SignupView(APIView):
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        try:
+            with transaction.atomic():
+                challenge = None
+                if serializer.validated_data.get("phoneChallengeId"):
+                    challenge = consume_phone_challenge(
+                        serializer.validated_data["phoneChallengeId"],
+                        serializer.validated_data["phoneCode"],
+                        PhoneChallenge.PURPOSE_SIGNUP,
+                    )
+                    if not challenge:
+                        return Response({"phoneCode": ["휴대폰 인증번호가 올바르지 않거나 만료되었습니다."]}, status=400)
+                    if User.objects.filter(phone_number=challenge.phone_number).exists():
+                        return Response({"phoneCode": ["이미 등록된 휴대폰 번호입니다."]}, status=400)
+                user = serializer.save()
+                if challenge:
+                    user.phone_number = challenge.phone_number
+                    user.phone_verified_at = timezone.now()
+                    user.phone_consent_at = timezone.now()
+                    user.save(update_fields=["phone_number", "phone_verified_at", "phone_consent_at"])
+        except IntegrityError:
+            return Response({"detail": "이메일 또는 휴대폰 번호가 이미 등록되어 있습니다."}, status=400)
         tokens = get_tokens_for_user(user)
         return Response(
             {**tokens, "user": UserSerializer(user, context={"request": request}).data},

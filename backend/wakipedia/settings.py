@@ -105,7 +105,7 @@ AUTH_USER_MODEL = "user.User"
 REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {"feedback": "5/hour"},
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "user.token_auth.EpochJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
@@ -152,6 +152,25 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 
 KAKAO_REST_API_KEY = os.environ.get("KAKAO_REST_API_KEY", "")
+
+# Account recovery stays unavailable until a real delivery provider is configured.
+SOLAPI_API_KEY = os.environ.get("SOLAPI_API_KEY", "")
+SOLAPI_API_SECRET = os.environ.get("SOLAPI_API_SECRET", "")
+SOLAPI_SENDER = os.environ.get("SOLAPI_SENDER", "")
+PHONE_RECOVERY_ENABLED = all((SOLAPI_API_KEY, SOLAPI_API_SECRET, SOLAPI_SENDER))
+
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "")
+SES_FROM_EMAIL = os.environ.get("SES_FROM_EMAIL", "")
+SES_REGION_NAME = os.environ.get("SES_REGION_NAME", "ap-northeast-2")
+EMAIL_RECOVERY_ENABLED = bool(SES_FROM_EMAIL) or all((EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL))
+PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "https://wakipedia.co.kr").rstrip("/")
+PASSWORD_RESET_TIMEOUT = 3600
 
 # 500 오류의 traceback을 콘솔(journalctl -u waki)로 출력
 LOGGING = {

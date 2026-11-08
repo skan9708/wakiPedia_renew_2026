@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -22,6 +22,13 @@ export function LoginMobile() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recovery, setRecovery] = useState({ phoneEnabled: false, emailEnabled: false });
+
+  useEffect(() => {
+    api.get<{ phoneEnabled: boolean; emailEnabled: boolean }>('/auth/recovery/status/')
+      .then(({ data }) => setRecovery(data))
+      .catch(() => {});
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +75,11 @@ export function LoginMobile() {
               placeholder="••••••••"
             />
           </label>
+          {(recovery.phoneEnabled || recovery.emailEnabled) && <p className="text-sm text-center text-muted space-x-2">
+            {recovery.phoneEnabled && <button type="button" onClick={() => navigate('/auth/find-email')} className="text-accent underline">아이디 찾기</button>}
+            {recovery.phoneEnabled && recovery.emailEnabled && <span>·</span>}
+            {recovery.emailEnabled && <button type="button" onClick={() => navigate('/auth/forgot-password')} className="text-accent underline">비밀번호 찾기</button>}
+          </p>}
           <p className="text-sm text-center text-muted">
             계정이 없으신가요?{' '}
             <button type="button" onClick={() => navigate('/auth/signup')} className="text-accent font-medium">

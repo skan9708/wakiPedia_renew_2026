@@ -10,6 +10,14 @@ export function MyPageDetailMobile() {
 
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
+  const [maskedPhone, setMaskedPhone] = useState<string | null>(null);
+  const [phoneEnabled, setPhoneEnabled] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [phoneConsent, setPhoneConsent] = useState(false);
+  const [phoneCode, setPhoneCode] = useState('');
+  const [phoneChallengeId, setPhoneChallengeId] = useState('');
+  const [phoneBusy, setPhoneBusy] = useState(false);
+  const [phoneMessage, setPhoneMessage] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -25,11 +33,50 @@ export function MyPageDetailMobile() {
       .then(({ data }) => {
         setNickname(data.nickname ?? '');
         setEmail(data.email ?? '');
+        setMaskedPhone(data.maskedPhone ?? null);
         setAvatarUrl(data.avatarUrl ?? null);
       })
       .catch(() => setError('프로필을 불러오지 못했습니다.'))
       .finally(() => setFetchLoading(false));
+    api.get('/auth/recovery/status/')
+      .then(({ data }) => setPhoneEnabled(Boolean(data.phoneEnabled)))
+      .catch(() => setPhoneEnabled(false));
   }, [token]);
+
+  const sendPhoneCode = async () => {
+    setPhoneBusy(true); setPhoneMessage('');
+    try {
+      const { data } = await api.post('/me/phone/send/', { phone, phoneConsent });
+      setPhoneChallengeId(data.challengeId);
+      setPhoneMessage('인증번호를 보냈습니다. 5분 안에 입력해주세요.');
+    } catch (err: any) {
+      setPhoneMessage(err.response?.data?.detail ?? err.response?.data?.phone?.[0] ?? '인증번호를 보내지 못했습니다.');
+    } finally { setPhoneBusy(false); }
+  };
+
+  const verifyPhoneCode = async () => {
+    setPhoneBusy(true); setPhoneMessage('');
+    try {
+      const { data } = await api.post('/me/phone/verify/', { challengeId: phoneChallengeId, code: phoneCode });
+      const value: string = data.phone;
+      setMaskedPhone(`${value.slice(0, 3)}-****-${value.slice(-4)}`);
+      setPhoneChallengeId(''); setPhoneCode(''); setPhone(''); setPhoneConsent(false);
+      setPhoneMessage('휴대폰 인증이 완료되었습니다. 이제 아이디 찾기에 사용할 수 있습니다.');
+    } catch (err: any) {
+      setPhoneMessage(err.response?.data?.detail ?? '인증번호를 확인하지 못했습니다.');
+    } finally { setPhoneBusy(false); }
+  };
+
+  const removePhone = async () => {
+    setPhoneBusy(true); setPhoneMessage('');
+    try {
+      await api.delete('/me/phone/');
+      setMaskedPhone(null);
+      setPhoneMessage('등록된 휴대폰 번호를 삭제했습니다.');
+    } catch (err: any) {
+      setPhoneMessage(err.response?.data?.detail ?? '번호를 삭제하지 못했습니다.');
+    } finally { setPhoneBusy(false); }
+  };
 
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -132,6 +179,30 @@ export function MyPageDetailMobile() {
             />
             <p className="mt-1 text-xs text-muted">이메일은 변경할 수 없습니다.</p>
           </label>
+          <div className="border-t border-border pt-4 space-y-3">
+            <p className="text-sm font-medium">휴대폰 인증</p>
+            <p className="text-xs text-muted">아이디를 잊었을 때 기존 기록을 찾으려면 번호를 인증해 등록해주세요. 선택 사항이며, 광고 문자에는 사용하지 않습니다.</p>
+            <p className="text-xs text-muted">수집 항목: 휴대폰 번호 · 보유 기간: 삭제 요청 또는 탈퇴 시까지 · 동의 거부 시 아이디 찾기를 사용할 수 없습니다.</p>
+            {phoneEnabled && <label className="flex items-start gap-2 text-xs">
+              <input type="checkbox" checked={phoneConsent} onChange={e => setPhoneConsent(e.target.checked)} />
+              휴대폰 번호 수집·이용에 동의합니다 (선택)
+            </label>}
+            {maskedPhone && <div className="flex items-center justify-between gap-2">
+              <p className="text-sm">등록된 번호: {maskedPhone}</p>
+              <button type="button" onClick={removePhone} disabled={phoneBusy} className="text-xs text-muted underline disabled:opacity-50">번호 삭제</button>
+            </div>}
+            {!phoneEnabled ? <p className="text-xs text-muted">휴대폰 인증 서비스 준비 중입니다.</p> : <>
+              <div className="flex gap-2">
+                <input type="tel" inputMode="tel" autoComplete="tel" aria-label="휴대폰 번호" value={phone} onChange={e => setPhone(e.target.value)} placeholder="010-1234-5678" className="min-w-0 flex-1 border border-border rounded-lg px-3 py-2 text-sm" />
+                <button type="button" disabled={phoneBusy || !phone.trim() || !phoneConsent} onClick={sendPhoneCode} className="rounded-lg border border-accent px-3 text-sm text-accent disabled:opacity-50">인증번호 발송</button>
+              </div>
+              {phoneChallengeId && <div className="flex gap-2">
+                <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} aria-label="휴대폰 인증번호" value={phoneCode} onChange={e => setPhoneCode(e.target.value)} placeholder="인증번호 6자리" className="min-w-0 flex-1 border border-border rounded-lg px-3 py-2 text-sm" />
+                <button type="button" disabled={phoneBusy || !/^[0-9]{6}$/.test(phoneCode)} onClick={verifyPhoneCode} className="rounded-lg bg-accent px-3 text-sm text-white disabled:opacity-50">확인</button>
+              </div>}
+            </>}
+            {phoneMessage && <p role="status" className="text-xs text-muted">{phoneMessage}</p>}
+          </div>
         </div>
       </div>
 

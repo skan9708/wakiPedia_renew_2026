@@ -5,6 +5,7 @@ import { SideDrawer } from '@/components/layout/SideDrawer';
 import { Home } from '@/pages/Home/Home';
 import { LoginMobile } from '@/pages/Auth/LoginMobile';
 import { SignupMobile } from '@/pages/Auth/SignupMobile';
+import { FindEmailMobile, PasswordResetRequestMobile, PasswordResetConfirmMobile } from '@/pages/Auth/AccountRecoveryMobile';
 import { KakaoCallback } from '@/pages/Auth/KakaoCallback';
 import { SearchListMobile } from '@/pages/Search/SearchListMobile';
 import { WineFilterListMobile } from '@/pages/Search/WineFilterListMobile';
@@ -55,6 +56,9 @@ export function AppRoutes() {
           <Route path="/" element={<Home />} />
           <Route path="/auth/login" element={<LoginMobile />} />
           <Route path="/auth/signup" element={<SignupMobile />} />
+          <Route path="/auth/find-email" element={<FindEmailMobile />} />
+          <Route path="/auth/forgot-password" element={<PasswordResetRequestMobile />} />
+          <Route path="/auth/reset-password" element={<PasswordResetConfirmMobile />} />
           <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
           <Route path="/search" element={<SearchListMobile />} />
           <Route path="/search/filters" element={<WineFilterListMobile />} />

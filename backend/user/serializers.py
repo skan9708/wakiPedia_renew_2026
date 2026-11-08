@@ -24,10 +24,19 @@ class UserSerializer(serializers.ModelSerializer):
     likeCount = serializers.SerializerMethodField()
     likeRank = serializers.SerializerMethodField()
     isStaff = serializers.BooleanField(source="is_staff", read_only=True)
+    phoneVerified = serializers.SerializerMethodField()
+    maskedPhone = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "email", "nickname", "avatarUrl", "reviewCount", "likeCount", "likeRank", "isStaff", "created_at")
+        fields = ("id", "email", "nickname", "avatarUrl", "reviewCount", "likeCount", "likeRank", "isStaff", "phoneVerified", "maskedPhone", "created_at")
+
+    def get_phoneVerified(self, obj):
+        return bool(obj.phone_number and obj.phone_verified_at)
+
+    def get_maskedPhone(self, obj):
+        phone = obj.phone_number
+        return f"{phone[:3]}-****-{phone[-4:]}" if phone else None
 
     def get_avatarUrl(self, obj):
         request = self.context.get("request")
@@ -62,18 +71,28 @@ class UserSerializer(serializers.ModelSerializer):
 class SignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     passwordConfirm = serializers.CharField(write_only=True)
+    phoneChallengeId = serializers.UUIDField(write_only=True, required=False)
+    phoneCode = serializers.RegexField(r"^\d{6}$", write_only=True, required=False)
+    phoneConsent = serializers.BooleanField(write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ("email", "nickname", "password", "passwordConfirm")
+        fields = ("email", "nickname", "password", "passwordConfirm", "phoneChallengeId", "phoneCode", "phoneConsent")
 
     def validate(self, data):
         if data["password"] != data["passwordConfirm"]:
             raise serializers.ValidationError({"passwordConfirm": "비밀번호가 일치하지 않습니다."})
+        if ("phoneChallengeId" in data) != ("phoneCode" in data):
+            raise serializers.ValidationError({"phoneCode": "휴대폰 인증번호를 입력해주세요."})
+        if "phoneChallengeId" in data and not data.get("phoneConsent"):
+            raise serializers.ValidationError({"phoneConsent": "휴대폰 번호 수집·이용 동의가 필요합니다."})
         return data
 
     def create(self, validated_data):
         validated_data.pop("passwordConfirm")
+        validated_data.pop("phoneChallengeId", None)
+        validated_data.pop("phoneCode", None)
+        validated_data.pop("phoneConsent", None)
         return User.objects.create_user(**validated_data)
 
 

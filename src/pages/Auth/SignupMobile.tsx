@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { trackSignUp } from '@/lib/analytics';
@@ -19,12 +19,38 @@ export function SignupMobile() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [phoneEnabled, setPhoneEnabled] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [phoneCode, setPhoneCode] = useState('');
+  const [phoneChallengeId, setPhoneChallengeId] = useState('');
+  const [phoneConsent, setPhoneConsent] = useState(false);
+  const [phoneBusy, setPhoneBusy] = useState(false);
+  const [phoneMessage, setPhoneMessage] = useState('');
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const canSubmit = nickname && email && password && confirm && agreePrivacy && agreeTerms && password === confirm;
+  useEffect(() => {
+    api.get('/auth/recovery/status/')
+      .then(({ data }) => setPhoneEnabled(Boolean(data.phoneEnabled)))
+      .catch(() => setPhoneEnabled(false));
+  }, []);
+
+  const hasOptionalPhone = Boolean(phone.trim());
+  const canSubmit = nickname && email && password && confirm && agreePrivacy && agreeTerms && password === confirm
+    && (!hasOptionalPhone || (phoneConsent && phoneChallengeId && /^[0-9]{6}$/.test(phoneCode)));
+
+  const sendPhoneCode = async () => {
+    setPhoneBusy(true); setPhoneMessage(''); setError('');
+    try {
+      const { data } = await api.post('/auth/signup/phone/send/', { phone, phoneConsent });
+      setPhoneChallengeId(data.challengeId);
+      setPhoneMessage('인증번호를 보냈습니다. 5분 안에 입력해주세요.');
+    } catch (err: any) {
+      setError(err.response?.data?.detail ?? err.response?.data?.phone?.[0] ?? '인증번호 발송에 실패했습니다.');
+    } finally { setPhoneBusy(false); }
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +63,7 @@ export function SignupMobile() {
         nickname,
         password,
         passwordConfirm: confirm,
+        ...(hasOptionalPhone ? { phoneChallengeId, phoneCode, phoneConsent } : {}),
       });
       login(data.access, data.user);
       trackSignUp('email');
@@ -79,13 +106,28 @@ export function SignupMobile() {
             <span className="block text-sm text-muted mb-1">비밀번호 확인</span>
             <input type="password" className="w-full border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" />
           </label>
+          {phoneEnabled && <div className="border-t border-border pt-4 space-y-3">
+            <p className="text-sm font-medium">휴대폰 인증 (선택)</p>
+            <p className="text-xs text-muted">아이디를 잊었을 때 기존 기록을 찾으려면 번호를 인증해 등록해주세요. 등록은 선택 사항이며, 광고 문자에는 사용하지 않습니다.</p>
+            <p className="text-xs text-muted">수집 항목: 휴대폰 번호 · 보유 기간: 회원 탈퇴 시까지 · 동의 거부 시 아이디 찾기 기능을 사용할 수 없습니다.</p>
+            <label className="flex items-start gap-2 text-xs">
+              <input type="checkbox" checked={phoneConsent} onChange={e => setPhoneConsent(e.target.checked)} />
+              휴대폰 번호 수집·이용에 동의합니다 (선택)
+            </label>
+            <div className="flex gap-2">
+              <input type="tel" inputMode="tel" autoComplete="tel" aria-label="휴대폰 번호" value={phone} onChange={e => { setPhone(e.target.value); setPhoneChallengeId(''); setPhoneCode(''); }} placeholder="010-1234-5678" className="min-w-0 flex-1 border border-border rounded-lg px-3 py-2 text-sm" />
+              <button type="button" disabled={!phoneConsent || !phone.trim() || phoneBusy} onClick={sendPhoneCode} className="rounded-lg border border-accent px-3 text-sm text-accent disabled:opacity-50">인증번호 발송</button>
+            </div>
+            {phoneChallengeId && <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} aria-label="휴대폰 인증번호" value={phoneCode} onChange={e => setPhoneCode(e.target.value)} placeholder="인증번호 6자리" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />}
+            {phoneMessage && <p role="status" className="text-xs text-accent">{phoneMessage}</p>}
+          </div>}
           <label className="flex items-start gap-2">
             <input type="checkbox" className="mt-1" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} />
-            <span className="text-sm">개인정보 처리방침에 동의합니다.</span>
+            <span className="text-sm"><Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-accent underline">개인정보처리방침</Link>에 동의합니다.</span>
           </label>
           <label className="flex items-start gap-2">
             <input type="checkbox" className="mt-1" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} />
-            <span className="text-sm">이용약관에 동의합니다.</span>
+            <span className="text-sm"><Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-accent underline">이용약관</Link>에 동의합니다.</span>
           </label>
           <p className="text-sm text-center text-muted">
             이미 계정이 있으신가요?{' '}
