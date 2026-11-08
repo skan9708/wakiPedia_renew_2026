@@ -22,9 +22,15 @@ TYPE_MAP = {
     "시드르": "시드르", "과실주": "과실주",
 }
 
-# The source export left this pair separate. Wine 6063 has a bottle photo that
-# clearly reads "PRIVATE BIN"; the owner confirmed merging it into 5521.
-REPRESENTATIVE_MERGES = {6063: 5521}
+# These representative pairs were verified against bottle labels. The 2019
+# Decoy Merlot photos match; wine 8010's photo reads Cabernet Sauvignon.
+# This catalog groups vintages of the same named wine together.
+REPRESENTATIVE_MERGES = {6063: 5521, 5803: 4816, 8010: 8437}
+REPRESENTATIVE_MERGE_NAMES = {
+    6063: ("Villa Maria Sauvignon Blanc", "Villa Maria,Private Bin Sauvignon Blanc"),
+    5803: ("Decoy sonoma county Merlot", "Duckhorn Decoy Merlot"),
+    8010: ("decoy", "Decoy Cabernet Sauvignon"),
+}
 
 
 def normalized_name(value):
@@ -89,10 +95,23 @@ def apply_reviewed_merges(data, mapping):
                 or mapping.get(source) != source or mapping.get(target) != target):
             raise CommandError(f"Invalid reviewed representative merge {source}:{target}.")
         original, representative = by_id[source], by_id[target]
-        if any(original[field] != representative[field] for field in ("country", "type", "grapesRaw")):
+        expected_source, expected_target = REPRESENTATIVE_MERGE_NAMES[source]
+        if (normalized_name(original["nameEn"]) != normalized_name(expected_source)
+                or normalized_name(representative["nameEn"]) != normalized_name(expected_target)):
+            raise CommandError(f"Reviewed merge {source}:{target} has unexpected wine names.")
+        if any(original[field] != representative[field] for field in ("country", "type")):
             raise CommandError(f"Reviewed merge {source}:{target} has conflicting wine details.")
-        if original["nameEn"].casefold() not in representative["searchAliasesRaw"].casefold():
-            raise CommandError(f"Reviewed merge {source}:{target} is absent from search aliases.")
+        source_grapes = {name.strip() for name in (original.get("grapesRaw") or "").split(",") if name.strip()}
+        target_grapes = {name.strip() for name in (representative.get("grapesRaw") or "").split(",") if name.strip()}
+        if not source_grapes.issubset(target_grapes):
+            raise CommandError(f"Reviewed merge {source}:{target} has conflicting grapes.")
+        aliases = representative.get("searchAliasesRaw") or ""
+        for name in (original["nameEn"], original["nameKo"], original.get("searchAliasesRaw") or ""):
+            if name and name.casefold() not in aliases.casefold():
+                aliases = f"{aliases}, {name}" if aliases else name
+        representative["searchAliasesRaw"] = aliases
+    by_id[4816]["nameEn"] = "Decoy Merlot"
+    by_id[4816]["nameKo"] = "디코이 메를로"
     representatives = [item for item in data["wines"] if item["id"] not in REPRESENTATIVE_MERGES]
     mapping = {source: REPRESENTATIVE_MERGES.get(target, target) for source, target in mapping.items()}
     return representatives, mapping
