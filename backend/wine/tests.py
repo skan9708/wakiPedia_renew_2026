@@ -2,6 +2,7 @@ from importlib import import_module
 from types import SimpleNamespace
 
 from django.apps import apps
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import TestCase
 from rest_framework.test import APIClient
@@ -155,6 +156,31 @@ class ReviewPrivacyAndWinePermissionTests(TestCase):
         self.assertEqual(self.private_review.likes.count(), 0)
         self.assertEqual(self.owner_client.patch(private_url, {"text": "수정한 기록"}).status_code, 200)
         self.assertEqual(self.owner_client.delete(private_url).status_code, 204)
+
+    def test_private_review_rejects_publicly_stored_photos(self):
+        response = self.owner_client.post("/api/reviews/", {
+            "wine": self.wine.id,
+            "rating": 4,
+            "text": "사진을 포함한 비공개 기록",
+            "body": 2,
+            "acidity": 2,
+            "sweetness": 2,
+            "tannin": 2,
+            "is_public": "false",
+            "images": SimpleUploadedFile("private.jpg", b"image", content_type="image/jpeg"),
+        }, format="multipart")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("images", response.data)
+        self.assertEqual(WineReview.objects.count(), 2)
+
+        WineReviewImage.objects.create(
+            review=self.public_review, image="review_images/public.jpg",
+        )
+        public_url = f"/api/reviews/{self.public_review.id}/"
+        response = self.owner_client.patch(public_url, {"is_public": False})
+        self.assertEqual(response.status_code, 400)
+        self.public_review.refresh_from_db()
+        self.assertTrue(self.public_review.is_public)
 
     def test_wine_changes_require_owner_or_staff_and_deletion_requires_staff(self):
         wine_url = f"/api/wines/{self.wine.id}/"

@@ -141,6 +141,13 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             "is_public", "feels",
         )
 
+    def validate(self, attrs):
+        if not attrs.get("is_public", True) and self.context.get("images"):
+            raise serializers.ValidationError({
+                "images": "사진을 첨부한 리뷰는 나만 보기로 저장할 수 없습니다."
+            })
+        return attrs
+
     def validate_rating(self, value):
         raw = round(value * 10)
         if raw % 5 != 0:

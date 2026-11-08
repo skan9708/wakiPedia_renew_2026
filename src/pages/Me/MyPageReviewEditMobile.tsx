@@ -22,6 +22,7 @@ export function MyPageReviewEditMobile() {
   const [acidLevel, setAcidLevel] = useState(2);
   const [taninLevel, setTaninLevel] = useState(2);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
+  const [hasImages, setHasImages] = useState(false);
   const [feels, setFeels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,6 +40,7 @@ export function MyPageReviewEditMobile() {
         setAcidLevel(data.acidityRating ?? 2);
         setTaninLevel(data.taninRating ?? 2);
         setVisibility(data.is_public ? 'public' : 'private');
+        setHasImages((data.images?.length ?? 0) > 0);
         setFeels(data.feels ?? []);
       })
       .catch(() => navigate(-1))
@@ -151,8 +153,9 @@ export function MyPageReviewEditMobile() {
         <h3 className="text-base font-semibold mb-2">공개 범위</h3>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className={`py-2 rounded-xl border ${visibility === 'public' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('public')}>전체 공개</button>
-          <button type="button" className={`py-2 rounded-xl border ${visibility === 'private' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('private')}>나만 보기</button>
+          <button type="button" disabled={hasImages} className={`py-2 rounded-xl border disabled:opacity-50 ${visibility === 'private' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('private')}>나만 보기</button>
         </div>
+        {hasImages && <p className="mt-2 text-xs text-muted">사진이 첨부된 리뷰는 나만 보기로 변경할 수 없습니다.</p>}
       </section>
 
       <div className="fixed bottom-16 left-0 right-0 bg-white/95 backdrop-blur border-t border-border">

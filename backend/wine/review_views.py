@@ -1,5 +1,5 @@
 from django.http import Http404
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -97,6 +97,14 @@ class ReviewDetailView(APIView):
         if review.user != request.user:
             return Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
+        if "is_public" in request.data:
+            is_public = serializers.BooleanField().run_validation(request.data["is_public"])
+            if not is_public and review.images.exists():
+                return Response(
+                    {"images": ["사진을 첨부한 리뷰는 나만 보기로 변경할 수 없습니다."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         if request.data.get("text") is not None:
             review.text = request.data["text"]
         if request.data.get("rating") is not None:
@@ -110,7 +118,7 @@ class ReviewDetailView(APIView):
         if request.data.get("tannin") is not None:
             review.tannin = int(request.data["tannin"])
         if "is_public" in request.data:
-            review.is_public = request.data["is_public"]
+            review.is_public = is_public
         review.save()
 
         feels = request.data.get("feels")
