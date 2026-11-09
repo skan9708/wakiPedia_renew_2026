@@ -84,6 +84,7 @@ export function MyPageMobile() {
   const recordedWineCount = new Set(myReviews.map((review) => review.wineId).filter(Number.isInteger)).size;
   const publicReviews = myReviews.filter((review) => review.is_public);
   const helpfulCount = publicReviews.reduce((total, review) => total + review.likeCount, 0);
+  const activityHelp = "공개 리뷰 수와 다른 사용자가 내 공개 리뷰에 누른 '도움이 돼요' 횟수예요. 비공개 리뷰는 개인 와인 셀러에만 포함됩니다.";
 
   return (
     <div className="space-y-10">
@@ -100,13 +101,27 @@ export function MyPageMobile() {
                 </div>
               )}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="text-lg font-semibold">{displayName}</div>
               <div className="break-all text-sm text-muted">{displayEmail}</div>
             </div>
+            <div className="hidden min-[440px]:flex shrink-0 items-start gap-1.5 border-l border-border pl-3">
+              <div className="space-y-1 text-right text-xs text-muted">
+                {!reviewsLoaded ? (
+                  <span>집계 중...</span>
+                ) : reviewsError ? (
+                  <span>불러오기 실패</span>
+                ) : (
+                  <>
+                    <div><span className="font-semibold text-fg tabular-nums">{publicReviews.length}</span> 공개 리뷰</div>
+                    <div><span className="font-semibold text-fg tabular-nums">{helpfulCount}</span> 도움 된 횟수</div>
+                  </>
+                )}
+              </div>
+              {reviewsLoaded && !reviewsError && <InfoTooltip label="활동 수치 설명" text={activityHelp} small />}
+            </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-2 text-xs text-muted">
-            <span className="font-semibold text-[#4c5700]">와키 기여</span>
+          <div className="mt-3 flex min-[440px]:hidden flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-2 text-xs text-muted">
             {!reviewsLoaded ? (
               <span>집계 중...</span>
             ) : reviewsError ? (
@@ -116,11 +131,7 @@ export function MyPageMobile() {
                 <span>공개 리뷰 {publicReviews.length}개</span>
                 <span aria-hidden="true">·</span>
                 <span>도움 된 횟수 {helpfulCount}회</span>
-                <InfoTooltip
-                  label="와키 기여 설명"
-                  small
-                  text="공개 리뷰 수와 다른 사용자가 내 공개 리뷰에 누른 '도움이 돼요' 횟수예요. 비공개 리뷰는 개인 와인 셀러에만 포함됩니다."
-                />
+                <InfoTooltip label="활동 수치 설명" text={activityHelp} small />
               </>
             )}
           </div>

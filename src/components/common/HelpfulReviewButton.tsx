@@ -49,7 +49,8 @@ export function HelpfulReviewButton({ reviewId, creatorId, count, isLiked = fals
   if (isOwnReview) {
     return (
       <span className={`inline-flex items-center gap-1.5 text-muted ${compact ? 'text-xs' : 'text-sm'}`}>
-        <ThumbsUp className="h-4 w-4" aria-hidden="true" /> 도움 된 횟수 {helpfulCount}회
+        <ThumbsUp className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} aria-hidden="true" />
+        {compact ? `도움 ${helpfulCount}` : `도움 된 횟수 ${helpfulCount}회`}
       </span>
     );
   }
@@ -62,10 +63,11 @@ export function HelpfulReviewButton({ reviewId, creatorId, count, isLiked = fals
         disabled={pending}
         aria-pressed={helpful}
         aria-label={`도움이 돼요, ${helpfulCount}회`}
-        className={`inline-flex items-center gap-1.5 rounded-lg border border-accent px-2.5 py-1.5 font-medium transition-colors disabled:opacity-60 ${compact ? 'text-xs' : 'text-sm'} ${helpful ? 'bg-accent text-white' : 'bg-[#f6f8e8] text-[#596800] hover:bg-[#eef2d2]'}`}
+        title={compact ? '도움이 돼요' : undefined}
+        className={`inline-flex items-center rounded-lg border font-medium transition-colors disabled:opacity-60 ${compact ? 'gap-1 px-2 py-1 text-[11px]' : 'gap-1.5 px-2.5 py-1.5 text-xs'} ${helpful ? 'border-accent bg-accent text-white' : 'border-[#d8df9b] bg-[#f7f9e9] text-[#596800] hover:bg-[#eef2d2]'}`}
       >
-        <ThumbsUp className="h-4 w-4" fill={helpful ? 'currentColor' : 'none'} aria-hidden="true" />
-        도움이 돼요 <span className="tabular-nums">{helpfulCount}</span>
+        <ThumbsUp className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} fill={helpful ? 'currentColor' : 'none'} aria-hidden="true" />
+        {compact ? '도움' : '도움이 돼요'} <span className="tabular-nums">{helpfulCount}</span>
       </button>
       {error && <span role="alert" className="text-xs text-red-600">잠시 후 다시 눌러주세요.</span>}
     </span>
