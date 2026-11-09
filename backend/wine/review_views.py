@@ -142,6 +142,11 @@ class ReviewLikeView(APIView):
         from django.shortcuts import get_object_or_404
         review = get_object_or_404(WineReview, pk=pk, is_public=True)
         user = request.user
+        if review.user_id == user.id:
+            return Response(
+                {"detail": "자신의 리뷰에는 '도움이 돼요'를 누를 수 없습니다."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         if review.likes.filter(id=user.id).exists():
             review.likes.remove(user)
             return Response({"isLiked": False, "likeCount": review.likes.count()})

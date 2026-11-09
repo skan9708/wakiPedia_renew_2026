@@ -107,6 +107,7 @@ export function ReviewDetailMobile() {
   if (!review) return <div className="p-8 text-center text-muted text-sm">리뷰를 찾을 수 없습니다.</div>;
 
   const mainImage = review.images?.[0]?.url;
+  const isOwnReview = user && review.creator.id === Number(user.id);
 
   return (
     <>
@@ -124,7 +125,7 @@ export function ReviewDetailMobile() {
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-sm text-muted">{review.creator.nickname}</span>
-              {user && review.creator.id === parseInt(user.id) && (
+              {isOwnReview && (
                 <div className="flex gap-1">
                   <button
                     onClick={() => navigate(`/me/reviews/${id}/edit`)}
@@ -139,17 +140,25 @@ export function ReviewDetailMobile() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onToggleLike}
-              aria-pressed={liked}
-              className={`relative px-3 py-1.5 rounded-full text-sm flex items-center gap-2 border transition-colors ${liked ? 'bg-accent text-white border-accent' : 'bg-bgsubtle border-border text-fg'}`}
-            >
-              {burst && <span className="anim-heart-pop absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-accent">❤️</span>}
-              <Heart className={`w-4 h-4 ${liked ? 'text-white' : 'text-accent'}`} />
-              <span>도움이 돼요</span>
-            </button>
-            <span className="text-sm text-muted">{likeCount}</span>
+            {isOwnReview ? (
+              <span className="flex items-center gap-1 text-sm text-muted">
+                <Heart className="w-4 h-4" />받은 도움 {likeCount}
+              </span>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onToggleLike}
+                  aria-pressed={liked}
+                  className={`relative px-3 py-1.5 rounded-full text-sm flex items-center gap-2 border transition-colors ${liked ? 'bg-accent text-white border-accent' : 'bg-bgsubtle border-border text-fg'}`}
+                >
+                  {burst && <span className="anim-heart-pop absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-accent">❤️</span>}
+                  <Heart className={`w-4 h-4 ${liked ? 'text-white' : 'text-accent'}`} />
+                  <span>도움이 돼요</span>
+                </button>
+                <span className="text-sm text-muted">{likeCount}</span>
+              </>
+            )}
           </div>
         </div>
 

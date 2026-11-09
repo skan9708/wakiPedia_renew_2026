@@ -186,6 +186,17 @@ class ReviewPrivacyAndWinePermissionTests(TestCase):
         self.assertEqual(self.owner_client.patch(private_url, {"text": "수정한 기록"}).status_code, 200)
         self.assertEqual(self.owner_client.delete(private_url).status_code, 204)
 
+    def test_author_cannot_like_own_public_review(self):
+        like_url = f"/api/reviews/{self.public_review.id}/like/"
+
+        self.assertEqual(self.owner_client.post(like_url).status_code, 403)
+        self.assertEqual(self.public_review.likes.count(), 0)
+
+        self.assertEqual(self.other_client.post(like_url).status_code, 200)
+        self.assertEqual(self.public_review.likes.count(), 1)
+        self.assertEqual(self.other_client.post(like_url).status_code, 200)
+        self.assertEqual(self.public_review.likes.count(), 0)
+
     def test_private_review_rejects_publicly_stored_photos(self):
         response = self.owner_client.post("/api/reviews/", {
             "wine": self.wine.id,
