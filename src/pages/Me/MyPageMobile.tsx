@@ -41,6 +41,7 @@ export function MyPageMobile() {
   const [myReviews, setMyReviews] = useState<MyReview[]>([]);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
   const [reviewsError, setReviewsError] = useState(false);
+  const [communityReviewCount, setCommunityReviewCount] = useState<number | null>(null);
   const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
   const [tasteTab, setTasteTab] = useState<TasteTab>('all');
   const [tasteLoading, setTasteLoading] = useState(true);
@@ -56,6 +57,10 @@ export function MyPageMobile() {
       .then(({ data }) => setMyReviews(data))
       .catch(() => setReviewsError(true))
       .finally(() => setReviewsLoaded(true));
+    setCommunityReviewCount(null);
+    api.get<{ total: number }>('/reviews/', { params: { limit: 1 } })
+      .then(({ data }) => setCommunityReviewCount(data.total))
+      .catch(() => {});
     setTasteProfile(null);
     setTasteTab('all');
     setTasteLoading(true);
@@ -105,7 +110,8 @@ export function MyPageMobile() {
               <div className="text-lg font-semibold">{displayName}</div>
               <div className="break-all text-sm text-muted">{displayEmail}</div>
             </div>
-            <div className="hidden min-[440px]:flex shrink-0 items-start gap-1.5 border-l border-border pl-3">
+            <div className="hidden min-[440px]:flex shrink-0 items-center gap-2 border-l border-border pl-3">
+              {reviewsLoaded && !reviewsError && <InfoTooltip label="활동 수치 설명" text={activityHelp} small />}
               <div className="text-xs text-muted">
                 {!reviewsLoaded ? (
                   <span>집계 중...</span>
@@ -122,7 +128,6 @@ export function MyPageMobile() {
                   </>
                 )}
               </div>
-              {reviewsLoaded && !reviewsError && <InfoTooltip label="활동 수치 설명" text={activityHelp} small />}
             </div>
           </div>
           <div className="mt-3 flex min-[440px]:hidden flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-2 text-xs text-muted">
@@ -132,10 +137,10 @@ export function MyPageMobile() {
               <span>집계를 불러오지 못했어요.</span>
             ) : (
               <>
+                <InfoTooltip label="활동 수치 설명" text={activityHelp} small align="left" />
                 <span>공개 리뷰 {publicReviews.length}개</span>
                 <span aria-hidden="true">·</span>
                 <span>도움 준 리뷰 {helpfulReviewCount}개</span>
-                <InfoTooltip label="활동 수치 설명" text={activityHelp} small />
               </>
             )}
           </div>
@@ -152,7 +157,7 @@ export function MyPageMobile() {
           {reviewsError ? (
             <p className="rounded-2xl bg-bgsubtle p-4 text-sm text-muted">와인 기록을 불러오지 못했습니다.</p>
           ) : reviewsLoaded && !tasteLoading ? (
-            <WineBottleProgress wineCount={recordedWineCount} onRecord={() => navigate('/search')} />
+            <WineBottleProgress wineCount={recordedWineCount} communityReviewCount={communityReviewCount} onRecord={() => navigate('/search')} />
           ) : (
             <p className="rounded-2xl bg-bgsubtle p-4 text-sm text-muted">와인 기록을 불러오는 중...</p>
           )}

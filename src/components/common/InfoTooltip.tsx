@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
-export function InfoTooltip({ label, text, small = false }: { label: string; text: ReactNode; small?: boolean }) {
+export function InfoTooltip({ label, text, small = false, align = 'right' }: { label: string; text: ReactNode; small?: boolean; align?: 'left' | 'right' }) {
   const [open, setOpen] = useState(false);
   const tooltipId = useId();
   const containerRef = useRef<HTMLSpanElement>(null);
@@ -42,7 +42,7 @@ export function InfoTooltip({ label, text, small = false }: { label: string; tex
         ?
       </button>
       {open && (
-        <div id={tooltipId} role="tooltip" className="absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] max-h-[65vh] overflow-y-auto rounded-xl border border-border bg-white p-3 text-sm font-normal leading-5 text-fg shadow-card">
+        <div id={tooltipId} role="tooltip" className={`absolute top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] max-h-[65vh] overflow-y-auto rounded-xl border border-border bg-white p-3 text-sm font-normal leading-5 text-fg shadow-card ${align === 'left' ? 'left-0' : 'right-0'}`}>
           {text}
         </div>
       )}

@@ -14,7 +14,7 @@ function getBottleStyle(tierStart: number) {
   return { trim: '#A7B621', background: '#F2F4D9' };
 }
 
-export function WineBottleProgress({ wineCount, onRecord }: { wineCount: number; onRecord: () => void }) {
+export function WineBottleProgress({ wineCount, communityReviewCount, onRecord }: { wineCount: number; communityReviewCount: number | null; onRecord: () => void }) {
   const progress = getWineProgress(wineCount);
   const tier = getWineLevelTier(progress.level);
   const style = getBottleStyle(tier.minLevel);
@@ -30,38 +30,42 @@ export function WineBottleProgress({ wineCount, onRecord }: { wineCount: number;
     <div className="rounded-2xl border border-[#e9e2dc] bg-[#fcfaf7] p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-[#745f51]">나의 와인 셀러</p>
+          <div className="flex items-center gap-1.5">
+            <InfoTooltip
+              label="와인 기록 레벨 설명"
+              small
+              align="left"
+              text={
+                <div>
+                  <p className="font-semibold">와인병 레벨 안내</p>
+                  <p className="mt-2 text-xs leading-5 text-muted">공개·비공개 리뷰 모두 포함해 마셔본 와인을 셉니다. 같은 와인을 여러 번 기록해도 셀러에는 1병으로 표시해요.</p>
+                  <p className="mt-2 text-xs leading-5 text-muted">첫 병은 와인 3개, 다음 병은 5개, 그다음은 7개를 기록하면 완성됩니다. 레벨 상한은 없어요.</p>
+                  <p className="mt-2 text-xs leading-5 text-muted">이번 병은 {progress.current}/{progress.required}개 채웠고, 다음 병까지 {progress.remaining}개 남았어요.</p>
+                  <p className="mt-2 text-xs font-medium">완성한 병 {progress.completedBottles}개 · 다음 병은 총 {progress.nextMilestone}개 기록하면 완성</p>
+                  <p className="mt-3 border-t border-border pt-2 text-xs font-semibold">레벨별 이름</p>
+                  <ul className="mt-1 space-y-1 text-xs text-muted">
+                    {WINE_LEVEL_TIERS.map((item) => {
+                      const min = wineCountAtLevel(item.minLevel);
+                      const max = item.maxLevel === null ? null : wineCountAtLevel(item.maxLevel + 1) - 1;
+                      return (
+                        <li key={item.minLevel} className="flex justify-between gap-2">
+                          <span>Lv.{item.minLevel}{item.maxLevel === null ? '+' : `–${item.maxLevel}`} {item.name}</span>
+                          <span className="shrink-0 tabular-nums">{min}{max === null ? '병부터' : `–${max}병`}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              }
+            />
+            <p className="text-xs font-semibold text-[#745f51]">나의 와인 셀러</p>
+          </div>
           <h3 className="mt-1 text-lg font-bold text-[#352e2c]">Lv.{progress.level} {tier.name}</h3>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="rounded-full px-2.5 py-1 text-xs font-semibold text-[#584d44]" style={{ backgroundColor: style.background }}>
             마셔본 와인 {wineCount}병
           </span>
-          <InfoTooltip
-            label="와인 기록 레벨 설명"
-            small
-            text={
-              <div>
-                <p className="font-semibold">와인병 레벨 안내</p>
-                <p className="mt-2 text-xs leading-5 text-muted">공개·비공개 리뷰 모두 포함해 마셔본 와인을 셉니다. 같은 와인을 여러 번 기록해도 셀러에는 1병으로 표시해요.</p>
-                <p className="mt-2 text-xs leading-5 text-muted">첫 병은 와인 3개, 다음 병은 5개, 그다음은 7개를 기록하면 완성됩니다. 레벨 상한은 없어요.</p>
-                <p className="mt-2 text-xs font-medium">완성한 병 {progress.completedBottles}개 · 다음 병은 총 {progress.nextMilestone}개 기록하면 완성</p>
-                <p className="mt-3 border-t border-border pt-2 text-xs font-semibold">레벨별 이름</p>
-                <ul className="mt-1 space-y-1 text-xs text-muted">
-                  {WINE_LEVEL_TIERS.map((item) => {
-                    const min = wineCountAtLevel(item.minLevel);
-                    const max = item.maxLevel === null ? null : wineCountAtLevel(item.maxLevel + 1) - 1;
-                    return (
-                      <li key={item.minLevel} className="flex justify-between gap-2">
-                        <span>Lv.{item.minLevel}{item.maxLevel === null ? '+' : `–${item.maxLevel}`} {item.name}</span>
-                        <span className="shrink-0 tabular-nums">{min}{max === null ? '병부터' : `–${max}병`}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            }
-          />
         </div>
       </div>
 
@@ -98,18 +102,28 @@ export function WineBottleProgress({ wineCount, onRecord }: { wineCount: number;
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-[#745f51]">이번 병 채우기</p>
-          <p className="mt-0.5 text-2xl font-bold tabular-nums text-[#352e2c]">
+          <p className="text-2xl font-bold tabular-nums text-[#352e2c]">
             {progress.current}<span className="ml-1 text-sm font-medium text-[#85776e]">/ {progress.required}개</span>
-          </p>
-          <p className="mt-2 text-sm leading-5 text-[#584d44]">
-            {wineCount === 0 ? '첫 와인을 기록해 병을 채워보세요.' : `다음 병까지 와인 ${progress.remaining}개 남았어요.`}
           </p>
           <button type="button" onClick={onRecord} className="mt-3 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
             와인 기록하기
           </button>
         </div>
+        {communityReviewCount !== null && (
+          <div className="hidden min-[440px]:flex shrink-0 flex-col justify-center border-l border-[#e9e2dc] pl-3 text-right">
+            <p className="text-[11px] text-[#745f51]">와키에 쌓인 리뷰</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-[#352e2c]">
+              {communityReviewCount.toLocaleString('ko-KR')}<span className="ml-0.5 text-xs font-medium">개</span>
+            </p>
+          </div>
+        )}
       </div>
+      {communityReviewCount !== null && (
+        <div className="mt-3 flex items-center justify-between border-t border-[#e9e2dc] pt-3 text-xs min-[440px]:hidden">
+          <span className="text-[#745f51]">와키에 쌓인 리뷰</span>
+          <span className="font-semibold tabular-nums text-[#352e2c]">{communityReviewCount.toLocaleString('ko-KR')}개</span>
+        </div>
+      )}
     </div>
   );
 }
