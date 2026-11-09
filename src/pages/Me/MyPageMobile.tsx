@@ -83,8 +83,8 @@ export function MyPageMobile() {
   const wineTypeLabel = tasteTab === 'red' ? '레드 와인' : tasteTab === 'white' ? '화이트·스파클링 와인' : '와인';
   const recordedWineCount = new Set(myReviews.map((review) => review.wineId).filter(Number.isInteger)).size;
   const publicReviews = myReviews.filter((review) => review.is_public);
-  const helpfulCount = publicReviews.reduce((total, review) => total + review.likeCount, 0);
-  const activityHelp = "공개 리뷰 수와 다른 사용자가 내 공개 리뷰에 누른 '도움이 돼요' 횟수예요. 비공개 리뷰는 개인 와인 셀러에만 포함됩니다.";
+  const helpfulReviewCount = publicReviews.filter((review) => review.likeCount > 0).length;
+  const activityHelp = "공개 리뷰 수와 다른 사용자가 '도움이 돼요'를 한 번 이상 누른 공개 리뷰 수예요. 한 리뷰에 여러 번 눌려도 도움 준 리뷰는 1개로 셉니다. 비공개 리뷰는 개인 와인 셀러에만 포함됩니다.";
 
   return (
     <div className="space-y-10">
@@ -106,15 +106,19 @@ export function MyPageMobile() {
               <div className="break-all text-sm text-muted">{displayEmail}</div>
             </div>
             <div className="hidden min-[440px]:flex shrink-0 items-start gap-1.5 border-l border-border pl-3">
-              <div className="space-y-1 text-right text-xs text-muted">
+              <div className="text-xs text-muted">
                 {!reviewsLoaded ? (
                   <span>집계 중...</span>
                 ) : reviewsError ? (
                   <span>불러오기 실패</span>
                 ) : (
                   <>
-                    <div><span className="font-semibold text-fg tabular-nums">{publicReviews.length}</span> 공개 리뷰</div>
-                    <div><span className="font-semibold text-fg tabular-nums">{helpfulCount}</span> 도움 된 횟수</div>
+                    <div className="grid grid-cols-[auto_auto] gap-x-2 gap-y-1">
+                      <span>공개 리뷰</span>
+                      <span className="text-right font-semibold text-fg tabular-nums">{publicReviews.length}</span>
+                      <span>도움 준 리뷰</span>
+                      <span className="text-right font-semibold text-fg tabular-nums">{helpfulReviewCount}</span>
+                    </div>
                   </>
                 )}
               </div>
@@ -130,7 +134,7 @@ export function MyPageMobile() {
               <>
                 <span>공개 리뷰 {publicReviews.length}개</span>
                 <span aria-hidden="true">·</span>
-                <span>도움 된 횟수 {helpfulCount}회</span>
+                <span>도움 준 리뷰 {helpfulReviewCount}개</span>
                 <InfoTooltip label="활동 수치 설명" text={activityHelp} small />
               </>
             )}
