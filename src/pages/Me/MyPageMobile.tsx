@@ -1,9 +1,10 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import defaultWineImg from '@/assets/default-wine.jpg';
 import { WineBottleProgress } from '@/components/common/WineBottleProgress';
+import { InfoTooltip } from '@/components/common/InfoTooltip';
 
 type UserProfile = {
   id: number;
@@ -249,38 +250,6 @@ function SectionTitle({ title, action, help }: { title: string; action?: React.R
       <h3 className="text-base font-semibold">{title}</h3>
       {help ? <InfoTooltip label={`${title} 설명`} text={help} /> : action}
     </div>
-  );
-}
-
-function InfoTooltip({ label, text }: { label: string; text: string }) {
-  const [open, setOpen] = useState(false);
-  const tooltipId = useId();
-
-  return (
-    <span
-      className="relative inline-flex shrink-0"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
-    >
-      <button
-        type="button"
-        className="flex h-7 w-7 items-center justify-center rounded-full border border-accent text-sm font-semibold text-[#4c5700] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        aria-label={label}
-        aria-expanded={open}
-        aria-describedby={open ? tooltipId : undefined}
-        onClick={() => setOpen(true)}
-        onKeyDown={(event) => { if (event.key === 'Escape') setOpen(false); }}
-      >
-        ?
-      </button>
-      {open && (
-        <span id={tooltipId} role="tooltip" className="absolute right-0 top-full z-20 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-white p-3 text-sm font-normal leading-6 text-fg shadow-card">
-          {text}
-        </span>
-      )}
-    </span>
   );
 }
 
