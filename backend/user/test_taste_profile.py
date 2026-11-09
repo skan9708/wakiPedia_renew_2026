@@ -14,9 +14,9 @@ class MyTasteProfileTests(APITestCase):
         )
         self.client.force_authenticate(user=self.user)
 
-    def wine(self, name, *, body=None, sweet=None, acid=None, tanin=None):
+    def wine(self, name, *, wine_type="red", body=None, sweet=None, acid=None, tanin=None):
         return Wine.objects.create(
-            kor_name=name, eng_name=name, type="red",
+            kor_name=name, eng_name=name, type=wine_type,
             source_body=body, source_sweetness=sweet,
             source_acidity=acid, source_tannin=tanin,
         )
@@ -71,6 +71,33 @@ class MyTasteProfileTests(APITestCase):
         self.assertEqual(response.data["taste"], {
             "body": 1.0, "sweet": 3.0, "acid": 2.0, "tanin": 4.0,
         })
+
+    def test_sparkling_counts_as_white_and_rose_only_in_all(self):
+        red = self.wine("레드", body=1, sweet=2, acid=3, tanin=4)
+        white = self.wine("화이트", wine_type="white", body=4, sweet=3, acid=2, tanin=1)
+        sparkling = self.wine("스파클링", wine_type="sparkling", body=2, sweet=5, acid=5, tanin=2)
+        rose = self.wine("로제", wine_type="rose", body=5, sweet=1, acid=4, tanin=5)
+        low = self.wine("낮은 평점 화이트", wine_type="white", body=5, sweet=5, acid=5, tanin=5)
+        bubbles = Tag.objects.create(name="기포", category="fruity")
+
+        self.review(red, 40)
+        self.review(white, 45)
+        sparkling_review = self.review(sparkling, 50)
+        sparkling_review.tags.add(bubbles)
+        self.review(rose, 40)
+        self.review(low, 35)
+
+        response = self.client.get("/api/me/taste-profile/")
+        self.assertEqual(response.data["wineCount"], 4)
+        self.assertEqual(response.data["byType"]["all"]["wineCount"], 4)
+        self.assertEqual(response.data["byType"]["red"]["wineCount"], 1)
+        self.assertEqual(response.data["byType"]["white"]["wineCount"], 2)
+        self.assertEqual(response.data["byType"]["white"]["taste"], {
+            "body": 2.0, "sweet": 3.0, "acid": 2.5, "tanin": 0.5,
+        })
+        self.assertEqual(response.data["byType"]["white"]["keywords"], [
+            {"text": "기포", "weight": 1},
+        ])
 
     def test_import_account_has_no_personal_profile(self):
         self.user.is_import_account = True

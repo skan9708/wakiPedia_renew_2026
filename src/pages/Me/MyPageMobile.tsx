@@ -16,13 +16,23 @@ type UserProfile = {
 
 type LikedWine = { id: number; nameKr: string; nameEng: string; imageUrl: string | null };
 type MyReview = { id: number; images: { id: number; url: string }[]; wineName: string };
-type TasteProfile = {
-  excluded: boolean;
+type TasteTab = 'all' | 'red' | 'white';
+type TasteSummary = {
   wineCount: number;
   highRatedWineCount: number;
   taste: { body: number; sweet: number; acid: number; tanin: number } | null;
   keywords: { text: string; weight: number }[];
 };
+type TasteProfile = TasteSummary & {
+  excluded: boolean;
+  byType?: Record<TasteTab, TasteSummary>;
+};
+
+const TASTE_TABS: { key: TasteTab; label: string }[] = [
+  { key: 'all', label: '전체' },
+  { key: 'red', label: '레드' },
+  { key: 'white', label: '화이트' },
+];
 
 export function MyPageMobile() {
   const navigate = useNavigate();
@@ -31,6 +41,7 @@ export function MyPageMobile() {
   const [likedWines, setLikedWines] = useState<LikedWine[]>([]);
   const [myReviews, setMyReviews] = useState<MyReview[]>([]);
   const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
+  const [tasteTab, setTasteTab] = useState<TasteTab>('all');
   const [tasteLoading, setTasteLoading] = useState(true);
   const [tasteError, setTasteError] = useState(false);
 
@@ -40,6 +51,7 @@ export function MyPageMobile() {
     api.get('/me/likes/').then(({ data }) => setLikedWines(data)).catch(() => {});
     api.get('/me/reviews/').then(({ data }) => setMyReviews(data)).catch(() => {});
     setTasteProfile(null);
+    setTasteTab('all');
     setTasteLoading(true);
     setTasteError(false);
     api.get<TasteProfile>('/me/taste-profile/')
@@ -59,8 +71,10 @@ export function MyPageMobile() {
 
   const displayName = profile?.nickname ?? storeUser?.nickname ?? '와키';
   const displayEmail = profile?.email ?? storeUser?.email ?? '';
-  const myTaste = tasteProfile?.taste ?? null;
-  const keywords = tasteProfile?.keywords ?? [];
+  const selectedTaste = tasteProfile?.byType?.[tasteTab] ?? (tasteTab === 'all' ? tasteProfile : null);
+  const myTaste = selectedTaste?.taste ?? null;
+  const keywords = selectedTaste?.keywords ?? [];
+  const wineTypeLabel = tasteTab === 'red' ? '레드 와인' : tasteTab === 'white' ? '화이트·스파클링 와인' : '와인';
 
   return (
     <div className="space-y-10">
@@ -142,11 +156,26 @@ export function MyPageMobile() {
       <section className="mx-auto w-full max-w-mobile px-4">
         <SectionTitle
           title="내 취향 분석"
-          help={`내가 4점 이상 준 와인${tasteProfile && !tasteProfile.excluded ? ` ${tasteProfile.wineCount}종` : ''}의 특징을 평균낸 값이에요. 같은 와인에 리뷰를 여러 번 썼다면 가장 최근 리뷰의 별점을 기준으로 해요. 4점 미만 리뷰는 포함하지 않아요.`}
+          help={`내가 4점 이상 준 ${wineTypeLabel}${selectedTaste && !tasteProfile?.excluded ? ` ${selectedTaste.wineCount}종` : ''}의 특징을 평균낸 값이에요. 화이트에는 스파클링을 포함하고, 로제는 전체에서만 볼 수 있어요. 같은 와인에 리뷰를 여러 번 썼다면 가장 최근 리뷰의 별점을 기준으로 해요. 4점 미만 리뷰는 포함하지 않아요.`}
         />
         {tasteLoading && <p className="text-sm text-muted">취향을 분석하는 중...</p>}
         {tasteError && <p className="text-sm text-muted">취향 분석을 불러오지 못했습니다.</p>}
         {tasteProfile?.excluded && <p className="text-sm text-muted">여러 사람의 리뷰를 모은 계정이라 개인 취향 분석을 제공하지 않습니다.</p>}
+        {tasteProfile?.byType && !tasteProfile.excluded && (
+          <div className="mb-7 grid grid-cols-3 gap-1 rounded-xl bg-bgsubtle p-1" aria-label="와인 종류별 취향 분석">
+            {TASTE_TABS.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={tasteTab === key}
+                className={`rounded-lg px-2 py-2 text-sm transition-colors ${tasteTab === key ? 'bg-white font-semibold text-[#4c5700] shadow-sm' : 'text-muted'}`}
+                onClick={() => setTasteTab(key)}
+              >
+                {label} {tasteProfile.byType?.[key].wineCount ?? 0}종
+              </button>
+            ))}
+          </div>
+        )}
         {myTaste && (
           <>
             <div className="space-y-10 pt-3">
@@ -155,18 +184,21 @@ export function MyPageMobile() {
               <GaugeRow title="산도" left="매우 부드러움" right="매우 시다" value={myTaste.acid} />
               <GaugeRow title="탄닌" left="매우 부드러움" right="매우 떫음" value={myTaste.tanin} />
             </div>
-            {tasteProfile && tasteProfile.highRatedWineCount > tasteProfile.wineCount && (
+            {selectedTaste && selectedTaste.wineCount < 3 && (
+              <p className="mt-5 text-xs text-muted">아직 기록이 적어 참고용이에요. 기록이 쌓이면 취향이 더 선명해져요.</p>
+            )}
+            {selectedTaste && selectedTaste.highRatedWineCount > selectedTaste.wineCount && (
               <p className="mt-4 text-xs text-muted">특징 정보가 없는 와인은 계산에서 제외했어요.</p>
             )}
           </>
         )}
-        {tasteProfile && !tasteProfile.excluded && !myTaste && (
+        {selectedTaste && !tasteProfile?.excluded && !myTaste && (
           <div className="mt-5 flex flex-col items-center gap-2 py-3 rounded-xl bg-neutral-50 border border-dashed border-neutral-200">
             <span className="text-2xl">🍷</span>
             <p className="text-sm text-muted text-center leading-snug">
-              {tasteProfile.highRatedWineCount > 0
-                ? '4점 이상 준 와인에 분석할 특징 정보가 아직 없어요.'
-                : <>4점 이상 준 와인이 생기면<br />내 취향을 보여드려요.</>}
+              {selectedTaste.highRatedWineCount > 0
+                ? `4점 이상 준 ${wineTypeLabel}에 분석할 특징 정보가 아직 없어요.`
+                : <>4점 이상 준 {wineTypeLabel}이 생기면<br />내 취향을 보여드려요.</>}
             </p>
             <button
               className="mt-1 px-4 py-1.5 rounded-full bg-accent text-white text-xs"
@@ -179,12 +211,16 @@ export function MyPageMobile() {
       </section>
 
       {/* 좋아한 와인 리뷰의 느낌 태그 */}
-      {keywords.length > 0 && (
+      {selectedTaste && !tasteProfile?.excluded && (
         <section className="mx-auto w-full max-w-mobile px-4 pb-24">
-          <SectionTitle title="좋아한 와인의 키워드" help="내가 4점 이상 준 와인의 리뷰에서 선택한 느낌 태그예요. 자주 선택한 키워드일수록 크게 보여요." />
-          <div className="card p-4 mt-5">
-            <WordCloud words={keywords} />
-          </div>
+          <SectionTitle title="좋아한 와인의 키워드" help={`내가 4점 이상 준 ${wineTypeLabel}의 리뷰에서 선택한 느낌 태그예요. 자주 선택한 키워드일수록 크게 보여요.`} />
+          {keywords.length > 0 ? (
+            <div className="card p-4 mt-5">
+              <WordCloud words={keywords} />
+            </div>
+          ) : (
+            <p className="text-sm text-muted">선택한 와인에서 기록한 느낌 키워드가 아직 없어요.</p>
+          )}
         </section>
       )}
       <div className="h-24" />

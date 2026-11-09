@@ -41,10 +41,14 @@ class MyTasteProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        empty_profile = {
+            "wineCount": 0, "highRatedWineCount": 0,
+            "taste": None, "keywords": [],
+        }
         if request.user.is_import_account:
             return Response({
-                "excluded": True, "wineCount": 0, "highRatedWineCount": 0,
-                "taste": None, "keywords": [],
+                "excluded": True, **empty_profile,
+                "byType": {key: empty_profile for key in ("all", "red", "white")},
             })
 
         reviews = request.user.wine_reviews.select_related(
@@ -57,8 +61,10 @@ class MyTasteProfileView(APIView):
             latest_by_wine.setdefault(wine.id, (review, wine))
 
         liked = [(review, wine) for review, wine in latest_by_wine.values() if review.rating >= 40]
-        vectors = []
-        keywords = Counter()
+        groups = {
+            key: {"vectors": [], "keywords": Counter(), "highRatedWineCount": 0}
+            for key in ("all", "red", "white")
+        }
         fields = {
             "body": ("source_body", "body"),
             "sweet": ("source_sweetness", "sweetness"),
@@ -67,27 +73,45 @@ class MyTasteProfileView(APIView):
         }
 
         for review, wine in liked:
+            group_keys = ["all"]
+            if wine.type == "red":
+                group_keys.append("red")
+            elif wine.type in ("white", "sparkling"):
+                group_keys.append("white")
+
             vector = {}
             for key, (source_field, review_field) in fields.items():
                 source = getattr(wine, source_field)
                 vector[key] = source - 1 if source is not None else getattr(review, review_field)
-            if all(value is not None for value in vector.values()):
-                vectors.append(vector)
-            keywords.update(tag.name for tag in review.tags.all())
+            has_taste = all(value is not None for value in vector.values())
+            tag_names = [tag.name for tag in review.tags.all()]
+            for group_key in group_keys:
+                group = groups[group_key]
+                group["highRatedWineCount"] += 1
+                if has_taste:
+                    group["vectors"].append(vector)
+                group["keywords"].update(tag_names)
 
-        taste = None
-        if vectors:
-            taste = {
-                key: round(sum(vector[key] for vector in vectors) / len(vectors), 1)
-                for key in fields
+        profiles = {}
+        for group_key, group in groups.items():
+            vectors = group["vectors"]
+            profiles[group_key] = {
+                "wineCount": len(vectors),
+                "highRatedWineCount": group["highRatedWineCount"],
+                "taste": {
+                    key: round(sum(vector[key] for vector in vectors) / len(vectors), 1)
+                    for key in fields
+                } if vectors else None,
+                "keywords": [
+                    {"text": text, "weight": weight}
+                    for text, weight in group["keywords"].most_common(8)
+                ],
             }
 
         return Response({
             "excluded": False,
-            "wineCount": len(vectors),
-            "highRatedWineCount": len(liked),
-            "taste": taste,
-            "keywords": [{"text": text, "weight": weight} for text, weight in keywords.most_common(8)],
+            **profiles["all"],
+            "byType": profiles,
         })
 
 
