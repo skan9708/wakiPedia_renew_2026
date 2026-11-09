@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import defaultWineImg from '@/assets/default-wine.jpg';
+import { WineBottleProgress } from '@/components/common/WineBottleProgress';
 
 type UserProfile = {
   id: number;
@@ -11,11 +12,10 @@ type UserProfile = {
   avatarUrl: string | null;
   reviewCount: number;
   likeCount: number;
-  likeRank: { rank: number; total: number; topPercent: number } | null;
 };
 
 type LikedWine = { id: number; nameKr: string; nameEng: string; imageUrl: string | null };
-type MyReview = { id: number; images: { id: number; url: string }[]; wineName: string };
+type MyReview = { id: number; wineId: number; images: { id: number; url: string }[]; wineName: string };
 type TasteTab = 'all' | 'red' | 'white';
 type TasteSummary = {
   wineCount: number;
@@ -40,6 +40,8 @@ export function MyPageMobile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [likedWines, setLikedWines] = useState<LikedWine[]>([]);
   const [myReviews, setMyReviews] = useState<MyReview[]>([]);
+  const [reviewsLoaded, setReviewsLoaded] = useState(false);
+  const [reviewsError, setReviewsError] = useState(false);
   const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
   const [tasteTab, setTasteTab] = useState<TasteTab>('all');
   const [tasteLoading, setTasteLoading] = useState(true);
@@ -49,7 +51,12 @@ export function MyPageMobile() {
     if (!token) return;
     api.get('/me/').then(({ data }) => setProfile(data)).catch(() => {});
     api.get('/me/likes/').then(({ data }) => setLikedWines(data)).catch(() => {});
-    api.get('/me/reviews/').then(({ data }) => setMyReviews(data)).catch(() => {});
+    setReviewsLoaded(false);
+    setReviewsError(false);
+    api.get<MyReview[]>('/me/reviews/')
+      .then(({ data }) => setMyReviews(data))
+      .catch(() => setReviewsError(true))
+      .finally(() => setReviewsLoaded(true));
     setTasteProfile(null);
     setTasteTab('all');
     setTasteLoading(true);
@@ -75,49 +82,57 @@ export function MyPageMobile() {
   const myTaste = selectedTaste?.taste ?? null;
   const keywords = selectedTaste?.keywords ?? [];
   const wineTypeLabel = tasteTab === 'red' ? '레드 와인' : tasteTab === 'white' ? '화이트·스파클링 와인' : '와인';
+  const recordedWineCount = new Set(myReviews.map((review) => review.wineId).filter(Number.isInteger)).size;
 
   return (
     <div className="space-y-10">
       {/* 상단 프로필 */}
       <section className="mx-auto w-full max-w-mobile px-4 pt-4">
-        <div className="card p-4 flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full overflow-hidden bg-bgsubtle">
-            {profile?.avatarUrl ? (
-              <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-accent/20 flex items-center justify-center text-accent text-2xl font-bold">
-                {displayName[0]}
-              </div>
-            )}
-          </div>
-          <div>
-            <div className="text-lg font-semibold">{displayName}</div>
-            <div className="text-sm text-muted">{displayEmail}</div>
-          </div>
-          <div className="ml-auto grid grid-cols-2 gap-3 text-center">
-            <div>
-              <div className="text-lg font-semibold">{profile?.reviewCount ?? 0}</div>
-              <div className="text-xs text-muted">리뷰</div>
-            </div>
-            <div>
-              <div className="text-lg font-semibold">{profile?.likeCount ?? 0}</div>
-              <div className="text-xs text-muted">좋아요</div>
-              {profile?.likeRank && (
-                <div className="text-[10px] text-accent font-medium mt-0.5">전체 {profile.likeRank.rank}위</div>
+        <div className="card p-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 shrink-0 rounded-full overflow-hidden bg-bgsubtle">
+              {profile?.avatarUrl ? (
+                <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-accent/20 flex items-center justify-center text-accent text-2xl font-bold">
+                  {displayName[0]}
+                </div>
               )}
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-semibold">{displayName}</div>
+              <div className="break-all text-sm text-muted">{displayEmail}</div>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 border-t border-border pt-3 text-center">
+            <div>
+              <div className="text-lg font-semibold tabular-nums">{profile?.reviewCount ?? 0}</div>
+              <div className="text-xs text-muted">작성한 리뷰</div>
+            </div>
+            <div className="border-l border-border">
+              <div className="text-lg font-semibold tabular-nums">{profile?.likeCount ?? 0}</div>
+              <div className="text-xs text-muted">받은 도움이 돼요</div>
             </div>
           </div>
         </div>
-        {profile?.likeRank && (
-          <div className="mt-3 text-center text-xs text-muted">
-            덕분에 도움됐어요 😊 · 상위 <span className="text-accent font-semibold">{profile.likeRank.topPercent}%</span>
-          </div>
-        )}
         <div className="mt-3 flex gap-2">
           <button className="flex-1 py-2 rounded-xl border border-border text-sm" onClick={() => navigate('/me/detail')}>프로필 수정</button>
           <button className="flex-1 py-2 rounded-xl border border-border text-sm text-red-500" onClick={() => { useAuthStore.getState().logout(); navigate('/'); }}>로그아웃</button>
         </div>
       </section>
+
+      {/* 개인 기록은 같은 와인을 여러 번 리뷰해도 한 종류로 센다. */}
+      {!tasteProfile?.excluded && (
+        <section className="mx-auto w-full max-w-mobile px-4">
+          {reviewsError ? (
+            <p className="rounded-2xl bg-bgsubtle p-4 text-sm text-muted">와인 기록을 불러오지 못했습니다.</p>
+          ) : reviewsLoaded && !tasteLoading ? (
+            <WineBottleProgress wineCount={recordedWineCount} onRecord={() => navigate('/search')} />
+          ) : (
+            <p className="rounded-2xl bg-bgsubtle p-4 text-sm text-muted">와인 기록을 불러오는 중...</p>
+          )}
+        </section>
+      )}
 
       {/* 좋아요한 와인 */}
       <section className="mx-auto w-full max-w-mobile px-4">
@@ -146,7 +161,7 @@ export function MyPageMobile() {
               </div>
             );
           })}
-          {myReviews.length === 0 && (
+          {reviewsLoaded && !reviewsError && myReviews.length === 0 && (
             <div className="col-span-3 text-sm text-muted text-center py-4">작성한 리뷰가 없습니다.</div>
           )}
         </div>
