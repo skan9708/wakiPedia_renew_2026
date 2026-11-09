@@ -11,12 +11,10 @@ type UserProfile = {
   email: string;
   nickname: string;
   avatarUrl: string | null;
-  reviewCount: number;
-  likeCount: number;
 };
 
 type LikedWine = { id: number; nameKr: string; nameEng: string; imageUrl: string | null };
-type MyReview = { id: number; wineId: number; images: { id: number; url: string }[]; wineName: string };
+type MyReview = { id: number; wineId: number; images: { id: number; url: string }[]; wineName: string; is_public: boolean; likeCount: number };
 type TasteTab = 'all' | 'red' | 'white';
 type TasteSummary = {
   wineCount: number;
@@ -84,6 +82,8 @@ export function MyPageMobile() {
   const keywords = selectedTaste?.keywords ?? [];
   const wineTypeLabel = tasteTab === 'red' ? '레드 와인' : tasteTab === 'white' ? '화이트·스파클링 와인' : '와인';
   const recordedWineCount = new Set(myReviews.map((review) => review.wineId).filter(Number.isInteger)).size;
+  const publicReviews = myReviews.filter((review) => review.is_public);
+  const helpfulCount = publicReviews.reduce((total, review) => total + review.likeCount, 0);
 
   return (
     <div className="space-y-10">
@@ -103,16 +103,6 @@ export function MyPageMobile() {
             <div className="min-w-0">
               <div className="text-lg font-semibold">{displayName}</div>
               <div className="break-all text-sm text-muted">{displayEmail}</div>
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-2 border-t border-border pt-3 text-center">
-            <div>
-              <div className="text-lg font-semibold tabular-nums">{profile?.reviewCount ?? 0}</div>
-              <div className="text-xs text-muted">작성한 리뷰</div>
-            </div>
-            <div className="border-l border-border">
-              <div className="text-lg font-semibold tabular-nums">{profile?.likeCount ?? 0}</div>
-              <div className="text-xs text-muted">받은 도움이 돼요</div>
             </div>
           </div>
         </div>
@@ -153,6 +143,19 @@ export function MyPageMobile() {
       {/* 내 리뷰 */}
       <section className="mx-auto w-full max-w-mobile px-4">
         <SectionTitle title="내 리뷰" action={<button className="text-xs text-muted" onClick={() => navigate('/me/reviews')}>더보기</button>} />
+        {reviewsLoaded && !reviewsError && (
+          <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+            <span className="font-semibold text-[#4c5700]">와키 기여</span>
+            <span>공개 리뷰 {publicReviews.length}개</span>
+            <span aria-hidden="true">·</span>
+            <span>내 리뷰가 도움 된 횟수 {helpfulCount}회</span>
+            <InfoTooltip
+              label="와키 기여 설명"
+              small
+              text="다른 사람도 볼 수 있는 공개 리뷰와 그 리뷰에 받은 '도움이 돼요'를 보여줘요. 비공개 기록은 개인 와인 셀러에만 포함됩니다."
+            />
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-1">
           {myReviews.slice(0, 9).map((r) => {
             const imgUrl = r.images?.[0]?.url ?? defaultWineImg;

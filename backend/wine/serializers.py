@@ -258,7 +258,9 @@ class WineDetailSerializer(WineListSerializer):
         return [{"text": item["tags__name"], "weight": item["count"]} for item in tag_counts]
 
     def get_reviews(self, obj):
-        reviews = self._public_reviews(obj).select_related("user").prefetch_related(
+        reviews = self._public_reviews(obj).annotate(
+            helpful_count=Count("likes")
+        ).select_related("user").prefetch_related(
             "tags", "images", "likes"
-        )[:10]
+        ).order_by("-helpful_count", "-created_at", "-id")[:10]
         return ReviewSerializer(reviews, many=True, context=self.context).data

@@ -7,6 +7,7 @@ export function WineReviewListMobile() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const sort = params.get('sort') ?? 'latest';
+  const wineId = params.get('wine_id');
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
@@ -21,20 +22,20 @@ export function WineReviewListMobile() {
     setPage(1);
     setHasNext(false);
     setLoading(true);
-    api.get(`/reviews/?sort=${sort}&page=1&limit=10`)
+    api.get('/reviews/', { params: { sort, wine_id: wineId, page: 1, limit: 10 } })
       .then(({ data }) => {
         setReviews(data.results ?? []);
         setHasNext(data.hasNext ?? false);
       })
       .catch(() => setReviews([]))
       .finally(() => setLoading(false));
-  }, [sort]);
+  }, [sort, wineId]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || !hasNext) return;
     const next = page + 1;
     setLoadingMore(true);
-    api.get(`/reviews/?sort=${sort}&page=${next}&limit=10`)
+    api.get('/reviews/', { params: { sort, wine_id: wineId, page: next, limit: 10 } })
       .then(({ data }) => {
         setReviews((prev) => [...prev, ...(data.results ?? [])]);
         setHasNext(data.hasNext ?? false);
@@ -42,7 +43,7 @@ export function WineReviewListMobile() {
       })
       .catch(() => {})
       .finally(() => setLoadingMore(false));
-  }, [sort, page, hasNext, loadingMore]);
+  }, [sort, wineId, page, hasNext, loadingMore]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -58,6 +59,7 @@ export function WineReviewListMobile() {
   return (
     <div className="space-y-4">
       <div className="mx-auto w-full max-w-mobile px-4 pt-2">
+        {wineId && <h2 className="mb-3 text-base font-semibold">이 와인의 리뷰</h2>}
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
           {[
             { key: 'latest', label: '최신 리뷰' },
@@ -65,7 +67,7 @@ export function WineReviewListMobile() {
           ].map((t) => (
             <button
               key={t.key}
-              onClick={() => navigate(`/reviews?sort=${t.key}`)}
+              onClick={() => navigate(`/reviews?sort=${t.key}${wineId ? `&wine_id=${encodeURIComponent(wineId)}` : ''}`)}
               className={`px-3 py-1.5 rounded-full text-sm border ${sort === t.key ? 'bg-accent text-white border-accent' : 'border-border'}`}
               aria-pressed={sort === t.key}
             >

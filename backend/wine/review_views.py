@@ -30,7 +30,7 @@ class ReviewListView(APIView):
 
         if sort == "popular":
             from django.db.models import Count
-            qs = qs.annotate(like_cnt=Count("likes")).order_by("-like_cnt", "-created_at")
+            qs = qs.annotate(like_cnt=Count("likes")).order_by("-like_cnt", "-created_at", "-id")
         else:
             qs = qs.order_by("-created_at")
 

@@ -1,22 +1,23 @@
 import { RatingStars } from './RatingStars';
-import { Heart } from 'lucide-react';
+import { HelpfulReviewButton } from './HelpfulReviewButton';
 
 export type Review = {
-  id: string;
-  wineId: string;
+  id: number | string;
+  wineId: number | string;
   wineName?: string;
-  creator: { id: string; nickname: string; avatarUrl?: string };
+  creator: { id: number | string; nickname: string; avatarUrl?: string };
   rating: number;
   bodyRating?: number | null; sweetRating?: number | null; taninRating?: number | null; acidityRating?: number | null;
   text: string;
   likeCount: number;
+  isLiked?: boolean;
   createdAt: string;
   feels?: string[];
 };
 
-type Props = { review: Review; onLike?: () => Promise<void> };
+type Props = { review: Review };
 
-export function CardReview({ review, onLike }: Props) {
+export function CardReview({ review }: Props) {
   return (
     <div className="card p-4 space-y-2">
       {review.wineName && (
@@ -31,16 +32,12 @@ export function CardReview({ review, onLike }: Props) {
         <div className="text-sm font-medium text-fg">{review.creator.nickname}</div>
         <div className="ml-auto text-xs text-muted">{new Date(review.createdAt).toLocaleDateString('ko-KR')}</div>
       </div>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <RatingStars value={review.rating} />
-          <span className="text-xs text-accent font-medium">{review.rating.toFixed(1)}</span>
-        </div>
-        <button aria-label="좋아요" onClick={onLike} className="flex items-center gap-1 text-xs text-muted">
-          <Heart className="w-3.5 h-3.5" /> {review.likeCount}
-        </button>
+      <div className="flex items-center gap-1.5">
+        <RatingStars value={review.rating} />
+        <span className="text-xs text-accent font-medium">{review.rating.toFixed(1)}</span>
       </div>
       <p className="text-sm text-fg leading-relaxed line-clamp-2">{review.text}</p>
+      <HelpfulReviewButton reviewId={review.id} creatorId={review.creator.id} count={review.likeCount} isLiked={review.isLiked} compact />
     </div>
   );
 }

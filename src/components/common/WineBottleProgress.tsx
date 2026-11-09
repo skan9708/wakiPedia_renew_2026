@@ -35,7 +35,7 @@ export function WineBottleProgress({ wineCount, onRecord }: { wineCount: number;
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="rounded-full px-2.5 py-1 text-xs font-semibold text-[#584d44]" style={{ backgroundColor: style.background }}>
-            완성 {progress.completedBottles}병
+            마신 와인 {wineCount}종
           </span>
           <InfoTooltip
             label="와인 기록 레벨 설명"
@@ -45,7 +45,7 @@ export function WineBottleProgress({ wineCount, onRecord }: { wineCount: number;
                 <p className="font-semibold">와인병 레벨 안내</p>
                 <p className="mt-2 text-xs leading-5 text-muted">공개·비공개 리뷰 모두 포함해, 기록한 와인 종류를 셉니다. 같은 와인을 여러 번 기록해도 한 종류예요.</p>
                 <p className="mt-2 text-xs leading-5 text-muted">첫 병은 3종, 다음 병은 5종, 그다음은 7종처럼 병마다 필요한 수가 2종씩 늘어납니다. 레벨 상한은 없어요.</p>
-                <p className="mt-2 text-xs font-medium">현재 총 {wineCount}종 · 다음 병은 {progress.nextMilestone}종째</p>
+                <p className="mt-2 text-xs font-medium">완성한 병 {progress.completedBottles}개 · 다음 병은 {progress.nextMilestone}종째</p>
                 <p className="mt-3 border-t border-border pt-2 text-xs font-semibold">레벨별 이름</p>
                 <ul className="mt-1 space-y-1 text-xs text-muted">
                   {WINE_LEVEL_TIERS.map((item) => {

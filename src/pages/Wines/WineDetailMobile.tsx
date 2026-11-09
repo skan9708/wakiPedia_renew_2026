@@ -181,6 +181,19 @@ export function WineDetailMobile() {
 
       {/* 리뷰 목록 */}
       <div className="px-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold">리뷰</h3>
+            <p className="text-xs text-muted">도움이 돼요 많은 순</p>
+          </div>
+          <button
+            type="button"
+            className="text-sm text-muted underline underline-offset-2"
+            onClick={() => navigate(`/reviews?sort=popular&wine_id=${wine.id}`)}
+          >
+            전체 보기
+          </button>
+        </div>
         {wine.reviews.map((r) => (
           <div key={r.id} onClick={() => navigate(`/reviews/${r.id}`)}>
             <CardReview review={r} />

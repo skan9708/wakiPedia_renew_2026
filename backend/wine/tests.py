@@ -40,6 +40,37 @@ class OptionalReviewTasteTests(TestCase):
         self.assertIsNone(cleared.data["bodyRating"])
 
 
+class HelpfulReviewOrderTests(TestCase):
+    def test_wine_detail_shows_most_helpful_public_reviews_first(self):
+        author = User.objects.create_user(email="helpful-author@example.com", password="test-password", nickname="Author")
+        voters = [
+            User.objects.create_user(email=f"helpful-voter-{i}@example.com", password="test-password", nickname=f"Voter {i}")
+            for i in range(2)
+        ]
+        wine = Wine.objects.create(kor_name="도움 순서 테스트", eng_name="Helpful Order", type="red")
+        reviews = [
+            WineReview.objects.create(wine=wine, user=author, text=f"Review {i}", rating=40)
+            for i in range(11)
+        ]
+        reviews[0].likes.add(*voters)
+        reviews[1].likes.add(voters[0])
+        private = WineReview.objects.create(
+            wine=wine, user=author, text="Private", rating=40, is_public=False,
+        )
+        private.likes.add(*voters)
+
+        detail = self.client.get(f"/api/wines/{wine.pk}/")
+        self.assertEqual(detail.status_code, 200)
+        detail_ids = [item["id"] for item in detail.data["reviews"]]
+        self.assertEqual(detail_ids[:2], [reviews[0].id, reviews[1].id])
+        self.assertEqual(len(detail_ids), 10)
+        self.assertNotIn(private.id, detail_ids)
+
+        popular = self.client.get("/api/reviews/", {"wine_id": wine.pk, "sort": "popular"})
+        self.assertEqual(popular.status_code, 200)
+        self.assertEqual([item["id"] for item in popular.data["results"][:2]], detail_ids[:2])
+
+
 class TobaccoTagMigrationTests(TestCase):
     def test_existing_reviews_keep_tobacco_aroma_when_tags_are_merged(self):
         user = User.objects.create_user(

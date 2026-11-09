@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RatingStars } from '@/components/common/RatingStars';
-import { Heart, Share2 } from 'lucide-react';
+import { HelpfulReviewButton } from '@/components/common/HelpfulReviewButton';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import defaultWineImg from '@/assets/default-wine.jpg';
@@ -27,12 +27,9 @@ type ReviewDetail = {
 export function ReviewDetailMobile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token, user } = useAuthStore((s) => ({ token: s.token, user: s.user }));
+  const user = useAuthStore((s) => s.user);
   const [review, setReview] = useState<ReviewDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-  const [burst, setBurst] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -40,23 +37,10 @@ export function ReviewDetailMobile() {
     api.get(`/reviews/${id}/`)
       .then(({ data }) => {
         setReview(data);
-        setLiked(data.isLiked);
-        setLikeCount(data.likeCount);
       })
       .catch(() => setReview(null))
       .finally(() => setLoading(false));
   }, [id]);
-
-  const onToggleLike = async () => {
-    if (!token) return navigate('/auth/login');
-    try {
-      const { data } = await api.post(`/reviews/${id}/like/`);
-      setLiked(data.isLiked);
-      setLikeCount(data.likeCount);
-      setBurst(true);
-      setTimeout(() => setBurst(false), 500);
-    } catch {}
-  };
 
   const handleDelete = async () => {
     if (!window.confirm('리뷰를 삭제할까요?')) return;
@@ -139,27 +123,6 @@ export function ReviewDetailMobile() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {isOwnReview ? (
-              <span className="flex items-center gap-1 text-sm text-muted">
-                <Heart className="w-4 h-4" />받은 도움 {likeCount}
-              </span>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={onToggleLike}
-                  aria-pressed={liked}
-                  className={`relative px-3 py-1.5 rounded-full text-sm flex items-center gap-2 border transition-colors ${liked ? 'bg-accent text-white border-accent' : 'bg-bgsubtle border-border text-fg'}`}
-                >
-                  {burst && <span className="anim-heart-pop absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-accent">❤️</span>}
-                  <Heart className={`w-4 h-4 ${liked ? 'text-white' : 'text-accent'}`} />
-                  <span>도움이 돼요</span>
-                </button>
-                <span className="text-sm text-muted">{likeCount}</span>
-              </>
-            )}
-          </div>
         </div>
 
         {/* 리뷰 텍스트 + 별점 */}
@@ -170,6 +133,9 @@ export function ReviewDetailMobile() {
               <span className="text-accent text-sm">{review.rating.toFixed(1)} 점</span>
             </div>
             <p className="mt-2 text-sm leading-relaxed">{review.text}</p>
+            <div className="mt-4">
+              <HelpfulReviewButton reviewId={review.id} creatorId={review.creator.id} count={review.likeCount} isLiked={review.isLiked} />
+            </div>
           </div>
         </div>
 
