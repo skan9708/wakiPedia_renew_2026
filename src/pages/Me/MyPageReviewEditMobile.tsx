@@ -129,7 +129,7 @@ export function MyPageReviewEditMobile() {
       </section>
 
       {/* 맛 상세 */}
-      <section className="review-taste-section mx-auto w-full max-w-mobile px-4">
+      <section className="mx-auto w-full max-w-mobile px-4">
         <h3 className="text-base font-semibold mb-2">와인 상세기록 <span className="text-sm text-muted font-normal">선택</span></h3>
         <div className="space-y-5">
           <TasteScaleRow title="바디" leftLabel="매우 가벼움" rightLabel="매우 무거움" value={bodyLevel} onChange={setBodyLevel} />
@@ -189,23 +189,26 @@ type TasteScaleRowProps = { title: string; leftLabel: string; rightLabel: string
 function TasteScaleRow({ title, leftLabel, rightLabel, value, onChange }: TasteScaleRowProps) {
   const fillPct = `${((value ?? 0) / 4) * 100}%`;
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-12 shrink-0 text-sm text-muted">{title}</div>
-      <div className="flex-1">
-        <div className="relative h-12">
-          <div className="absolute -top-5 left-0 text-[12px] text-muted">{leftLabel}</div>
-          <div className="absolute -top-5 right-0 text-[12px] text-muted">{rightLabel}</div>
-          <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[5px] bg-neutral-200 rounded-full" />
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[5px] bg-accent rounded-full" style={{ width: fillPct }} />
-          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <button key={i} type="button" aria-label={`${title} ${i + 1}단계`} onClick={() => onChange(i)}
-                className={`w-5 h-5 rounded-full border-2 ${value !== null && i <= value ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`}
-              />
-            ))}
-          </div>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">{title}</span>
+        <button type="button" onClick={() => onChange(null)} aria-label={`${title} 선택 안 함`} aria-pressed={value === null}
+          className={`min-h-8 rounded-full px-2.5 text-xs ${value === null ? 'bg-accent/20 text-[#4c5700]' : 'text-muted underline'}`}>선택 안 함</button>
+      </div>
+      <div className="flex justify-between text-xs text-muted">
+        <span>{leftLabel}</span>
+        <span>{rightLabel}</span>
+      </div>
+      <div className="relative h-8">
+        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[5px] bg-neutral-200 rounded-full" />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[5px] bg-accent rounded-full" style={{ width: fillPct }} />
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <button key={i} type="button" aria-label={`${title} ${i + 1}단계`} onClick={() => onChange(i)}
+              className={`w-5 h-5 rounded-full border-2 ${value !== null && i <= value ? 'bg-accent border-accent' : 'bg-white border-neutral-300'}`}
+            />
+          ))}
         </div>
-        <button type="button" onClick={() => onChange(null)} className="text-xs text-muted underline">선택 안 함</button>
       </div>
     </div>
   );
