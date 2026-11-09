@@ -14,6 +14,24 @@ function getBottleStyle(tierStart: number) {
   return { trim: '#A7B621', background: '#F2F4D9' };
 }
 
+function CommunityCellarIcon() {
+  return (
+    <svg viewBox="0 0 112 112" className="h-[88px] w-[88px]" aria-hidden="true">
+      <path d="M9 104V47a47 47 0 0 1 94 0v57Z" fill="#f2ece5" stroke="#b9a99b" strokeWidth="2" />
+      <path d="M19 56h74M19 93h74" stroke="#9c806f" strokeWidth="3" strokeLinecap="round" />
+      <path d="M31 31h7v9l-3 5v10H24V45l4-5v-9h3Z" fill="#974f59" stroke="#70444b" strokeWidth="1.5" />
+      <path d="M59 27h7v10l4 6v12H55V43l4-6V27Z" fill="#a7b621" stroke="#788619" strokeWidth="1.5" />
+      <path d="M82 34h6v9l3 4v8H79v-8l3-4v-9Z" fill="#974f59" stroke="#70444b" strokeWidth="1.5" />
+      <rect x="24" y="68" width="13" height="24" rx="2" fill="#bf8b70" />
+      <rect x="39" y="63" width="12" height="29" rx="2" fill="#a7b621" />
+      <rect x="53" y="70" width="12" height="22" rx="2" fill="#974f59" />
+      <rect x="67" y="66" width="11" height="26" rx="2" fill="#dec5a9" />
+      <rect x="80" y="72" width="9" height="20" rx="2" fill="#8f6c63" />
+      <path d="M20 102h72" stroke="#9c806f" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function WineBottleProgress({ wineCount, communityReviewCount, onRecord }: { wineCount: number; communityReviewCount: number | null; onRecord: () => void }) {
   const progress = getWineProgress(wineCount);
   const tier = getWineLevelTier(progress.level);
@@ -28,7 +46,7 @@ export function WineBottleProgress({ wineCount, communityReviewCount, onRecord }
 
   return (
     <div className="rounded-2xl border border-[#e9e2dc] bg-[#fcfaf7] p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
+      <div className="grid gap-4 min-[400px]:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <InfoTooltip
@@ -61,69 +79,60 @@ export function WineBottleProgress({ wineCount, communityReviewCount, onRecord }
             <p className="text-xs font-semibold text-[#745f51]">나의 와인 셀러</p>
           </div>
           <h3 className="mt-1 text-lg font-bold text-[#352e2c]">Lv.{progress.level} {tier.name}</h3>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="rounded-full px-2.5 py-1 text-xs font-semibold text-[#584d44]" style={{ backgroundColor: style.background }}>
-            마셔본 와인 {wineCount}병
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-3 sm:gap-5">
-        <div
-          role="progressbar"
-          aria-label={`레벨 ${progress.level} 와인병 채우기`}
-          aria-valuemin={0}
-          aria-valuemax={progress.required}
-          aria-valuenow={progress.current}
-          aria-valuetext={`이번 병 ${progress.current}개, 완성까지 ${progress.remaining}개`}
-          className="w-[96px] shrink-0"
-        >
-          <svg viewBox="0 0 110 180" className="h-[156px] w-[96px]" aria-hidden="true">
-            <defs>
-              <clipPath id={clipId}><path d={BOTTLE_SHAPE} /></clipPath>
-            </defs>
-            <path d={BOTTLE_SHAPE} fill="#eee8e5" />
-            <g clipPath={`url(#${clipId})`}>
-              <rect x="19" y="28" width="72" height="143" fill="#f5efeb" />
-              <rect
-                x="19" y="28" width="72" height="143" fill="#974f59"
-                className="transition-transform duration-700 ease-out motion-reduce:transition-none"
-                style={{ transform: `translateY(${(1 - animatedPercent / 100) * 143}px)` }}
-              />
-              <path d="M32 70 Q30 62 39 49" fill="none" stroke="white" strokeOpacity="0.55" strokeWidth="4" strokeLinecap="round" />
-            </g>
-            <path d={BOTTLE_SHAPE} fill="none" stroke="#654e4b" strokeWidth="2.5" />
-            <rect x="42" y="4" width="26" height="23" rx="3" fill={style.trim} />
-            <path d="M43 27 H67" stroke="#654e4b" strokeWidth="2" />
-            <rect x="29" y="103" width="52" height="37" rx="4" fill="#fffdf8" stroke={style.trim} strokeWidth="2" />
-            <text x="55" y="119" textAnchor="middle" fill="#745f51" fontSize="7" fontWeight="bold">WAKI</text>
-            <text x="55" y="132" textAnchor="middle" fill="#453936" fontSize="11" fontWeight="bold">LV.{progress.level}</text>
-          </svg>
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-2xl font-bold tabular-nums text-[#352e2c]">
-            {progress.current}<span className="ml-1 text-sm font-medium text-[#85776e]">/ {progress.required}개</span>
-          </p>
-          <button type="button" onClick={onRecord} className="mt-3 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-            와인 기록하기
-          </button>
-        </div>
-        {communityReviewCount !== null && (
-          <div className="hidden min-[440px]:flex shrink-0 flex-col justify-center border-l border-[#e9e2dc] pl-3 text-right">
-            <p className="text-[11px] text-[#745f51]">와키에 쌓인 리뷰</p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-[#352e2c]">
-              {communityReviewCount.toLocaleString('ko-KR')}<span className="ml-0.5 text-xs font-medium">개</span>
-            </p>
+          <div className="mt-4 flex items-center gap-1.5">
+            <div
+              role="progressbar"
+              aria-label={`레벨 ${progress.level} 와인병 채우기`}
+              aria-valuemin={0}
+              aria-valuemax={progress.required}
+              aria-valuenow={progress.current}
+              aria-valuetext={`이번 병 ${progress.current}개, 완성까지 ${progress.remaining}개`}
+              className="w-[76px] shrink-0"
+            >
+              <svg viewBox="0 0 110 180" className="h-[124px] w-[76px]" aria-hidden="true">
+                <defs>
+                  <clipPath id={clipId}><path d={BOTTLE_SHAPE} /></clipPath>
+                </defs>
+                <path d={BOTTLE_SHAPE} fill="#eee8e5" />
+                <g clipPath={`url(#${clipId})`}>
+                  <rect x="19" y="28" width="72" height="143" fill="#f5efeb" />
+                  <rect
+                    x="19" y="28" width="72" height="143" fill="#974f59"
+                    className="transition-transform duration-700 ease-out motion-reduce:transition-none"
+                    style={{ transform: `translateY(${(1 - animatedPercent / 100) * 143}px)` }}
+                  />
+                  <path d="M32 70 Q30 62 39 49" fill="none" stroke="white" strokeOpacity="0.55" strokeWidth="4" strokeLinecap="round" />
+                </g>
+                <path d={BOTTLE_SHAPE} fill="none" stroke="#654e4b" strokeWidth="2.5" />
+                <rect x="42" y="4" width="26" height="23" rx="3" fill={style.trim} />
+                <path d="M43 27 H67" stroke="#654e4b" strokeWidth="2" />
+                <rect x="29" y="103" width="52" height="37" rx="4" fill="#fffdf8" stroke={style.trim} strokeWidth="2" />
+                <text x="55" y="119" textAnchor="middle" fill="#745f51" fontSize="7" fontWeight="bold">WAKI</text>
+                <text x="55" y="132" textAnchor="middle" fill="#453936" fontSize="11" fontWeight="bold">LV.{progress.level}</text>
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="whitespace-nowrap text-xl font-bold tabular-nums text-[#352e2c]">
+                {progress.current}<span className="ml-1 text-xs font-medium text-[#85776e]">/ {progress.required}개</span>
+              </p>
+              <button type="button" onClick={onRecord} className="mt-3 whitespace-nowrap rounded-full bg-accent px-3 py-2 text-xs font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                와인 기록하기
+              </button>
+            </div>
           </div>
-        )}
-      </div>
-      {communityReviewCount !== null && (
-        <div className="mt-3 flex items-center justify-between border-t border-[#e9e2dc] pt-3 text-xs min-[440px]:hidden">
-          <span className="text-[#745f51]">와키에 쌓인 리뷰</span>
-          <span className="font-semibold tabular-nums text-[#352e2c]">{communityReviewCount.toLocaleString('ko-KR')}개</span>
         </div>
-      )}
+        <div className="flex min-w-0 flex-col items-center justify-center border-t border-[#e9e2dc] pt-3 text-center min-[400px]:border-l min-[400px]:border-t-0 min-[400px]:pl-3 min-[400px]:pt-0">
+          <CommunityCellarIcon />
+          <p className="mt-2 whitespace-nowrap text-xs text-[#745f51]">
+            마셔본 와인 <strong className="font-semibold tabular-nums text-[#352e2c]">{wineCount.toLocaleString('ko-KR')}병</strong>
+          </p>
+          <p className="mt-2 text-xs text-[#745f51]">와키에 쌓인 리뷰</p>
+          <p className="text-lg font-bold tabular-nums text-[#352e2c]">
+            {communityReviewCount === null ? '—' : communityReviewCount.toLocaleString('ko-KR')}
+            {communityReviewCount !== null && <span className="ml-0.5 text-xs font-medium">개</span>}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
