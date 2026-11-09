@@ -24,8 +24,10 @@ type WineDetail = {
   avgSweetness: number | null;
   avgTannin: number | null;
   keywords: { text: string; weight: number }[];
-  reviews: Review[];
 };
+
+type ReviewSort = 'latest' | 'popular';
+type ReviewPage = { results: Review[]; hasNext: boolean };
 
 export function WineDetailMobile() {
   const { id } = useParams();
@@ -35,6 +37,13 @@ export function WineDetailMobile() {
   const [loading, setLoading] = useState(true);
   const [isFav, setIsFav] = useState(false);
   const [imgZoom, setImgZoom] = useState(false);
+  const [reviewSort, setReviewSort] = useState<ReviewSort>('popular');
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewHasNext, setReviewHasNext] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsLoadingMore, setReviewsLoadingMore] = useState(false);
+  const [reviewsError, setReviewsError] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -51,6 +60,44 @@ export function WineDetailMobile() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [id]);
+
+  const wineId = wine?.id;
+  useEffect(() => {
+    if (!wineId) return;
+    let active = true;
+    setReviewsLoading(true);
+    setReviewsError(false);
+    setReviews([]);
+    setReviewPage(1);
+    setReviewHasNext(false);
+    api.get<ReviewPage>('/reviews/', { params: { wine_id: wineId, sort: reviewSort, page: 1, limit: 10 } })
+      .then(({ data }) => {
+        if (!active) return;
+        setReviews(data.results);
+        setReviewHasNext(data.hasNext);
+      })
+      .catch(() => { if (active) setReviewsError(true); })
+      .finally(() => { if (active) setReviewsLoading(false); });
+    return () => { active = false; };
+  }, [wineId, reviewSort]);
+
+  const loadMoreReviews = async () => {
+    if (!wineId || !reviewHasNext || reviewsLoadingMore) return;
+    setReviewsLoadingMore(true);
+    try {
+      const nextPage = reviewPage + 1;
+      const { data } = await api.get<ReviewPage>('/reviews/', {
+        params: { wine_id: wineId, sort: reviewSort, page: nextPage, limit: 10 },
+      });
+      setReviews((current) => [...current, ...data.results]);
+      setReviewPage(nextPage);
+      setReviewHasNext(data.hasNext);
+    } catch {
+      setReviewsError(true);
+    } finally {
+      setReviewsLoadingMore(false);
+    }
+  };
 
   const toggleFav = async () => {
     if (!token) return navigate('/auth/login');
@@ -182,23 +229,45 @@ export function WineDetailMobile() {
       {/* 리뷰 목록 */}
       <div className="px-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-base font-semibold">리뷰</h3>
-            <p className="text-xs text-muted">도움이 돼요 많은 순</p>
+          <h3 className="text-base font-semibold">리뷰</h3>
+          <div className="flex gap-1 rounded-full bg-bgsubtle p-1" role="group" aria-label="리뷰 정렬">
+            {([
+              ['latest', '최신 리뷰'],
+              ['popular', '인기 리뷰'],
+            ] as const).map(([sort, label]) => (
+              <button
+                key={sort}
+                type="button"
+                aria-pressed={reviewSort === sort}
+                disabled={reviewsLoadingMore}
+                onClick={() => setReviewSort(sort)}
+                className={`rounded-full px-2.5 py-1.5 text-xs transition-colors ${reviewSort === sort ? 'bg-white font-semibold text-[#4c5700] shadow-sm' : 'text-muted'}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-          <button
-            type="button"
-            className="text-sm text-muted underline underline-offset-2"
-            onClick={() => navigate(`/reviews?sort=popular&wine_id=${wine.id}`)}
-          >
-            전체 보기
-          </button>
         </div>
-        {wine.reviews.map((r) => (
+        {reviewsLoading && <p className="py-5 text-center text-sm text-muted">리뷰를 불러오는 중...</p>}
+        {reviewsError && <p className="py-5 text-center text-sm text-muted">리뷰를 불러오지 못했어요. 다시 시도해 주세요.</p>}
+        {!reviewsLoading && !reviewsError && reviews.length === 0 && (
+          <p className="py-5 text-center text-sm text-muted">아직 공개 리뷰가 없습니다.</p>
+        )}
+        {reviews.map((r) => (
           <div key={r.id} onClick={() => navigate(`/reviews/${r.id}`)}>
             <CardReview review={r} />
           </div>
         ))}
+        {reviewHasNext && !reviewsLoading && (
+          <button
+            type="button"
+            onClick={loadMoreReviews}
+            disabled={reviewsLoadingMore}
+            className="w-full rounded-xl border border-border py-2.5 text-sm text-muted disabled:opacity-60"
+          >
+            {reviewsLoadingMore ? '불러오는 중...' : '리뷰 더 보기'}
+          </button>
+        )}
       </div>
     </div>
   );

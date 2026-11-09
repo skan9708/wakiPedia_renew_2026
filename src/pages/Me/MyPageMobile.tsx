@@ -105,6 +105,25 @@ export function MyPageMobile() {
               <div className="break-all text-sm text-muted">{displayEmail}</div>
             </div>
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-2 text-xs text-muted">
+            <span className="font-semibold text-[#4c5700]">와키 기여</span>
+            {!reviewsLoaded ? (
+              <span>집계 중...</span>
+            ) : reviewsError ? (
+              <span>집계를 불러오지 못했어요.</span>
+            ) : (
+              <>
+                <span>공개 리뷰 {publicReviews.length}개</span>
+                <span aria-hidden="true">·</span>
+                <span>도움 된 횟수 {helpfulCount}회</span>
+                <InfoTooltip
+                  label="와키 기여 설명"
+                  small
+                  text="공개 리뷰 수와 다른 사용자가 내 공개 리뷰에 누른 '도움이 돼요' 횟수예요. 비공개 리뷰는 개인 와인 셀러에만 포함됩니다."
+                />
+              </>
+            )}
+          </div>
         </div>
         <div className="mt-3 flex gap-2">
           <button className="flex-1 py-2 rounded-xl border border-border text-sm" onClick={() => navigate('/me/detail')}>프로필 수정</button>
@@ -143,19 +162,6 @@ export function MyPageMobile() {
       {/* 내 리뷰 */}
       <section className="mx-auto w-full max-w-mobile px-4">
         <SectionTitle title="내 리뷰" action={<button className="text-xs text-muted" onClick={() => navigate('/me/reviews')}>더보기</button>} />
-        {reviewsLoaded && !reviewsError && (
-          <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-            <span className="font-semibold text-[#4c5700]">와키 기여</span>
-            <span>공개 리뷰 {publicReviews.length}개</span>
-            <span aria-hidden="true">·</span>
-            <span>내 리뷰가 도움 된 횟수 {helpfulCount}회</span>
-            <InfoTooltip
-              label="와키 기여 설명"
-              small
-              text="다른 사람도 볼 수 있는 공개 리뷰와 그 리뷰에 받은 '도움이 돼요'를 보여줘요. 비공개 기록은 개인 와인 셀러에만 포함됩니다."
-            />
-          </div>
-        )}
         <div className="grid grid-cols-3 gap-1">
           {myReviews.slice(0, 9).map((r) => {
             const imgUrl = r.images?.[0]?.url ?? defaultWineImg;

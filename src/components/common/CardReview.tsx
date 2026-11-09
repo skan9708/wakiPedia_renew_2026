@@ -32,12 +32,14 @@ export function CardReview({ review }: Props) {
         <div className="text-sm font-medium text-fg">{review.creator.nickname}</div>
         <div className="ml-auto text-xs text-muted">{new Date(review.createdAt).toLocaleDateString('ko-KR')}</div>
       </div>
-      <div className="flex items-center gap-1.5">
-        <RatingStars value={review.rating} />
-        <span className="text-xs text-accent font-medium">{review.rating.toFixed(1)}</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <RatingStars value={review.rating} />
+          <span className="text-xs text-accent font-medium">{review.rating.toFixed(1)}</span>
+        </div>
+        <HelpfulReviewButton reviewId={review.id} creatorId={review.creator.id} count={review.likeCount} isLiked={review.isLiked} compact />
       </div>
       <p className="text-sm text-fg leading-relaxed line-clamp-2">{review.text}</p>
-      <HelpfulReviewButton reviewId={review.id} creatorId={review.creator.id} count={review.likeCount} isLiked={review.isLiked} compact />
     </div>
   );
 }

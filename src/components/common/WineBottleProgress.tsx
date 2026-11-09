@@ -35,7 +35,7 @@ export function WineBottleProgress({ wineCount, onRecord }: { wineCount: number;
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="rounded-full px-2.5 py-1 text-xs font-semibold text-[#584d44]" style={{ backgroundColor: style.background }}>
-            마신 와인 {wineCount}종
+            마셔본 와인 {wineCount}병
           </span>
           <InfoTooltip
             label="와인 기록 레벨 설명"
@@ -43,9 +43,9 @@ export function WineBottleProgress({ wineCount, onRecord }: { wineCount: number;
             text={
               <div>
                 <p className="font-semibold">와인병 레벨 안내</p>
-                <p className="mt-2 text-xs leading-5 text-muted">공개·비공개 리뷰 모두 포함해, 기록한 와인 종류를 셉니다. 같은 와인을 여러 번 기록해도 한 종류예요.</p>
-                <p className="mt-2 text-xs leading-5 text-muted">첫 병은 3종, 다음 병은 5종, 그다음은 7종처럼 병마다 필요한 수가 2종씩 늘어납니다. 레벨 상한은 없어요.</p>
-                <p className="mt-2 text-xs font-medium">완성한 병 {progress.completedBottles}개 · 다음 병은 {progress.nextMilestone}종째</p>
+                <p className="mt-2 text-xs leading-5 text-muted">공개·비공개 리뷰 모두 포함해 마셔본 와인을 셉니다. 같은 와인을 여러 번 기록해도 셀러에는 1병으로 표시해요.</p>
+                <p className="mt-2 text-xs leading-5 text-muted">첫 병은 와인 3개, 다음 병은 5개, 그다음은 7개를 기록하면 완성됩니다. 레벨 상한은 없어요.</p>
+                <p className="mt-2 text-xs font-medium">완성한 병 {progress.completedBottles}개 · 다음 병은 총 {progress.nextMilestone}개 기록하면 완성</p>
                 <p className="mt-3 border-t border-border pt-2 text-xs font-semibold">레벨별 이름</p>
                 <ul className="mt-1 space-y-1 text-xs text-muted">
                   {WINE_LEVEL_TIERS.map((item) => {
@@ -54,7 +54,7 @@ export function WineBottleProgress({ wineCount, onRecord }: { wineCount: number;
                     return (
                       <li key={item.minLevel} className="flex justify-between gap-2">
                         <span>Lv.{item.minLevel}{item.maxLevel === null ? '+' : `–${item.maxLevel}`} {item.name}</span>
-                        <span className="shrink-0 tabular-nums">{min}{max === null ? '종부터' : `–${max}종`}</span>
+                        <span className="shrink-0 tabular-nums">{min}{max === null ? '병부터' : `–${max}병`}</span>
                       </li>
                     );
                   })}
@@ -72,7 +72,7 @@ export function WineBottleProgress({ wineCount, onRecord }: { wineCount: number;
           aria-valuemin={0}
           aria-valuemax={progress.required}
           aria-valuenow={progress.current}
-          aria-valuetext={`이번 병 ${progress.current}종, 완성까지 ${progress.remaining}종`}
+          aria-valuetext={`이번 병 ${progress.current}개, 완성까지 ${progress.remaining}개`}
           className="w-[96px] shrink-0"
         >
           <svg viewBox="0 0 110 180" className="h-[156px] w-[96px]" aria-hidden="true">
@@ -100,10 +100,10 @@ export function WineBottleProgress({ wineCount, onRecord }: { wineCount: number;
         <div className="min-w-0 flex-1">
           <p className="text-xs text-[#745f51]">이번 병 채우기</p>
           <p className="mt-0.5 text-2xl font-bold tabular-nums text-[#352e2c]">
-            {progress.current}<span className="ml-1 text-sm font-medium text-[#85776e]">/ {progress.required}종</span>
+            {progress.current}<span className="ml-1 text-sm font-medium text-[#85776e]">/ {progress.required}개</span>
           </p>
           <p className="mt-2 text-sm leading-5 text-[#584d44]">
-            {wineCount === 0 ? '첫 와인을 기록해 병을 채워보세요.' : `다음 병까지 ${progress.remaining}종 남았어요.`}
+            {wineCount === 0 ? '첫 와인을 기록해 병을 채워보세요.' : `다음 병까지 와인 ${progress.remaining}개 남았어요.`}
           </p>
           <button type="button" onClick={onRecord} className="mt-3 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
             와인 기록하기

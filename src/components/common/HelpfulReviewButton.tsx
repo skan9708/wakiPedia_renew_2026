@@ -62,7 +62,7 @@ export function HelpfulReviewButton({ reviewId, creatorId, count, isLiked = fals
         disabled={pending}
         aria-pressed={helpful}
         aria-label={`도움이 돼요, ${helpfulCount}회`}
-        className={`inline-flex items-center gap-1.5 rounded-lg border border-[#3977ff] px-2.5 py-1.5 font-medium text-[#2866e9] transition-colors disabled:opacity-60 ${compact ? 'text-xs' : 'text-sm'} ${helpful ? 'bg-[#e8f0ff]' : 'bg-white hover:bg-[#f3f7ff]'}`}
+        className={`inline-flex items-center gap-1.5 rounded-lg border border-accent px-2.5 py-1.5 font-medium transition-colors disabled:opacity-60 ${compact ? 'text-xs' : 'text-sm'} ${helpful ? 'bg-accent text-white' : 'bg-[#f6f8e8] text-[#596800] hover:bg-[#eef2d2]'}`}
       >
         <ThumbsUp className="h-4 w-4" fill={helpful ? 'currentColor' : 'none'} aria-hidden="true" />
         도움이 돼요 <span className="tabular-nums">{helpfulCount}</span>
