@@ -35,6 +35,7 @@ class User(BaseModel, AbstractBaseUser):
 
     is_active = models.BooleanField("계정 활성화 여부", default=True)
     is_staff = models.BooleanField("admin 여부", default=False)
+    is_import_account = models.BooleanField("여러 사람의 리뷰를 모은 계정", default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

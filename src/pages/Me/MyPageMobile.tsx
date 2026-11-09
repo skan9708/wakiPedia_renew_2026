@@ -16,6 +16,13 @@ type UserProfile = {
 
 type LikedWine = { id: number; nameKr: string; nameEng: string; imageUrl: string | null };
 type MyReview = { id: number; images: { id: number; url: string }[]; wineName: string };
+type TasteProfile = {
+  excluded: boolean;
+  wineCount: number;
+  highRatedWineCount: number;
+  taste: { body: number; sweet: number; acid: number; tanin: number } | null;
+  keywords: { text: string; weight: number }[];
+};
 
 export function MyPageMobile() {
   const navigate = useNavigate();
@@ -23,31 +30,22 @@ export function MyPageMobile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [likedWines, setLikedWines] = useState<LikedWine[]>([]);
   const [myReviews, setMyReviews] = useState<MyReview[]>([]);
-  const [myTaste, setMyTaste] = useState<{ body: number | null; sweet: number | null; acid: number | null; tanin: number | null } | null>(null);
-  const [keywords, setKeywords] = useState<{ text: string; weight: number }[]>([]);
+  const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
+  const [tasteLoading, setTasteLoading] = useState(true);
+  const [tasteError, setTasteError] = useState(false);
 
   useEffect(() => {
     if (!token) return;
     api.get('/me/').then(({ data }) => setProfile(data)).catch(() => {});
     api.get('/me/likes/').then(({ data }) => setLikedWines(data)).catch(() => {});
-    api.get('/me/reviews/').then(({ data }) => {
-      setMyReviews(data);
-      if (data.length > 0) {
-        const averageOf = (key: string): number | null => {
-          const values = data.map((review: any) => review[key]).filter((value: unknown): value is number => typeof value === 'number');
-          return values.length ? Math.round(values.reduce((sum: number, value: number) => sum + value, 0) / values.length) : null;
-        };
-        const taste = {
-          body: averageOf('bodyRating'), sweet: averageOf('sweetRating'),
-          acid: averageOf('acidityRating'), tanin: averageOf('taninRating'),
-        };
-        setMyTaste(Object.values(taste).some((value) => value !== null) ? taste : null);
-
-        const counts: Record<string, number> = {};
-        data.forEach((r: any) => (r.feels ?? []).forEach((f: string) => { counts[f] = (counts[f] ?? 0) + 1; }));
-        setKeywords(Object.entries(counts).map(([text, weight]) => ({ text, weight })));
-      }
-    }).catch(() => {});
+    api.get('/me/reviews/').then(({ data }) => setMyReviews(data)).catch(() => {});
+    setTasteProfile(null);
+    setTasteLoading(true);
+    setTasteError(false);
+    api.get<TasteProfile>('/me/taste-profile/')
+      .then(({ data }) => setTasteProfile(data))
+      .catch(() => setTasteError(true))
+      .finally(() => setTasteLoading(false));
   }, [token]);
 
   if (!token) {
@@ -61,6 +59,8 @@ export function MyPageMobile() {
 
   const displayName = profile?.nickname ?? storeUser?.nickname ?? '와키';
   const displayEmail = profile?.email ?? storeUser?.email ?? '';
+  const myTaste = tasteProfile?.taste ?? null;
+  const keywords = tasteProfile?.keywords ?? [];
 
   return (
     <div className="space-y-6">
@@ -144,20 +144,33 @@ export function MyPageMobile() {
         </div>
       </section>
 
-      {/* 내가 선호하는 스타일 게이지 */}
+      {/* 4점 이상 준 와인의 특징 평균 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-4">내가 선호하는 스타일</h3>
-        <div className="space-y-6">
-          <GaugeRow title="바디" left="매우 가벼움" right="매우 무거움" value={myTaste?.body ?? null} />
-          <GaugeRow title="당도" left="매우 드라이" right="매우 스윗" value={myTaste?.sweet ?? null} />
-          <GaugeRow title="산도" left="매우 부드러움" right="매우 시다" value={myTaste?.acid ?? null} />
-          <GaugeRow title="탄닌" left="매우 부드러움" right="매우 떫음" value={myTaste?.tanin ?? null} />
-        </div>
-        {!myTaste && (
+        <h3 className="text-base font-semibold mb-2">내 취향 분석</h3>
+        {tasteLoading && <p className="text-sm text-muted">취향을 분석하는 중...</p>}
+        {tasteError && <p className="text-sm text-muted">취향 분석을 불러오지 못했습니다.</p>}
+        {tasteProfile?.excluded && <p className="text-sm text-muted">여러 사람의 리뷰를 모은 계정이라 개인 취향 분석을 제공하지 않습니다.</p>}
+        {myTaste && (
+          <>
+            <p className="mb-5 text-xs text-muted">4점 이상 준 와인 {tasteProfile?.wineCount}종의 특징을 평균냈어요.</p>
+            <div className="space-y-6">
+              <GaugeRow title="바디" left="매우 가벼움" right="매우 무거움" value={myTaste.body} />
+              <GaugeRow title="당도" left="매우 드라이" right="매우 스윗" value={myTaste.sweet} />
+              <GaugeRow title="산도" left="매우 부드러움" right="매우 시다" value={myTaste.acid} />
+              <GaugeRow title="탄닌" left="매우 부드러움" right="매우 떫음" value={myTaste.tanin} />
+            </div>
+            {tasteProfile && tasteProfile.highRatedWineCount > tasteProfile.wineCount && (
+              <p className="mt-4 text-xs text-muted">특징 정보가 없는 와인은 계산에서 제외했어요.</p>
+            )}
+          </>
+        )}
+        {tasteProfile && !tasteProfile.excluded && !myTaste && (
           <div className="mt-5 flex flex-col items-center gap-2 py-3 rounded-xl bg-neutral-50 border border-dashed border-neutral-200">
             <span className="text-2xl">🍷</span>
             <p className="text-sm text-muted text-center leading-snug">
-              리뷰에 와인 상세기록을 남기면<br />내 취향이 분석됩니다
+              {tasteProfile.highRatedWineCount > 0
+                ? '4점 이상 준 와인에 분석할 특징 정보가 아직 없어요.'
+                : <>4점 이상 준 와인이 생기면<br />내 취향을 보여드려요.</>}
             </p>
             <button
               className="mt-1 px-4 py-1.5 rounded-full bg-accent text-white text-xs"
@@ -169,10 +182,11 @@ export function MyPageMobile() {
         )}
       </section>
 
-      {/* 워드 클라우드 */}
+      {/* 좋아한 와인 리뷰의 느낌 태그 */}
       {keywords.length > 0 && (
         <section className="mx-auto w-full max-w-mobile px-4 pb-24">
-          <h3 className="text-base font-semibold mb-2">나의 와인 키워드</h3>
+          <h3 className="text-base font-semibold mb-1">좋아한 와인의 키워드</h3>
+          <p className="mb-2 text-xs text-muted">4점 이상 준 와인의 리뷰에서 선택한 느낌입니다.</p>
           <div className="card p-4">
             <WordCloud words={keywords} />
           </div>
@@ -190,7 +204,7 @@ function GaugeRow({ title, left, right, value }: GaugeProps) {
   const fillPct = hasData ? `${(safeVal / 4) * 100}%` : '0%';
   return (
     <div className="flex items-center gap-2">
-      <div className="w-12 shrink-0 text-sm text-muted">{title}</div>
+      <div className="w-12 shrink-0 text-sm text-muted">{title}{hasData && <span className="block text-xs text-accent">{safeVal.toFixed(1)}</span>}</div>
       <div className="flex-1">
         <div className="relative h-10">
           <div className="absolute -top-4 left-0 text-[12px] text-muted">{left}</div>

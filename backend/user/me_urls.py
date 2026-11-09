@@ -5,6 +5,7 @@ from user import recovery_views
 urlpatterns = [
     path("", me_views.MeView.as_view(), name="me"),
     path("reviews/", me_views.MyReviewsView.as_view(), name="my-reviews"),
+    path("taste-profile/", me_views.MyTasteProfileView.as_view(), name="my-taste-profile"),
     path("likes/", me_views.MyLikesView.as_view(), name="my-likes"),
     path("phone/send/", recovery_views.LinkPhoneSendView.as_view()),
     path("phone/verify/", recovery_views.LinkPhoneVerifyView.as_view()),
