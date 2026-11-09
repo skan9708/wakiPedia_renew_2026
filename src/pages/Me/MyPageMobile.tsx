@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -63,7 +63,7 @@ export function MyPageMobile() {
   const keywords = tasteProfile?.keywords ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {/* 상단 프로필 */}
       <section className="mx-auto w-full max-w-mobile px-4 pt-4">
         <div className="card p-4 flex items-center gap-4">
@@ -107,10 +107,7 @@ export function MyPageMobile() {
 
       {/* 좋아요한 와인 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base font-semibold">내가 좋아요한 와인</h3>
-          <button className="text-xs text-muted" onClick={() => navigate('/me/likes')}>더보기</button>
-        </div>
+        <SectionTitle title="내가 좋아요한 와인" action={<button className="text-xs text-muted" onClick={() => navigate('/me/likes')}>더보기</button>} />
         <div className="grid grid-cols-3 gap-3">
           {likedWines.slice(0, 6).map((w) => (
             <div key={w.id} className="aspect-square rounded-xl overflow-hidden bg-bgsubtle cursor-pointer" onClick={() => navigate(`/wines/${w.id}`)}>
@@ -125,10 +122,7 @@ export function MyPageMobile() {
 
       {/* 내 리뷰 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base font-semibold">내 리뷰</h3>
-          <button className="text-xs text-muted" onClick={() => navigate('/me/reviews')}>더보기</button>
-        </div>
+        <SectionTitle title="내 리뷰" action={<button className="text-xs text-muted" onClick={() => navigate('/me/reviews')}>더보기</button>} />
         <div className="grid grid-cols-3 gap-1">
           {myReviews.slice(0, 9).map((r) => {
             const imgUrl = r.images?.[0]?.url ?? defaultWineImg;
@@ -146,14 +140,16 @@ export function MyPageMobile() {
 
       {/* 4점 이상 준 와인의 특징 평균 */}
       <section className="mx-auto w-full max-w-mobile px-4">
-        <h3 className="text-base font-semibold mb-2">내 취향 분석</h3>
+        <SectionTitle
+          title="내 취향 분석"
+          help={`내가 4점 이상 준 와인${tasteProfile && !tasteProfile.excluded ? ` ${tasteProfile.wineCount}종` : ''}의 특징을 평균낸 값이에요. 같은 와인에 리뷰를 여러 번 썼다면 가장 최근 리뷰의 별점을 기준으로 해요. 4점 미만 리뷰는 포함하지 않아요.`}
+        />
         {tasteLoading && <p className="text-sm text-muted">취향을 분석하는 중...</p>}
         {tasteError && <p className="text-sm text-muted">취향 분석을 불러오지 못했습니다.</p>}
         {tasteProfile?.excluded && <p className="text-sm text-muted">여러 사람의 리뷰를 모은 계정이라 개인 취향 분석을 제공하지 않습니다.</p>}
         {myTaste && (
           <>
-            <p className="mb-5 text-xs text-muted">4점 이상 준 와인 {tasteProfile?.wineCount}종의 특징을 평균냈어요.</p>
-            <div className="space-y-6">
+            <div className="space-y-10 pt-3">
               <GaugeRow title="바디" left="매우 가벼움" right="매우 무거움" value={myTaste.body} />
               <GaugeRow title="당도" left="매우 드라이" right="매우 스윗" value={myTaste.sweet} />
               <GaugeRow title="산도" left="매우 부드러움" right="매우 시다" value={myTaste.acid} />
@@ -185,15 +181,55 @@ export function MyPageMobile() {
       {/* 좋아한 와인 리뷰의 느낌 태그 */}
       {keywords.length > 0 && (
         <section className="mx-auto w-full max-w-mobile px-4 pb-24">
-          <h3 className="text-base font-semibold mb-1">좋아한 와인의 키워드</h3>
-          <p className="mb-2 text-xs text-muted">4점 이상 준 와인의 리뷰에서 선택한 느낌입니다.</p>
-          <div className="card p-4">
+          <SectionTitle title="좋아한 와인의 키워드" help="내가 4점 이상 준 와인의 리뷰에서 선택한 느낌 태그예요. 자주 선택한 키워드일수록 크게 보여요." />
+          <div className="card p-4 mt-5">
             <WordCloud words={keywords} />
           </div>
         </section>
       )}
       <div className="h-24" />
     </div>
+  );
+}
+
+function SectionTitle({ title, action, help }: { title: string; action?: React.ReactNode; help?: string }) {
+  return (
+    <div className="mypage-section-title flex items-center justify-between gap-3">
+      <h3 className="text-base font-semibold">{title}</h3>
+      {help ? <InfoTooltip label={`${title} 설명`} text={help} /> : action}
+    </div>
+  );
+}
+
+function InfoTooltip({ label, text }: { label: string; text: string }) {
+  const [open, setOpen] = useState(false);
+  const tooltipId = useId();
+
+  return (
+    <span
+      className="relative inline-flex shrink-0"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        className="flex h-7 w-7 items-center justify-center rounded-full border border-accent text-sm font-semibold text-[#4c5700] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        aria-label={label}
+        aria-expanded={open}
+        aria-describedby={open ? tooltipId : undefined}
+        onClick={() => setOpen(true)}
+        onKeyDown={(event) => { if (event.key === 'Escape') setOpen(false); }}
+      >
+        ?
+      </button>
+      {open && (
+        <span id={tooltipId} role="tooltip" className="absolute right-0 top-full z-20 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-white p-3 text-sm font-normal leading-6 text-fg shadow-card">
+          {text}
+        </span>
+      )}
+    </span>
   );
 }
 
