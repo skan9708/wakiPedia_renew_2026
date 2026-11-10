@@ -26,6 +26,7 @@ import { SupportMobile } from '@/pages/Support/SupportMobile';
 import { AdminApp } from '@/pages/Admin/AdminApp';
 import { PrivacyPolicyMobile } from '@/pages/Legal/PrivacyPolicyMobile';
 import { TermsOfServiceMobile } from '@/pages/Legal/TermsOfServiceMobile';
+import { GuideMobile } from '@/pages/Guide/GuideMobile';
 
 export function AppRoutes() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -75,6 +76,7 @@ export function AppRoutes() {
           <Route path="/me/reviews" element={<MyReviewsFeedMobile />} />
           <Route path="/chat" element={<ChatMobile />} />
           <Route path="/feedback" element={<SupportMobile />} />
+          <Route path="/guide" element={<GuideMobile />} />
           <Route path="/support" element={<Navigate to="/feedback" replace />} />
           <Route path="/terms" element={<TermsOfServiceMobile />} />
           <Route path="/privacy" element={<PrivacyPolicyMobile />} />

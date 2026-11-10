@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home as HomeIcon, Search, MessageSquare, User, MessageSquarePlus } from 'lucide-react';
+import { Home as HomeIcon, Search, MessageSquare, User, MessageSquarePlus, BookOpen } from 'lucide-react';
 
 type SideDrawerProps = {
   open: boolean;
@@ -14,6 +14,7 @@ export function SideDrawer({ open, onClose }: SideDrawerProps) {
     { to: '/search', label: '검색', icon: Search },
     { to: '/reviews', label: '리뷰', icon: MessageSquare },
     { to: '/me', label: '마이페이지', icon: User },
+    { to: '/guide', label: '사용 가이드', icon: BookOpen },
     { to: '/feedback', label: '피드백 남기기', icon: MessageSquarePlus },
   ];
 

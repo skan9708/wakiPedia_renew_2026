@@ -10,6 +10,7 @@ export function Header({ onMenu }: HeaderProps) {
     if (location.pathname.startsWith('/reviews')) return '리뷰';
     if (location.pathname.startsWith('/me')) return '마이';
     if (location.pathname.startsWith('/wines')) return '와인';
+    if (location.pathname.startsWith('/guide')) return '사용 가이드';
     return 'Wakipedia';
   })();
   const isBrand = title === 'Wakipedia';

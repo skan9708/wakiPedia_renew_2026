@@ -145,17 +145,18 @@ export function SignupMobile() {
             <input type="password" className="w-full border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" />
           </label>
           {(phoneEnabled || previewOnly) && <details className="group border-t border-border pt-4">
-            <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
+            <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-xl border-l-4 border-accent bg-[#eef1d2] px-4 py-3">
               <span>
-                <span className="block text-sm font-medium">아이디 찾기용 번호 등록 <span className="text-accent">선택</span></span>
-                <span className="block text-xs text-muted mt-1">{hasOptionalPhone ? (phoneVerificationReady ? '문자 인증번호 입력됨' : '번호 인증을 완료해주세요.') : '이메일을 잊어도 내 기록을 찾을 수 있어요.'}</span>
+                <span className="block text-sm font-medium">아이디(이메일) 찾기용 번호 등록 <span className="text-accent">선택</span></span>
+                <span className="block text-xs text-muted mt-1">{hasOptionalPhone ? (phoneVerificationReady ? '문자 인증번호 입력됨' : '번호 인증을 완료해주세요.') : '이메일을 잊었다면 등록한 번호로 찾아요.'}</span>
               </span>
               <span className="shrink-0 text-xs text-accent group-open:hidden">펼치기</span>
               <span className="hidden shrink-0 text-xs text-accent group-open:inline">접기</span>
             </summary>
             <div className="space-y-3 pt-4">
-              <p className="text-xs text-muted">수집: 휴대폰 번호 · 목적: 아이디 찾기 · 보유: 삭제 요청 또는 탈퇴 시까지</p>
-              <p className="text-xs text-muted">동의하지 않아도 가입할 수 있지만, 휴대폰 아이디 찾기는 이용할 수 없어요. 광고 문자에는 사용하지 않습니다.</p>
+              <p className="text-xs text-muted">아이디를 잊었을 때 기존 기록을 찾으려면 번호를 인증해 등록해주세요. 등록은 선택 사항이며, 광고 문자에는 사용하지 않습니다.</p>
+              <p className="text-xs text-muted">동의하지 않아도 가입할 수 있지만, 휴대폰 번호 미입력 시 아이디 찾기는 이용할 수 없습니다.</p>
+              <p className="text-xs text-muted">수집 항목: 휴대폰 번호 / 목적: 아이디 찾기 / 보유: 삭제 요청 또는 탈퇴 시까지</p>
               <label className="flex items-start gap-2 text-xs">
                 <input type="checkbox" checked={phoneConsent} onChange={e => setPhoneConsent(e.target.checked)} />
                 휴대폰 번호 수집·이용에 동의합니다 (선택)
