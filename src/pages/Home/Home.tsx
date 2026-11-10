@@ -84,7 +84,7 @@ export function Home() {
             </h1>
 
             {/* 검색바 */}
-            <div className="w-full max-w-md">
+            <div data-guide="home-search" className="w-full max-w-md">
               <SearchBar
                 placeholder="와인 리뷰를 검색해 보세요"
                 onSearch={handleSearch}
@@ -98,7 +98,7 @@ export function Home() {
 
       {/* 와인 카테고리 섹션 */}
       <section className="px-6 pt-4 pb-8 page-container">
-        <div className="grid grid-cols-2 gap-4">
+        <div data-guide="home-types" className="grid grid-cols-2 gap-4">
           {wineCategories.map((category) => (
             <button
               key={category.type}

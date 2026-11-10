@@ -10,7 +10,7 @@ const tabs = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white">
+    <nav data-guide="bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white">
       <div className="mx-auto w-full max-w-mobile px-4 grid grid-cols-4 place-items-center py-1.5">
         {tabs.map(({ to, label, icon: Icon }) => (
           <NavLink

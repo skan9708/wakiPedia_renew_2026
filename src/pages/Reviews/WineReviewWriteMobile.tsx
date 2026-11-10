@@ -126,7 +126,7 @@ export function WineReviewWriteMobile() {
       </div>
 
       {/* 별점 */}
-      <section className="mx-auto w-full max-w-mobile px-4">
+      <section data-guide="review-required" className="mx-auto w-full max-w-mobile px-4">
         <h3 className="text-base font-semibold mb-2">별점 <span className="text-sm text-accent">필수</span></h3>
         <div className="card p-4">
           <div className="flex items-center gap-2 text-2xl">
@@ -161,7 +161,7 @@ export function WineReviewWriteMobile() {
       </section>
 
       {/* 이미지 업로드 */}
-      <section className="mx-auto w-full max-w-mobile px-4">
+      <section data-guide="review-optional" className="mx-auto w-full max-w-mobile px-4">
         <h3 className="text-base font-semibold mb-2">사진 <span className="text-sm text-muted font-normal">선택</span></h3>
         <div className="card p-4">
           <div className="grid grid-cols-4 gap-3">
@@ -199,7 +199,7 @@ export function WineReviewWriteMobile() {
       </section>
 
       {/* 공개 범위 */}
-      <section className="mx-auto w-full max-w-mobile px-4 pb-12">
+      <section data-guide="review-visibility" className="mx-auto w-full max-w-mobile px-4 pb-12">
         <h3 className="text-base font-semibold mb-2">공개 범위 <span className="text-sm text-muted font-normal">선택 · 기본 전체 공개</span></h3>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className={`py-2 rounded-xl border ${visibility === 'public' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('public')}>전체 공개</button>

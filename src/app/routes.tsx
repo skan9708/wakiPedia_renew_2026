@@ -27,10 +27,14 @@ import { AdminApp } from '@/pages/Admin/AdminApp';
 import { PrivacyPolicyMobile } from '@/pages/Legal/PrivacyPolicyMobile';
 import { TermsOfServiceMobile } from '@/pages/Legal/TermsOfServiceMobile';
 import { GuideMobile } from '@/pages/Guide/GuideMobile';
+import { getPageGuide } from '@/components/guide/pageGuides';
+import { PageGuideTour } from '@/components/guide/PageGuideTour';
 
 export function AppRoutes() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [guideOpenRequest, setGuideOpenRequest] = useState(0);
   const location = useLocation();
+  const pageGuide = getPageGuide(location.pathname);
 
   const isAdmin = location.pathname.startsWith('/admin-panel');
 
@@ -50,7 +54,7 @@ export function AppRoutes() {
 
   return (
     <div className="relative">
-      <Header onMenu={() => setDrawerOpen(true)} />
+      <Header onMenu={() => setDrawerOpen(true)} onGuide={pageGuide ? () => setGuideOpenRequest((current) => current + 1) : undefined} />
       <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <main className="pt-16 pb-24">
         <Routes>
@@ -82,6 +86,7 @@ export function AppRoutes() {
           <Route path="/privacy" element={<PrivacyPolicyMobile />} />
         </Routes>
       </main>
+      {pageGuide && <PageGuideTour key={pageGuide.id} guide={pageGuide} openRequest={guideOpenRequest} />}
       <BottomNav />
     </div>
   );

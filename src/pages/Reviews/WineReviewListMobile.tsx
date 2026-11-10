@@ -60,7 +60,7 @@ export function WineReviewListMobile() {
     <div className="space-y-4">
       <div className="mx-auto w-full max-w-mobile px-4 pt-2">
         {wineId && <h2 className="mb-3 text-base font-semibold">이 와인의 리뷰</h2>}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+        <div data-guide="reviews-sort" className="flex gap-2 overflow-x-auto no-scrollbar">
           {[
             { key: 'latest', label: '최신 리뷰' },
             { key: 'popular', label: '인기 리뷰' },
@@ -88,8 +88,8 @@ export function WineReviewListMobile() {
             <p className="text-center text-sm text-muted py-8">리뷰가 없습니다.</p>
           </div>
         )}
-        {reviews.map((r) => (
-          <div key={r.id} className="mx-auto w-full max-w-mobile px-4" onClick={() => navigate(`/reviews/${r.id}`)}>
+        {reviews.map((r, index) => (
+          <div key={r.id} data-guide={index === 0 ? 'reviews-list' : undefined} className="mx-auto w-full max-w-mobile px-4" onClick={() => navigate(`/reviews/${r.id}`)}>
             <CardReview review={r} />
           </div>
         ))}

@@ -112,7 +112,7 @@ export function ReviewDetailMobile() {
         )}
 
         {/* 헤더 */}
-        <div className="px-4 flex items-center justify-between">
+        <div data-guide="review-detail" className="px-4 flex items-center justify-between">
           <div>
             <div className="text-lg font-semibold text-fg cursor-pointer" onClick={() => navigate(`/wines/${review.wineId}`)}>
               {review.wineName}
@@ -137,7 +137,7 @@ export function ReviewDetailMobile() {
 
         {/* 리뷰 텍스트 + 별점 */}
         <div className="px-4">
-          <div className="card p-4 border border-border">
+          <div data-guide="review-action" className="card p-4 border border-border">
             <div className="flex items-center gap-2">
               <RatingStars value={review.rating} size="md" />
               <span className="text-accent text-sm">{review.rating.toFixed(1)} 점</span>
@@ -174,7 +174,7 @@ export function ReviewDetailMobile() {
         {review.bodyRating === null && review.sweetRating === null && review.acidityRating === null && review.taninRating === null && <div className="h-36" />}
       </div>
 
-      <div className="fixed z-50 bottom-16 left-0 right-0 mx-auto w-full max-w-mobile px-4">
+      <div data-guide="review-share" className="fixed z-50 bottom-16 left-0 right-0 mx-auto w-full max-w-mobile px-4">
         <button
           type="button"
           onClick={shareReview}

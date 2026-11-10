@@ -86,7 +86,7 @@ export function WineRegistMobile() {
       </section>
 
       {/* 기본 정보 */}
-      <section className="mx-auto w-full max-w-mobile px-4">
+      <section data-guide="wine-new-info" className="mx-auto w-full max-w-mobile px-4">
         <h3 className="text-base font-semibold mb-2">기본 정보</h3>
         <div className="card p-4 space-y-3">
           <label className="block">

@@ -94,7 +94,7 @@ export function MyPageMobile() {
   return (
     <div className="space-y-10">
       {/* 상단 프로필 */}
-      <section className="mx-auto w-full max-w-mobile px-4 pt-4">
+      <section data-guide="me-activity" className="mx-auto w-full max-w-mobile px-4 pt-4">
         <div className="card p-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 shrink-0 rounded-full overflow-hidden bg-bgsubtle">
@@ -153,7 +153,7 @@ export function MyPageMobile() {
 
       {/* 개인 기록은 같은 와인을 여러 번 리뷰해도 한 종류로 센다. */}
       {!tasteProfile?.excluded && (
-        <section className="mx-auto w-full max-w-mobile px-4">
+        <section data-guide="me-cellar" className="mx-auto w-full max-w-mobile px-4">
           {reviewsError ? (
             <p className="rounded-2xl bg-bgsubtle p-4 text-sm text-muted">와인 기록을 불러오지 못했습니다.</p>
           ) : reviewsLoaded && !tasteLoading ? (
@@ -165,7 +165,7 @@ export function MyPageMobile() {
       )}
 
       {/* 좋아요한 와인 */}
-      <section className="mx-auto w-full max-w-mobile px-4">
+      <section data-guide="me-records" className="mx-auto w-full max-w-mobile px-4">
         <SectionTitle title="내가 좋아요한 와인" action={<button className="text-xs text-muted" onClick={() => navigate('/me/likes')}>더보기</button>} />
         <div className="grid grid-cols-3 gap-3">
           {likedWines.slice(0, 6).map((w) => (
@@ -198,7 +198,7 @@ export function MyPageMobile() {
       </section>
 
       {/* 4점 이상 준 와인의 특징 평균 */}
-      <section className="mx-auto w-full max-w-mobile px-4">
+      <section data-guide="me-taste" className="mx-auto w-full max-w-mobile px-4">
         <SectionTitle
           title="내 취향 분석"
           help={`내가 4점 이상 준 ${wineTypeLabel}${selectedTaste && !tasteProfile?.excluded ? ` ${selectedTaste.wineCount}종` : ''}의 특징을 평균낸 값이에요. 화이트에는 스파클링을 포함하고, 로제는 전체에서만 볼 수 있어요. 같은 와인에 리뷰를 여러 번 썼다면 가장 최근 리뷰의 별점을 기준으로 해요. 4점 미만 리뷰는 포함하지 않아요.`}
@@ -257,7 +257,7 @@ export function MyPageMobile() {
 
       {/* 좋아한 와인 리뷰의 느낌 태그 */}
       {selectedTaste && !tasteProfile?.excluded && (
-        <section className="mx-auto w-full max-w-mobile px-4 pb-24">
+        <section data-guide="me-keywords" className="mx-auto w-full max-w-mobile px-4 pb-24">
           <SectionTitle title="좋아한 와인의 키워드" help={`내가 4점 이상 준 ${wineTypeLabel}의 리뷰에서 선택한 느낌 태그예요. 자주 선택한 키워드일수록 크게 보여요.`} />
           {keywords.length > 0 ? (
             <div className="card p-4 mt-5">

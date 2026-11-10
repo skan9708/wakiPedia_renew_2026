@@ -151,7 +151,7 @@ export function WineDetailMobile() {
       </div>
 
       {/* 타이틀 */}
-      <div className="px-4">
+      <div data-guide="wine-summary" className="px-4">
         <div className="flex items-center gap-2">
           <div className="text-xl font-semibold text-fg">{wine.nameEng}</div>
           <button type="button" aria-label={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'} onClick={toggleFav}
@@ -198,7 +198,7 @@ export function WineDetailMobile() {
         </div>
 
         {/* 와인 스타일 */}
-        <section className="mt-6">
+        <section data-guide="wine-style" className="mt-6">
           <h3 className="text-base font-semibold mb-3">와인 스타일</h3>
           <div className="space-y-5">
             <GaugeRow title="바디" left="매우 가벼움" right="매우 무거움" value={myTaste.body} />
@@ -219,7 +219,7 @@ export function WineDetailMobile() {
         )}
 
         {/* 행동 영역 */}
-        <div className="mt-4 grid grid-cols-1 gap-2">
+        <div data-guide="wine-record" className="mt-4 grid grid-cols-1 gap-2">
           <button className="w-full py-3 rounded-2xl bg-accent text-white" onClick={() => navigate(`/reviews/new?wine_id=${wine.id}`)}>
             리뷰 등록하기
           </button>
@@ -227,7 +227,7 @@ export function WineDetailMobile() {
       </div>
 
       {/* 리뷰 목록 */}
-      <div className="px-4 space-y-3">
+      <div data-guide="wine-reviews" className="px-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-semibold">리뷰</h3>
           <div className="flex gap-1 rounded-full bg-bgsubtle p-1" role="group" aria-label="리뷰 정렬">
