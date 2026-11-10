@@ -3,10 +3,11 @@ from django.db.models import OuterRef, Subquery
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
+from rest_framework import serializers, status
 
 from wine.models import Wine, WineReview, Tag, Country
 from wine.image_utils import public_review_image_names, wine_display_image_url
+from wine.review_images import protect_review_images, publish_review_images, review_image_url
 
 
 def require_staff(request):
@@ -312,7 +313,7 @@ class AdminReviewDetailView(APIView):
             "isPublic": r.is_public,
             "feels": list(r.tags.values_list("name", flat=True)),
             "images": [
-                {"id": img.id, "url": request.build_absolute_uri(img.image.url), "createdAt": img.created_at.isoformat()}
+                {"id": img.id, "url": review_image_url(img, request), "createdAt": img.created_at.isoformat()}
                 for img in r.images.all()
             ],
             "likeCount": r.likes.count(),
@@ -333,7 +334,7 @@ class AdminReviewDetailView(APIView):
             rating_db = round(float(request.data["rating"]) * 10 / 5) * 5
             r.rating = max(0, min(50, rating_db))
         if "isPublic" in request.data:
-            r.is_public = bool(request.data["isPublic"])
+            is_public = serializers.BooleanField().run_validation(request.data["isPublic"])
         if "body" in request.data:
             r.body = int(request.data["body"])
         if "acidity" in request.data:
@@ -342,7 +343,13 @@ class AdminReviewDetailView(APIView):
             r.sweetness = int(request.data["sweetness"])
         if "tannin" in request.data:
             r.tannin = int(request.data["tannin"])
+        if "isPublic" in request.data:
+            if not is_public and r.is_public:
+                protect_review_images(r)
+            r.is_public = is_public
         r.save()
+        if "isPublic" in request.data and r.is_public:
+            publish_review_images(r)
         return Response({"id": r.id})
 
     def delete(self, request, pk):

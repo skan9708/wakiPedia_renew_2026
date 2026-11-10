@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from wine.models import Wine, WineReview, WineReviewImage, Tag, Country, GrapeVariety
 from wine.image_utils import wine_display_image_url
+from wine.review_images import review_image_url
 from user.serializers import UserMiniSerializer
 
 
@@ -80,10 +81,7 @@ class ReviewImageSerializer(serializers.ModelSerializer):
         fields = ("id", "url")
 
     def get_url(self, obj):
-        request = self.context.get("request")
-        if request:
-            return request.build_absolute_uri(obj.image.url)
-        return obj.image.url
+        return review_image_url(obj, self.context.get("request"))
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -141,13 +139,6 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             "is_public", "feels",
         )
 
-    def validate(self, attrs):
-        if not attrs.get("is_public", True) and self.context.get("images"):
-            raise serializers.ValidationError({
-                "images": "사진을 첨부한 리뷰는 나만 보기로 저장할 수 없습니다."
-            })
-        return attrs
-
     def validate_rating(self, value):
         raw = round(value * 10)
         if raw % 5 != 0:
@@ -192,7 +183,10 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             review.tags.add(tag)
 
         for img in images:
-            WineReviewImage.objects.create(review=review, image=img)
+            if review.is_public:
+                WineReviewImage.objects.create(review=review, image=img)
+            else:
+                WineReviewImage.objects.create(review=review, private_image=img)
 
         return review
 

@@ -31,6 +31,7 @@ export function ReviewDetailMobile() {
   const [review, setReview] = useState<ReviewDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -90,7 +91,7 @@ export function ReviewDetailMobile() {
   if (loading) return <div className="p-8 text-center text-muted text-sm">불러오는 중...</div>;
   if (!review) return <div className="p-8 text-center text-muted text-sm">리뷰를 찾을 수 없습니다.</div>;
 
-  const mainImage = review.images?.[0]?.url;
+  const mainImage = review.images?.[selectedImageIndex]?.url ?? review.images?.[0]?.url;
   const isOwnReview = user && review.creator.id === Number(user.id);
 
   return (
@@ -100,6 +101,15 @@ export function ReviewDetailMobile() {
         <div className="w-full aspect-[16/10] bg-bgsubtle overflow-hidden">
           <img src={mainImage ?? defaultWineImg} alt="리뷰 이미지" className="w-full h-full object-cover" />
         </div>
+        {review.images.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto px-4">
+            {review.images.map((image, index) => (
+              <button key={image.id} type="button" onClick={() => setSelectedImageIndex(index)} aria-label={`${index + 1}번째 사진 보기`} aria-pressed={selectedImageIndex === index} className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${selectedImageIndex === index ? 'border-accent' : 'border-transparent'}`}>
+                <img src={image.url} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* 헤더 */}
         <div className="px-4 flex items-center justify-between">

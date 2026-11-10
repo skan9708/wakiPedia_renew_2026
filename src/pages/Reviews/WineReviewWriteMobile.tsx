@@ -39,8 +39,8 @@ export function WineReviewWriteMobile() {
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement | null>(null);
   const canSubmit = useMemo(
-    () => rating > 0 && content.trim().length > 0 && !!wineId && !(visibility === 'private' && images.length > 0),
-    [rating, content, wineId, visibility, images.length],
+    () => rating > 0 && content.trim().length > 0 && !!wineId,
+    [rating, content, wineId],
   );
 
   useEffect(() => {
@@ -165,7 +165,7 @@ export function WineReviewWriteMobile() {
         <h3 className="text-base font-semibold mb-2">사진 <span className="text-sm text-muted font-normal">선택</span></h3>
         <div className="card p-4">
           <div className="grid grid-cols-4 gap-3">
-            <button type="button" disabled={visibility === 'private'} onClick={() => fileRef.current?.click()} className="aspect-square rounded-xl bg-bgsubtle text-muted grid place-items-center text-xs disabled:opacity-50">와인 사진 업로드</button>
+            <button type="button" onClick={() => fileRef.current?.click()} className="aspect-square rounded-xl bg-bgsubtle text-muted grid place-items-center text-xs">와인 사진 업로드</button>
             {previews.map((src, i) => (
               <div key={src} className="relative aspect-square rounded-xl overflow-hidden">
                 <img src={src} alt={`preview-${i}`} className="w-full h-full object-cover" />
@@ -174,7 +174,7 @@ export function WineReviewWriteMobile() {
             ))}
           </div>
           <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onPickFiles} />
-          {visibility === 'private' && <p className="mt-3 text-xs text-muted">나만 보기 리뷰에는 사진을 첨부할 수 없습니다. {images.length > 0 && '선택한 사진을 삭제하거나 전체 공개를 선택해 주세요.'}</p>}
+          {visibility === 'private' && <p className="mt-3 text-xs text-muted">나만 보기 사진은 내 기록에서만 볼 수 있어요.</p>}
         </div>
       </section>
 

@@ -5,8 +5,9 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from wine.models import Wine, WineReview
+from wine.models import Wine, WineReview, WineReviewImage
 from wine.serializers import ReviewSerializer, ReviewCreateSerializer
+from wine.review_images import protect_review_images, publish_review_images, validate_review_photos
 
 
 class ReviewListView(APIView):
@@ -61,6 +62,7 @@ class ReviewListView(APIView):
             data = dict(request.data)
             images = data.pop("images", [])
 
+        validate_review_photos(images)
         serializer = ReviewCreateSerializer(
             data=data, context={"request": request, "images": images}
         )
@@ -99,11 +101,8 @@ class ReviewDetailView(APIView):
 
         if "is_public" in request.data:
             is_public = serializers.BooleanField().run_validation(request.data["is_public"])
-            if not is_public and review.images.exists():
-                return Response(
-                    {"images": ["사진을 첨부한 리뷰는 나만 보기로 변경할 수 없습니다."]},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        images = request.FILES.getlist("images")
+        validate_review_photos(images)
 
         if request.data.get("text") is not None:
             review.text = request.data["text"]
@@ -111,20 +110,42 @@ class ReviewDetailView(APIView):
             review.rating = round(float(request.data["rating"]) * 10)
         for field in ("body", "acidity", "sweetness", "tannin"):
             if field in request.data:
-                value = serializers.IntegerField(min_value=0, max_value=4, allow_null=True).run_validation(request.data[field])
+                raw_value = request.data[field]
+                value = serializers.IntegerField(min_value=0, max_value=4, allow_null=True).run_validation(
+                    None if raw_value == "" else raw_value
+                )
                 setattr(review, field, value)
+        removed = request.data.getlist("remove_images") if hasattr(request.data, "getlist") else request.data.get("remove_images", [])
+        if removed:
+            for photo in review.images.filter(pk__in=removed):
+                if photo.image and not WineReviewImage.objects.filter(image=photo.image.name).exclude(pk=photo.pk).exists():
+                    photo.image.storage.delete(photo.image.name)
+                photo.delete()
         if "is_public" in request.data:
+            if not is_public and review.is_public:
+                protect_review_images(review)
             review.is_public = is_public
         review.save()
+        if "is_public" in request.data and is_public:
+            publish_review_images(review)
 
-        feels = request.data.get("feels")
+        for image_file in images:
+            if review.is_public:
+                WineReviewImage.objects.create(review=review, image=image_file)
+            else:
+                WineReviewImage.objects.create(review=review, private_image=image_file)
+
+        feels = request.data.getlist("feels") if hasattr(request.data, "getlist") and "feels" in request.data else request.data.get("feels")
         if feels is not None:
             from wine.models import Tag
             review.tags.clear()
             for name in feels:
+                if not name:
+                    continue
                 tag, _ = Tag.objects.get_or_create(name=name, defaults={"category": "fruity"})
                 review.tags.add(tag)
 
+        review.refresh_from_db()
         return Response(ReviewSerializer(review, context={"request": request}).data)
 
     def delete(self, request, pk):

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -22,7 +22,12 @@ export function MyPageReviewEditMobile() {
   const [acidLevel, setAcidLevel] = useState<number | null>(null);
   const [taninLevel, setTaninLevel] = useState<number | null>(null);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
-  const [hasImages, setHasImages] = useState(false);
+  const [existingImages, setExistingImages] = useState<{ id: number; url: string }[]>([]);
+  const [removedImageIds, setRemovedImageIds] = useState<number[]>([]);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const previewUrlsRef = useRef<string[]>([]);
   const [feels, setFeels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,12 +45,14 @@ export function MyPageReviewEditMobile() {
         setAcidLevel(data.acidityRating ?? null);
         setTaninLevel(data.taninRating ?? null);
         setVisibility(data.is_public ? 'public' : 'private');
-        setHasImages((data.images?.length ?? 0) > 0);
+        setExistingImages(data.images ?? []);
         setFeels(data.feels ?? []);
       })
       .catch(() => navigate(-1))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => () => previewUrlsRef.current.forEach(URL.revokeObjectURL), []);
 
   const canSubmit = useMemo(() => rating > 0 && content.trim().length > 0, [rating, content]);
 
@@ -55,13 +62,29 @@ export function MyPageReviewEditMobile() {
   const toggleFeel = (t: string) =>
     setFeels((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
+  const onPickFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    const urls = files.map((file) => URL.createObjectURL(file));
+    previewUrlsRef.current.push(...urls);
+    setNewImages((previous) => [...previous, ...files]);
+    setPreviews((previous) => [...previous, ...urls]);
+    event.target.value = '';
+  };
+
+  const removeNewImage = (index: number) => {
+    URL.revokeObjectURL(previews[index]);
+    previewUrlsRef.current = previewUrlsRef.current.filter((url) => url !== previews[index]);
+    setNewImages((previous) => previous.filter((_, i) => i !== index));
+    setPreviews((previous) => previous.filter((_, i) => i !== index));
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
     setSaving(true);
     setError('');
     try {
-      await api.patch(`/reviews/${id}/`, {
+      const fields = {
         text: content,
         rating,
         body: bodyLevel,
@@ -70,7 +93,22 @@ export function MyPageReviewEditMobile() {
         tannin: taninLevel,
         is_public: visibility === 'public',
         feels,
-      });
+      };
+      if (newImages.length || removedImageIds.length) {
+        const form = new FormData();
+        form.append('text', fields.text);
+        form.append('rating', String(fields.rating));
+        form.append('is_public', String(fields.is_public));
+        for (const key of ['body', 'acidity', 'sweetness', 'tannin'] as const) {
+          form.append(key, fields[key] === null ? '' : String(fields[key]));
+        }
+        (feels.length ? feels : ['']).forEach((feel) => form.append('feels', feel));
+        removedImageIds.forEach((imageId) => form.append('remove_images', String(imageId)));
+        newImages.forEach((image) => form.append('images', image));
+        await api.patch(`/reviews/${id}/`, form);
+      } else {
+        await api.patch(`/reviews/${id}/`, fields);
+      }
       navigate(`/reviews/${id}`);
     } catch (err: any) {
       setError('수정에 실패했습니다.');
@@ -128,6 +166,33 @@ export function MyPageReviewEditMobile() {
         </div>
       </section>
 
+      {/* 사진 */}
+      <section className="mx-auto w-full max-w-mobile px-4">
+        <h3 className="text-base font-semibold mb-2">사진 <span className="text-sm text-muted font-normal">선택</span></h3>
+        <div className="card p-4">
+          <div className="grid grid-cols-4 gap-3">
+            <button type="button" onClick={() => fileRef.current?.click()} className="aspect-square rounded-xl bg-bgsubtle text-muted grid place-items-center text-xs">와인 사진 추가</button>
+            {existingImages.map((image) => (
+              <div key={image.id} className="relative aspect-square overflow-hidden rounded-xl">
+                <img src={image.url} alt="기존 리뷰 사진" className="h-full w-full object-cover" />
+                <button type="button" className="absolute right-1 top-1 rounded bg-black/60 px-1 text-xs text-white" onClick={() => {
+                  setExistingImages((previous) => previous.filter((item) => item.id !== image.id));
+                  setRemovedImageIds((previous) => [...previous, image.id]);
+                }}>삭제</button>
+              </div>
+            ))}
+            {previews.map((url, index) => (
+              <div key={url} className="relative aspect-square overflow-hidden rounded-xl">
+                <img src={url} alt="추가할 리뷰 사진" className="h-full w-full object-cover" />
+                <button type="button" className="absolute right-1 top-1 rounded bg-black/60 px-1 text-xs text-white" onClick={() => removeNewImage(index)}>삭제</button>
+              </div>
+            ))}
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onPickFiles} />
+          {visibility === 'private' && <p className="mt-3 text-xs text-muted">나만 보기 사진은 내 기록에서만 볼 수 있어요.</p>}
+        </div>
+      </section>
+
       {/* 맛 상세 */}
       <section className="mx-auto w-full max-w-mobile px-4">
         <h3 className="text-base font-semibold mb-2">와인 상세기록 <span className="text-sm text-muted font-normal">선택</span></h3>
@@ -153,9 +218,8 @@ export function MyPageReviewEditMobile() {
         <h3 className="text-base font-semibold mb-2">공개 범위 <span className="text-sm text-muted font-normal">선택</span></h3>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className={`py-2 rounded-xl border ${visibility === 'public' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('public')}>전체 공개</button>
-          <button type="button" disabled={hasImages} className={`py-2 rounded-xl border disabled:opacity-50 ${visibility === 'private' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('private')}>나만 보기</button>
+          <button type="button" className={`py-2 rounded-xl border ${visibility === 'private' ? 'bg-accent text-white border-accent' : 'border-border'}`} onClick={() => setVisibility('private')}>나만 보기</button>
         </div>
-        {hasImages && <p className="mt-2 text-xs text-muted">사진이 첨부된 리뷰는 나만 보기로 변경할 수 없습니다.</p>}
       </section>
 
       <div className="fixed bottom-16 left-0 right-0 bg-white/95 backdrop-blur border-t border-border">

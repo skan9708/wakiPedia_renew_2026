@@ -1,11 +1,18 @@
 from importlib import import_module
+from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from time import time
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.apps import apps
+from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import TestCase
 from rest_framework.test import APIClient
+from PIL import Image
 
 from user.models import User
 from wine.models import Tag, Wine, WineReview, WineReviewImage
@@ -228,31 +235,6 @@ class ReviewPrivacyAndWinePermissionTests(TestCase):
         self.assertEqual(self.other_client.post(like_url).status_code, 200)
         self.assertEqual(self.public_review.likes.count(), 0)
 
-    def test_private_review_rejects_publicly_stored_photos(self):
-        response = self.owner_client.post("/api/reviews/", {
-            "wine": self.wine.id,
-            "rating": 4,
-            "text": "사진을 포함한 비공개 기록",
-            "body": 2,
-            "acidity": 2,
-            "sweetness": 2,
-            "tannin": 2,
-            "is_public": "false",
-            "images": SimpleUploadedFile("private.jpg", b"image", content_type="image/jpeg"),
-        }, format="multipart")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("images", response.data)
-        self.assertEqual(WineReview.objects.count(), 2)
-
-        WineReviewImage.objects.create(
-            review=self.public_review, image="review_images/public.jpg",
-        )
-        public_url = f"/api/reviews/{self.public_review.id}/"
-        response = self.owner_client.patch(public_url, {"is_public": False})
-        self.assertEqual(response.status_code, 400)
-        self.public_review.refresh_from_db()
-        self.assertTrue(self.public_review.is_public)
-
     def test_wine_changes_require_owner_or_staff_and_deletion_requires_staff(self):
         wine_url = f"/api/wines/{self.wine.id}/"
         self.assertEqual(self.other_client.patch(wine_url, {"nameKr": "다른 이름"}).status_code, 403)
@@ -277,3 +259,130 @@ class ReviewPrivacyAndWinePermissionTests(TestCase):
         self.assertEqual(self.other_client.delete(legacy_url).status_code, 403)
         self.wine.refresh_from_db()
         self.assertEqual(self.wine.kor_name, "등록 와인")
+
+
+class PrivateReviewPhotoTests(TestCase):
+    def setUp(self):
+        self.temp_dir = TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        public_root = Path(self.temp_dir.name) / "public"
+        private_root = Path(self.temp_dir.name) / "private"
+        self.public_storage = FileSystemStorage(location=public_root, base_url="/media/")
+        self.private_storage = FileSystemStorage(location=private_root, base_url="")
+        for field_name, storage in (("image", self.public_storage), ("private_image", self.private_storage)):
+            field = WineReviewImage._meta.get_field(field_name)
+            patcher = patch.object(field, "storage", storage)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+        self.owner = User.objects.create_user(email="private-photo@example.com", password="test-password", nickname="Owner")
+        self.other = User.objects.create_user(email="private-photo-other@example.com", password="test-password", nickname="Other")
+        self.wine = Wine.objects.create(kor_name="비공개 사진 테스트", eng_name="Private Photo", type="red")
+        self.owner_client = APIClient()
+        self.owner_client.force_authenticate(user=self.owner)
+        self.other_client = APIClient()
+        self.other_client.force_authenticate(user=self.other)
+
+    def photo(self, name="test-photo.jpg"):
+        buffer = BytesIO()
+        Image.new("RGB", (2, 2), "red").save(buffer, format="JPEG")
+        return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
+
+    def create_review(self, is_public):
+        response = self.owner_client.post("/api/reviews/", {
+            "wine": self.wine.pk, "rating": 4, "text": "사진 기록",
+            "is_public": str(is_public).lower(), "images": self.photo(),
+        }, format="multipart")
+        self.assertEqual(response.status_code, 201, response.data)
+        return response
+
+    def test_private_photo_is_not_public_media_and_signed_link_expires(self):
+        created = self.create_review(False)
+        review_id = created.data["id"]
+        photo = WineReviewImage.objects.get(review_id=review_id)
+        self.assertFalse(photo.image)
+        self.assertTrue(self.private_storage.exists(photo.private_image.name))
+        url = created.data["images"][0]["url"]
+        self.assertIn(f"/api/reviews/photos/{photo.pk}/?token=", url)
+
+        self.assertEqual(self.other_client.get(f"/api/reviews/{review_id}/").status_code, 404)
+        self.assertEqual(self.client.get(f"/api/reviews/{review_id}/").status_code, 404)
+        self.assertEqual(self.client.get(f"/api/reviews/photos/{photo.pk}/").status_code, 404)
+        self.assertEqual(self.client.get(url + "wrong").status_code, 404)
+        image_response = self.client.get(url)
+        self.assertEqual(image_response.status_code, 200)
+        self.assertEqual(image_response["Cache-Control"], "private, no-store")
+        self.assertTrue(b"".join(image_response.streaming_content).startswith(b"\xff\xd8"))
+        with patch("django.core.signing.time.time", return_value=time() + 3700):
+            self.assertEqual(self.client.get(url).status_code, 404)
+
+        public_reviews = self.client.get("/api/reviews/")
+        self.assertEqual(public_reviews.data["total"], 0)
+        wine_detail = self.client.get(f"/api/wines/{self.wine.pk}/")
+        self.assertEqual(wine_detail.data["reviews"], [])
+        self.assertIsNone(wine_detail.data["imageUrl"])
+
+    def test_public_photo_is_moved_when_review_becomes_private_and_back(self):
+        created = self.create_review(True)
+        review_id = created.data["id"]
+        photo = WineReviewImage.objects.get(review_id=review_id)
+        public_name = photo.image.name
+        self.assertTrue(self.public_storage.exists(public_name))
+
+        changed = self.owner_client.patch(f"/api/reviews/{review_id}/", {"is_public": False}, format="json")
+        self.assertEqual(changed.status_code, 200, changed.data)
+        photo.refresh_from_db()
+        self.assertFalse(photo.image)
+        self.assertFalse(self.public_storage.exists(public_name))
+        self.assertTrue(self.private_storage.exists(photo.private_image.name))
+        self.assertIn("/api/reviews/photos/", changed.data["images"][0]["url"])
+
+        changed_back = self.owner_client.patch(f"/api/reviews/{review_id}/", {"is_public": True}, format="json")
+        self.assertEqual(changed_back.status_code, 200, changed_back.data)
+        photo.refresh_from_db()
+        self.assertTrue(photo.image)
+        self.assertFalse(photo.private_image)
+        self.assertTrue(self.public_storage.exists(photo.image.name))
+        self.assertTrue(changed_back.data["images"][0]["url"].endswith(photo.image.name))
+        self.assertTrue(self.client.get(f"/api/wines/{self.wine.pk}/").data["imageUrl"].endswith(photo.image.name))
+
+    def test_private_photo_can_be_added_and_removed_on_edit(self):
+        created = self.create_review(False)
+        review_id = created.data["id"]
+        original = WineReviewImage.objects.get(review_id=review_id)
+        original_name = original.private_image.name
+        changed = self.owner_client.patch(f"/api/reviews/{review_id}/", {
+            "is_public": "false", "images": self.photo("second-photo.jpg"), "remove_images": str(original.pk),
+            "feels": "",
+        }, format="multipart")
+        self.assertEqual(changed.status_code, 200, changed.data)
+        self.assertFalse(self.private_storage.exists(original_name))
+        self.assertEqual(len(changed.data["images"]), 1)
+        self.assertNotEqual(changed.data["images"][0]["id"], original.pk)
+
+    def test_admin_can_open_private_photo_and_visibility_change_moves_file(self):
+        created = self.create_review(True)
+        review_id = created.data["id"]
+        staff = User.objects.create_user(email="photo-staff@example.com", password="test-password", nickname="Staff", is_staff=True)
+        admin_client = APIClient()
+        admin_client.force_authenticate(user=staff)
+
+        changed = admin_client.put(f"/api/admin/reviews/{review_id}/", {"isPublic": False}, format="json")
+        self.assertEqual(changed.status_code, 200)
+        photo = WineReviewImage.objects.get(review_id=review_id)
+        self.assertFalse(photo.image)
+        detail = admin_client.get(f"/api/admin/reviews/{review_id}/")
+        self.assertEqual(detail.status_code, 200)
+        image_response = self.client.get(detail.data["images"][0]["url"])
+        self.assertEqual(image_response.status_code, 200)
+        image_response.close()
+
+    def test_deleting_private_review_deletes_photo_file(self):
+        created = self.create_review(False)
+        photo = WineReviewImage.objects.get(review_id=created.data["id"])
+        private_name = photo.private_image.name
+        link = created.data["images"][0]["url"]
+        deleted = self.owner_client.delete(f"/api/reviews/{created.data['id']}/")
+        self.assertEqual(deleted.status_code, 204)
+        self.assertFalse(self.private_storage.exists(private_name))
+        self.assertEqual(self.client.get(link).status_code, 404)

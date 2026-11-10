@@ -3,6 +3,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 
 from wakipedia.models import BaseModel
+from wine.private_storage import private_review_image_storage
 
 
 def validate_multiple_of_five(value):
@@ -130,7 +131,11 @@ class WineReview(BaseModel):
 
 class WineReviewImage(BaseModel):
     review = models.ForeignKey(WineReview, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField("이미지", upload_to="review_images/")
+    image = models.ImageField("이미지", upload_to="review_images/", blank=True)
+    private_image = models.ImageField(
+        "비공개 이미지", upload_to="", storage=private_review_image_storage,
+        null=True, blank=True,
+    )
 
     class Meta:
         verbose_name = "리뷰 이미지"
