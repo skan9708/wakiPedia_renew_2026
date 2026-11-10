@@ -11,7 +11,7 @@ def private_review_image_storage():
         return S3Storage(
             bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
             location="private/review_images",
-            default_acl="private",
+            default_acl=None,
             querystring_auth=True,
             file_overwrite=False,
         )
