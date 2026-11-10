@@ -51,7 +51,7 @@ export function SignupMobile() {
   }, []);
 
   const hasOptionalPhone = Boolean(phone.trim());
-  const previewOnly = previewEmailVerification && !emailVerificationEnabled;
+  const previewOnly = previewEmailVerification;
   const canSubmit = !previewOnly && emailVerificationEnabled !== null && nickname && email && password && confirm && agreePrivacy && agreeTerms && password === confirm
     && (!emailVerificationEnabled || (emailChallengeId && /^[0-9]{6}$/.test(emailCode)))
     && (!hasOptionalPhone || (phoneConsent && phoneChallengeId && /^[0-9]{6}$/.test(phoneCode)));
@@ -127,9 +127,9 @@ export function SignupMobile() {
           </label>
           {(emailVerificationEnabled || previewEmailVerification) && <div className="space-y-2">
             <p className="text-sm font-medium">이메일 인증 <span className="text-accent">필수</span></p>
-            {previewOnly && <p role="status" className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-muted">화면 미리보기입니다. 현재 인증 메일은 발송되지 않으며 이 화면에서 가입할 수 없습니다. <Link to="/auth/signup" className="text-accent underline">일반 가입 화면으로 돌아가기</Link></p>}
+            {previewOnly && <p role="status" className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-muted">화면 미리보기입니다. 인증번호는 발송되지 않으며 이 화면에서 가입할 수 없습니다. <Link to="/auth/signup" className="text-accent underline">일반 가입 화면으로 돌아가기</Link></p>}
             <p className="text-xs text-muted">가입에 사용할 이메일로 인증번호를 보냅니다. 인증번호는 10분 동안 유효합니다.</p>
-            <button type="button" disabled={!emailVerificationEnabled || !email.trim() || emailBusy} onClick={sendEmailCode} className="rounded-lg border border-accent px-3 py-2 text-sm text-accent disabled:opacity-50">
+            <button type="button" disabled={previewOnly || !emailVerificationEnabled || !email.trim() || emailBusy} onClick={sendEmailCode} className="rounded-lg border border-accent px-3 py-2 text-sm text-accent disabled:opacity-50">
               {emailBusy ? '보내는 중...' : '이메일 인증번호 보내기'}
             </button>
             {(emailChallengeId || previewOnly) && <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} aria-label="이메일 인증번호" value={emailCode} onChange={e => setEmailCode(e.target.value)} placeholder="이메일 인증번호 6자리" disabled={previewOnly} className="w-full border border-border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" />}
@@ -143,7 +143,7 @@ export function SignupMobile() {
             <span className="block text-sm text-muted mb-1">비밀번호 확인</span>
             <input type="password" className="w-full border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" />
           </label>
-          {phoneEnabled && <div className="border-t border-border pt-4 space-y-3">
+          {(phoneEnabled || previewOnly) && <div className="border-t border-border pt-4 space-y-3">
             <p className="text-sm font-medium">휴대폰 인증 (선택)</p>
             <p className="text-xs text-muted">아이디를 잊었을 때 기존 기록을 찾으려면 번호를 인증해 등록해주세요. 등록은 선택 사항이며, 광고 문자에는 사용하지 않습니다.</p>
             <p className="text-xs text-muted">수집 항목: 휴대폰 번호 · 보유 기간: 번호 삭제 요청 또는 회원 탈퇴 시까지 · 동의 거부 시 아이디 찾기 기능을 사용할 수 없습니다.</p>
@@ -154,9 +154,9 @@ export function SignupMobile() {
             </label>
             <div className="flex gap-2">
               <input type="tel" inputMode="tel" autoComplete="tel" aria-label="휴대폰 번호" value={phone} onChange={e => { setPhone(e.target.value); setPhoneChallengeId(''); setPhoneCode(''); }} placeholder="010-1234-5678" className="min-w-0 flex-1 border border-border rounded-lg px-3 py-2 text-sm" />
-              <button type="button" disabled={!phoneConsent || !phone.trim() || phoneBusy} onClick={sendPhoneCode} className="rounded-lg border border-accent px-3 text-sm text-accent disabled:opacity-50">인증번호 발송</button>
+              <button type="button" disabled={previewOnly || !phoneEnabled || !phoneConsent || !phone.trim() || phoneBusy} onClick={sendPhoneCode} className="rounded-lg border border-accent px-3 text-sm text-accent disabled:opacity-50">인증번호 발송</button>
             </div>
-            {phoneChallengeId && <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} aria-label="휴대폰 인증번호" value={phoneCode} onChange={e => setPhoneCode(e.target.value)} placeholder="인증번호 6자리" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />}
+            {(phoneChallengeId || previewOnly) && <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} aria-label="휴대폰 인증번호" value={phoneCode} onChange={e => setPhoneCode(e.target.value)} placeholder="휴대폰 인증번호 6자리" disabled={previewOnly} className="w-full border border-border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" />}
             {phoneMessage && <p role="status" className="text-xs text-accent">{phoneMessage}</p>}
           </div>}
           <label className="flex items-start gap-2">
