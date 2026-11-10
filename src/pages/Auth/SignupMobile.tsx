@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { trackSignUp } from '@/lib/analytics';
@@ -14,6 +14,8 @@ function kakaoLogin() {
 
 export function SignupMobile() {
   const navigate = useNavigate();
+  const { search } = useLocation();
+  const previewEmailVerification = new URLSearchParams(search).get('previewEmailVerification') === '1';
   const login = useAuthStore((s) => s.login);
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
@@ -49,7 +51,8 @@ export function SignupMobile() {
   }, []);
 
   const hasOptionalPhone = Boolean(phone.trim());
-  const canSubmit = emailVerificationEnabled !== null && nickname && email && password && confirm && agreePrivacy && agreeTerms && password === confirm
+  const previewOnly = previewEmailVerification && !emailVerificationEnabled;
+  const canSubmit = !previewOnly && emailVerificationEnabled !== null && nickname && email && password && confirm && agreePrivacy && agreeTerms && password === confirm
     && (!emailVerificationEnabled || (emailChallengeId && /^[0-9]{6}$/.test(emailCode)))
     && (!hasOptionalPhone || (phoneConsent && phoneChallengeId && /^[0-9]{6}$/.test(phoneCode)));
 
@@ -122,12 +125,14 @@ export function SignupMobile() {
             <span className="block text-sm text-muted mb-1">이메일</span>
             <input type="email" autoComplete="email" className="w-full border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40" value={email} onChange={(e) => { setEmail(e.target.value); setEmailChallengeId(''); setEmailCode(''); setEmailMessage(''); }} placeholder="you@example.com" />
           </label>
-          {emailVerificationEnabled && <div className="space-y-2">
+          {(emailVerificationEnabled || previewEmailVerification) && <div className="space-y-2">
+            <p className="text-sm font-medium">이메일 인증 <span className="text-accent">필수</span></p>
+            {previewOnly && <p role="status" className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-muted">화면 미리보기입니다. 현재 인증 메일은 발송되지 않으며 이 화면에서 가입할 수 없습니다. <Link to="/auth/signup" className="text-accent underline">일반 가입 화면으로 돌아가기</Link></p>}
             <p className="text-xs text-muted">가입에 사용할 이메일로 인증번호를 보냅니다. 인증번호는 10분 동안 유효합니다.</p>
-            <button type="button" disabled={!email.trim() || emailBusy} onClick={sendEmailCode} className="rounded-lg border border-accent px-3 py-2 text-sm text-accent disabled:opacity-50">
+            <button type="button" disabled={!emailVerificationEnabled || !email.trim() || emailBusy} onClick={sendEmailCode} className="rounded-lg border border-accent px-3 py-2 text-sm text-accent disabled:opacity-50">
               {emailBusy ? '보내는 중...' : '이메일 인증번호 보내기'}
             </button>
-            {emailChallengeId && <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} aria-label="이메일 인증번호" value={emailCode} onChange={e => setEmailCode(e.target.value)} placeholder="이메일 인증번호 6자리" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />}
+            {(emailChallengeId || previewOnly) && <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} aria-label="이메일 인증번호" value={emailCode} onChange={e => setEmailCode(e.target.value)} placeholder="이메일 인증번호 6자리" disabled={previewOnly} className="w-full border border-border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" />}
             {emailMessage && <p role="status" className="text-xs text-accent">{emailMessage}</p>}
           </div>}
           <label className="block">

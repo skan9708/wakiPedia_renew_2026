@@ -61,3 +61,5 @@ PUBLIC_SITE_URL=https://wakipedia.co.kr
 5. 예전 로그인 세션은 재설정한 계정에서만 무효화되어야 한다.
 
 문자/이메일 발송 서비스가 없으면 `GET /api/auth/recovery/status/`는 각 기능을 `false`로 응답하며 화면에서 발송 버튼을 비활성화한다. 이메일 발송이 준비되면 `signupEmailVerificationEnabled`가 `true`가 되고 이메일 가입 시 인증번호가 필수가 된다.
+
+메일 발송 설정 전 UI 검토용 주소: `https://wakipedia.co.kr/auth/signup?previewEmailVerification=1`. 인증 영역과 입력 칸을 보여주지만 발송과 가입 제출은 비활성화된다. 일반 가입 화면에는 미리보기가 표시되지 않는다.
