@@ -1,13 +1,14 @@
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 from datetime import timedelta
+import re
 
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from user.models import RecoveryRequest, User
+from user.models import RecoveryRequest, SignupEmailChallenge, User
 from user.recovery import DeliveryError, rate_limited, request_ip, send_sms, send_password_reset_email
 
 
@@ -150,6 +151,79 @@ class AccountRecoveryTests(APITestCase):
         self.assertEqual(request_ip(request), "203.0.113.2")
         request.META["REMOTE_ADDR"] = "198.51.100.4"
         self.assertEqual(request_ip(request), "198.51.100.4")
+
+
+@override_settings(EMAIL_RECOVERY_ENABLED=True, EMAIL_SIGNUP_VERIFICATION_ENABLED=True)
+class SignupEmailVerificationTests(APITestCase):
+    def signup_data(self, email="new@example.com"):
+        return {
+            "email": email, "nickname": "새 회원", "password": "newpassword123",
+            "passwordConfirm": "newpassword123",
+        }
+
+    @patch("user.recovery.send_account_email")
+    def test_email_code_is_required_bound_to_address_and_one_use(self, send_email):
+        data = self.signup_data()
+        self.assertEqual(self.client.post("/api/auth/signup/", data).status_code, 400)
+        self.assertFalse(User.objects.filter(email=data["email"]).exists())
+        sent = self.client.post("/api/auth/signup/email/send/", {"email": data["email"]})
+        self.assertEqual(sent.status_code, 200)
+        code = re.search(r"\d{6}", send_email.call_args.args[2]).group()
+        data.update(emailChallengeId=sent.data["challengeId"], emailCode=code)
+        self.assertEqual(self.client.post("/api/auth/signup/", self.signup_data("other@example.com") | {
+            "emailChallengeId": sent.data["challengeId"], "emailCode": code,
+        }).status_code, 400)
+        self.assertEqual(self.client.post("/api/auth/signup/", data).status_code, 201)
+        user = User.objects.get(email=data["email"])
+        self.assertIsNotNone(user.email_verified_at)
+        user.delete()
+        self.assertEqual(self.client.post("/api/auth/signup/", data).status_code, 400)
+
+    @patch("user.recovery.send_account_email")
+    def test_wrong_codes_and_send_limit(self, send_email):
+        data = self.signup_data()
+        sent = self.client.post("/api/auth/signup/email/send/", {"email": data["email"]})
+        code = re.search(r"\d{6}", send_email.call_args.args[2]).group()
+        wrong_code = "000000" if code != "000000" else "111111"
+        data.update(emailChallengeId=sent.data["challengeId"], emailCode=wrong_code)
+        for _ in range(5):
+            self.assertEqual(self.client.post("/api/auth/signup/", data).status_code, 400)
+        data["emailCode"] = code
+        self.assertEqual(self.client.post("/api/auth/signup/", data).status_code, 400)
+        self.assertFalse(User.objects.filter(email=data["email"]).exists())
+
+        RecoveryRequest.objects.update(created_at=timezone.now() - timedelta(minutes=2))
+        for _ in range(4):
+            response = self.client.post("/api/auth/signup/email/send/", {"email": data["email"]})
+            self.assertEqual(response.status_code, 200)
+            RecoveryRequest.objects.update(created_at=timezone.now() - timedelta(minutes=2))
+        self.assertEqual(self.client.post("/api/auth/signup/email/send/", {"email": data["email"]}).status_code, 429)
+
+    @patch("user.recovery.send_account_email")
+    def test_expired_code_cannot_create_account(self, send_email):
+        data = self.signup_data()
+        sent = self.client.post("/api/auth/signup/email/send/", {"email": data["email"]})
+        code = re.search(r"\d{6}", send_email.call_args.args[2]).group()
+        SignupEmailChallenge.objects.filter(pk=sent.data["challengeId"]).update(
+            expires_at=timezone.now() - timedelta(seconds=1)
+        )
+        data.update(emailChallengeId=sent.data["challengeId"], emailCode=code)
+        self.assertEqual(self.client.post("/api/auth/signup/", data).status_code, 400)
+        self.assertFalse(User.objects.filter(email=data["email"]).exists())
+
+    @patch("user.recovery.send_account_email", side_effect=DeliveryError("send failed"))
+    def test_delivery_failure_removes_challenge(self, send_email):
+        response = self.client.post("/api/auth/signup/email/send/", {"email": "new@example.com"})
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(SignupEmailChallenge.objects.count(), 0)
+
+    @patch("user.recovery.send_account_email")
+    def test_existing_email_does_not_receive_signup_code(self, send_email):
+        User.objects.create_user(email="member@example.com", nickname="멤버", password="oldpassword123")
+        response = self.client.post("/api/auth/signup/email/send/", {"email": "member@example.com"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("challengeId", response.data)
+        send_email.assert_not_called()
 
 
 class KakaoAccountLinkTests(APITestCase):

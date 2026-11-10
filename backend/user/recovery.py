@@ -14,7 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
 
-from user.models import PhoneChallenge, RecoveryRequest, User
+from user.models import PhoneChallenge, RecoveryRequest, SignupEmailChallenge, User
 
 
 class DeliveryError(Exception):
@@ -59,15 +59,16 @@ def rate_limited(kind, subject, request, actor=None):
         return True
     if subject_scope.filter(subject_hash=subject_hash, created_at__gte=now - timedelta(days=1)).count() >= 5:
         return True
-    if kind.startswith("sms_"):
-        if actor_hash and sms_scope.filter(actor_hash=actor_hash, created_at__gte=now - timedelta(days=1)).count() >= 5:
+    if kind.startswith("sms_") or kind == "email_signup":
+        if kind.startswith("sms_") and actor_hash and sms_scope.filter(actor_hash=actor_hash, created_at__gte=now - timedelta(days=1)).count() >= 5:
             return True
-        if sms_scope.filter(ip_hash=ip_hash, created_at__gte=now - timedelta(hours=1)).count() >= 10:
+        delivery_scope = sms_scope if kind.startswith("sms_") else recent.filter(kind=kind)
+        if delivery_scope.filter(ip_hash=ip_hash, created_at__gte=now - timedelta(hours=1)).count() >= 10:
             return True
-        if sms_scope.filter(ip_hash=ip_hash, created_at__gte=now - timedelta(days=1)).count() >= 30:
+        if delivery_scope.filter(ip_hash=ip_hash, created_at__gte=now - timedelta(days=1)).count() >= 30:
             return True
         # Circuit breaker for the whole service if many IPs coordinate requests.
-        if sms_scope.filter(created_at__gte=now - timedelta(hours=1)).count() >= 200:
+        if delivery_scope.filter(created_at__gte=now - timedelta(hours=1)).count() >= 200:
             return True
     elif recent.filter(ip_hash=ip_hash, created_at__gte=now - timedelta(hours=1)).count() >= 200:
         return True
@@ -77,6 +78,76 @@ def rate_limited(kind, subject, request, actor=None):
 
 def code_digest(challenge_id, code):
     return salted_hmac("phone-verification-code", f"{challenge_id}:{code}").hexdigest()
+
+
+def signup_email_code_digest(challenge_id, code):
+    return salted_hmac("signup-email-verification-code", f"{challenge_id}:{code}").hexdigest()
+
+
+def send_account_email(recipient, subject, body):
+    if not settings.EMAIL_RECOVERY_ENABLED:
+        raise DeliveryError("이메일 발송 서비스가 준비되지 않았습니다.")
+    try:
+        if settings.SES_FROM_EMAIL:
+            import boto3
+            from botocore.config import Config
+
+            boto3.client(
+                "ses", region_name=settings.SES_REGION_NAME,
+                config=Config(connect_timeout=5, read_timeout=8, retries={"max_attempts": 1}),
+            ).send_email(
+                Source=settings.SES_FROM_EMAIL,
+                Destination={"ToAddresses": [recipient]},
+                Message={
+                    "Subject": {"Data": subject, "Charset": "UTF-8"},
+                    "Body": {"Text": {"Data": body, "Charset": "UTF-8"}},
+                },
+            )
+        else:
+            send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=False)
+    except Exception as exc:
+        raise DeliveryError("이메일 발송에 실패했습니다.") from exc
+
+
+def create_signup_email_challenge(email, request):
+    if rate_limited("email_signup", email, request):
+        return None
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    challenge = SignupEmailChallenge(
+        email=email,
+        ip_hash=request_hash(request_ip(request)),
+        expires_at=timezone.now() + timedelta(minutes=10),
+    )
+    challenge.code_hash = signup_email_code_digest(challenge.id, code)
+    challenge.save()
+    try:
+        send_account_email(
+            email,
+            "[와키피디아] 회원가입 이메일 인증번호",
+            f"와키피디아 회원가입 인증번호는 {code}입니다. 10분 안에 입력해주세요.\n\n요청하지 않았다면 이 메일을 무시해주세요.",
+        )
+    except DeliveryError:
+        challenge.delete()
+        raise
+    SignupEmailChallenge.objects.filter(email__iexact=email, used_at__isnull=True).exclude(
+        pk=challenge.pk
+    ).update(used_at=timezone.now())
+    return challenge
+
+
+@transaction.atomic
+def check_signup_email_challenge(challenge_id, code, email):
+    challenge = SignupEmailChallenge.objects.select_for_update().filter(
+        pk=challenge_id, email__iexact=email
+    ).first()
+    if not challenge or challenge.used_at or challenge.expires_at <= timezone.now() or challenge.attempts >= 5:
+        return None
+    challenge.attempts += 1
+    valid = hmac.compare_digest(
+        challenge.code_hash, signup_email_code_digest(challenge.id, str(code))
+    )
+    challenge.save(update_fields=["attempts"])
+    return challenge if valid else None
 
 
 def send_sms(phone, code):
@@ -156,27 +227,6 @@ def consume_phone_challenge(challenge_id, code, purpose, user=None):
 
 
 def send_password_reset_email(user, reset_url):
-    if not settings.EMAIL_RECOVERY_ENABLED:
-        raise DeliveryError("이메일 발송 서비스가 준비되지 않았습니다.")
     subject = "[와키피디아] 비밀번호 재설정"
     body = f"비밀번호 재설정을 요청하셨습니다. 아래 링크는 1시간 동안 유효합니다.\n\n{reset_url}\n\n요청하지 않으셨다면 이 메일을 무시하세요."
-    try:
-        if settings.SES_FROM_EMAIL:
-            import boto3
-            from botocore.config import Config
-
-            boto3.client(
-                "ses", region_name=settings.SES_REGION_NAME,
-                config=Config(connect_timeout=5, read_timeout=8, retries={"max_attempts": 1}),
-            ).send_email(
-                Source=settings.SES_FROM_EMAIL,
-                Destination={"ToAddresses": [user.email]},
-                Message={
-                    "Subject": {"Data": subject, "Charset": "UTF-8"},
-                    "Body": {"Text": {"Data": body, "Charset": "UTF-8"}},
-                },
-            )
-        else:
-            send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
-    except Exception as exc:
-        raise DeliveryError("이메일 발송에 실패했습니다.") from exc
+    send_account_email(user.email, subject, body)

@@ -17,6 +17,11 @@ export function SignupMobile() {
   const login = useAuthStore((s) => s.login);
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
+  const [emailVerificationEnabled, setEmailVerificationEnabled] = useState<boolean | null>(null);
+  const [emailChallengeId, setEmailChallengeId] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMessage, setEmailMessage] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [phoneEnabled, setPhoneEnabled] = useState(false);
@@ -33,13 +38,31 @@ export function SignupMobile() {
 
   useEffect(() => {
     api.get('/auth/recovery/status/')
-      .then(({ data }) => setPhoneEnabled(Boolean(data.phoneEnabled)))
-      .catch(() => setPhoneEnabled(false));
+      .then(({ data }) => {
+        setPhoneEnabled(Boolean(data.phoneEnabled));
+        setEmailVerificationEnabled(Boolean(data.signupEmailVerificationEnabled));
+      })
+      .catch(() => {
+        setPhoneEnabled(false);
+        setError('가입 상태를 확인할 수 없습니다. 잠시 후 새로고침해주세요.');
+      });
   }, []);
 
   const hasOptionalPhone = Boolean(phone.trim());
-  const canSubmit = nickname && email && password && confirm && agreePrivacy && agreeTerms && password === confirm
+  const canSubmit = emailVerificationEnabled !== null && nickname && email && password && confirm && agreePrivacy && agreeTerms && password === confirm
+    && (!emailVerificationEnabled || (emailChallengeId && /^[0-9]{6}$/.test(emailCode)))
     && (!hasOptionalPhone || (phoneConsent && phoneChallengeId && /^[0-9]{6}$/.test(phoneCode)));
+
+  const sendEmailCode = async () => {
+    setEmailBusy(true); setEmailMessage(''); setError('');
+    try {
+      const { data } = await api.post('/auth/signup/email/send/', { email });
+      setEmailChallengeId(data.challengeId);
+      setEmailMessage('가입 가능한 이메일이라면 인증번호를 보냈습니다. 받은편지함을 확인해주세요.');
+    } catch (err: any) {
+      setError(err.response?.data?.detail ?? err.response?.data?.email?.[0] ?? '인증 메일 발송에 실패했습니다.');
+    } finally { setEmailBusy(false); }
+  };
 
   const sendPhoneCode = async () => {
     setPhoneBusy(true); setPhoneMessage(''); setError('');
@@ -63,6 +86,7 @@ export function SignupMobile() {
         nickname,
         password,
         passwordConfirm: confirm,
+        ...(emailVerificationEnabled ? { emailChallengeId, emailCode } : {}),
         ...(hasOptionalPhone ? { phoneChallengeId, phoneCode, phoneConsent } : {}),
       });
       login(data.access, data.user);
@@ -96,8 +120,16 @@ export function SignupMobile() {
           </label>
           <label className="block">
             <span className="block text-sm text-muted mb-1">이메일</span>
-            <input type="email" className="w-full border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            <input type="email" autoComplete="email" className="w-full border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40" value={email} onChange={(e) => { setEmail(e.target.value); setEmailChallengeId(''); setEmailCode(''); setEmailMessage(''); }} placeholder="you@example.com" />
           </label>
+          {emailVerificationEnabled && <div className="space-y-2">
+            <p className="text-xs text-muted">가입에 사용할 이메일로 인증번호를 보냅니다. 인증번호는 10분 동안 유효합니다.</p>
+            <button type="button" disabled={!email.trim() || emailBusy} onClick={sendEmailCode} className="rounded-lg border border-accent px-3 py-2 text-sm text-accent disabled:opacity-50">
+              {emailBusy ? '보내는 중...' : '이메일 인증번호 보내기'}
+            </button>
+            {emailChallengeId && <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} aria-label="이메일 인증번호" value={emailCode} onChange={e => setEmailCode(e.target.value)} placeholder="이메일 인증번호 6자리" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />}
+            {emailMessage && <p role="status" className="text-xs text-accent">{emailMessage}</p>}
+          </div>}
           <label className="block">
             <span className="block text-sm text-muted mb-1">비밀번호</span>
             <input type="password" className="w-full border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8자 이상" />

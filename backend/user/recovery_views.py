@@ -19,7 +19,7 @@ from rest_framework.views import APIView
 from user.models import PhoneChallenge, User
 from user.recovery import (
     DeliveryError, consume_phone_challenge, create_phone_challenge,
-    normalize_phone, rate_limited, send_password_reset_email,
+    create_signup_email_challenge, normalize_phone, rate_limited, send_password_reset_email,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,31 @@ class RecoveryStatusView(APIView):
         return Response({
             "phoneEnabled": settings.PHONE_RECOVERY_ENABLED,
             "emailEnabled": settings.EMAIL_RECOVERY_ENABLED,
+            "signupEmailVerificationEnabled": settings.EMAIL_SIGNUP_VERIFICATION_ENABLED,
         })
+
+
+class SignupEmailSendView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if not settings.EMAIL_SIGNUP_VERIFICATION_ENABLED:
+            return Response({"detail": "이메일 인증 서비스가 준비되지 않았습니다."}, status=503)
+        serializer = EmailSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            if rate_limited("email_signup", email, request):
+                return Response({"detail": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."}, status=429)
+            return Response({"challengeId": str(uuid.uuid4()), "detail": "가입 가능한 이메일이라면 인증번호를 보냈습니다."})
+        try:
+            challenge = create_signup_email_challenge(email, request)
+        except DeliveryError:
+            logger.exception("Signup verification email delivery failed")
+            return Response({"detail": "인증 메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요."}, status=503)
+        if not challenge:
+            return Response({"detail": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."}, status=429)
+        return Response({"challengeId": str(challenge.id), "detail": "가입 가능한 이메일이라면 인증번호를 보냈습니다."})
 
 
 class LinkPhoneSendView(APIView):

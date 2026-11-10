@@ -30,6 +30,7 @@ class User(BaseModel, AbstractBaseUser):
     phone_number = models.CharField("인증된 휴대폰 번호", max_length=11, unique=True, null=True, blank=True)
     phone_verified_at = models.DateTimeField("휴대폰 인증 시각", null=True, blank=True)
     phone_consent_at = models.DateTimeField("휴대폰 번호 선택 수집 동의 시각", null=True, blank=True)
+    email_verified_at = models.DateTimeField("이메일 인증 시각", null=True, blank=True)
     auth_epoch = models.PositiveIntegerField(default=0)
     favorite_wines = models.ManyToManyField("wine.Wine", related_name="favorite_users", blank=True)
 
@@ -75,6 +76,23 @@ class PhoneChallenge(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["phone_number", "created_at"]),
+            models.Index(fields=["ip_hash", "created_at"]),
+        ]
+
+
+class SignupEmailChallenge(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField()
+    code_hash = models.CharField(max_length=64)
+    ip_hash = models.CharField(max_length=64)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["email", "created_at"]),
             models.Index(fields=["ip_hash", "created_at"]),
         ]
 

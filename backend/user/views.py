@@ -5,15 +5,16 @@ from django.contrib.auth.models import update_last_login
 from django.core import signing
 from django.db import IntegrityError, transaction
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError as APIValidationError
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from user.models import User
+from user.models import SignupEmailChallenge, User
 from user.models import PhoneChallenge
-from user.recovery import consume_phone_challenge, rate_limited
+from user.recovery import check_signup_email_challenge, consume_phone_challenge, rate_limited
 from user.serializers import (
     SignupSerializer, LoginSerializer, UserSerializer, ProfileUpdateSerializer
 )
@@ -36,6 +37,15 @@ class SignupView(APIView):
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        email_challenge = None
+        if settings.EMAIL_SIGNUP_VERIFICATION_ENABLED:
+            email_challenge = check_signup_email_challenge(
+                serializer.validated_data["emailChallengeId"],
+                serializer.validated_data["emailCode"],
+                serializer.validated_data["email"],
+            )
+            if not email_challenge:
+                return Response({"emailCode": ["이메일 인증번호가 올바르지 않거나 만료되었습니다."]}, status=400)
         try:
             with transaction.atomic():
                 challenge = None
@@ -49,7 +59,16 @@ class SignupView(APIView):
                         return Response({"phoneCode": ["휴대폰 인증번호가 올바르지 않거나 만료되었습니다."]}, status=400)
                     if User.objects.filter(phone_number=challenge.phone_number).exists():
                         return Response({"phoneCode": ["이미 등록된 휴대폰 번호입니다."]}, status=400)
+                if email_challenge:
+                    updated = SignupEmailChallenge.objects.filter(
+                        pk=email_challenge.pk, used_at__isnull=True, expires_at__gt=timezone.now()
+                    ).update(used_at=timezone.now())
+                    if not updated:
+                        raise APIValidationError({"emailCode": "이메일 인증번호가 만료되었거나 이미 사용되었습니다."})
                 user = serializer.save()
+                if email_challenge:
+                    user.email_verified_at = timezone.now()
+                    user.save(update_fields=["email_verified_at"])
                 if challenge:
                     user.phone_number = challenge.phone_number
                     user.phone_verified_at = timezone.now()

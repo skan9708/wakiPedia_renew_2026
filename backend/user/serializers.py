@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 
 from user.models import User
@@ -71,17 +72,29 @@ class UserSerializer(serializers.ModelSerializer):
 class SignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     passwordConfirm = serializers.CharField(write_only=True)
+    emailChallengeId = serializers.UUIDField(write_only=True, required=False)
+    emailCode = serializers.RegexField(r"^\d{6}$", write_only=True, required=False)
     phoneChallengeId = serializers.UUIDField(write_only=True, required=False)
     phoneCode = serializers.RegexField(r"^\d{6}$", write_only=True, required=False)
     phoneConsent = serializers.BooleanField(write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ("email", "nickname", "password", "passwordConfirm", "phoneChallengeId", "phoneCode", "phoneConsent")
+        fields = ("email", "nickname", "password", "passwordConfirm", "emailChallengeId", "emailCode", "phoneChallengeId", "phoneCode", "phoneConsent")
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError("이미 가입된 이메일입니다.")
+        return email
 
     def validate(self, data):
         if data["password"] != data["passwordConfirm"]:
             raise serializers.ValidationError({"passwordConfirm": "비밀번호가 일치하지 않습니다."})
+        if settings.EMAIL_SIGNUP_VERIFICATION_ENABLED and (
+            "emailChallengeId" not in data or "emailCode" not in data
+        ):
+            raise serializers.ValidationError({"emailCode": "이메일 인증번호를 입력해주세요."})
         if ("phoneChallengeId" in data) != ("phoneCode" in data):
             raise serializers.ValidationError({"phoneCode": "휴대폰 인증번호를 입력해주세요."})
         if "phoneChallengeId" in data and not data.get("phoneConsent"):
@@ -90,6 +103,8 @@ class SignupSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop("passwordConfirm")
+        validated_data.pop("emailChallengeId", None)
+        validated_data.pop("emailCode", None)
         validated_data.pop("phoneChallengeId", None)
         validated_data.pop("phoneCode", None)
         validated_data.pop("phoneConsent", None)
