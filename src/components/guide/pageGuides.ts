@@ -1,4 +1,4 @@
-export type GuideStep = { title: string; description: string; target?: string; highlightAll?: boolean };
+export type GuideStep = { title: string; description: string; target?: string; highlightAll?: boolean; shape?: 'circle' };
 export type PageGuide = { id: string; name: string; steps: GuideStep[]; autoOpen?: boolean };
 
 const guides: Record<string, PageGuide> = {
@@ -40,8 +40,8 @@ const guides: Record<string, PageGuide> = {
     { title: '내 활동 확인하기', description: '공개 리뷰 수와 다른 사용자가 ‘도움이 돼요’를 누른 내 공개 리뷰 수를 볼 수 있어요.', target: '[data-guide="me-activity"]' },
     { title: '나의 와인 셀러', description: '공개 리뷰와 나만 보기 리뷰를 모두 합한 와인 기록 수예요. 같은 와인의 중복 기록은 제외해요. 오른쪽은 와키에 쌓인 전체 공개 리뷰 수예요.', target: '[data-guide="me-cellar"]' },
     { title: '내 기록 다시 보기', description: '좋아요한 와인과 내가 쓴 리뷰를 열어볼 수 있어요.', target: '[data-guide="me-records"]', highlightAll: true },
-    { title: '내 취향 분석', description: '내가 4점 이상 준 와인의 바디·당도·산도·탄닌을 평균내요. 같은 와인을 여러 번 기록했다면 최신 별점을 기준으로 하고, 특징이 없는 와인은 계산에서 빼요. 화이트 탭에는 스파클링도 포함돼요.', target: '[data-guide="me-taste"] h3' },
-    { title: '좋아한 와인의 키워드', description: '4점 이상 준 와인의 리뷰에서 내가 선택한 느낌 태그예요. 자주 선택한 키워드일수록 크게 보여요.', target: '[data-guide="me-keywords"] h3' },
+    { title: '내 취향 분석', description: '내가 4점 이상 준 와인의 바디·당도·산도·탄닌을 평균내요. 같은 와인을 여러 번 기록했다면 최신 별점을 기준으로 하고, 특징이 없는 와인은 계산에서 빼요. 화이트 탭에는 스파클링도 포함돼요.', target: '[data-guide="me-taste"] .mypage-section-title, [data-guide="me-taste"] [aria-label="와인 종류별 취향 분석"]', highlightAll: true },
+    { title: '좋아한 와인의 키워드', description: '4점 이상 준 와인의 리뷰에서 내가 선택한 느낌 태그예요. 자주 선택한 키워드일수록 크게 보여요.', target: '[data-guide="me-keyword-cloud"]', shape: 'circle' },
   ] },
   profile: { id: 'profile', name: '프로필 수정', steps: [
     { title: '프로필 바꾸기', description: '닉네임과 프로필 사진을 바꾼 뒤 저장할 수 있어요.', target: 'main input[placeholder="닉네임을 입력하세요"]' },

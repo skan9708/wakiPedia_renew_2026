@@ -361,7 +361,7 @@ function WordCloud({ words }: { words: CloudWord[] }) {
   });
 
   return (
-    <div className="relative mx-auto" style={{ width: R * 2, height: R * 2 }}>
+    <div data-guide="me-keyword-cloud" className="relative mx-auto" style={{ width: R * 2, height: R * 2 }}>
       <div className="absolute inset-0 rounded-full ring-1 ring-neutral-200 pointer-events-none" />
       {placed.map((p) => (
         <span

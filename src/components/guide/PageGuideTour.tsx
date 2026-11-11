@@ -108,7 +108,7 @@ export function PageGuideTour({ guide, openRequest }: { guide: PageGuide; openRe
   return (
     <>
       <button type="button" className={`fixed inset-0 z-[60] h-full w-full ${spotlight ? '' : 'bg-black/55'}`} aria-label="사용법 닫기" onClick={() => setStep(null)} />
-      {spotlight && <div aria-hidden="true" className="pointer-events-none fixed z-[70] rounded-xl ring-4 ring-accent" style={{ ...spotlight, boxShadow: '0 0 0 9999px rgba(0, 0, 0, .55)' }} />}
+      {spotlight && <div aria-hidden="true" className={`pointer-events-none fixed z-[70] ring-4 ring-accent ${current.shape === 'circle' ? 'rounded-full' : 'rounded-xl'}`} style={{ ...spotlight, boxShadow: '0 0 0 9999px rgba(0, 0, 0, .55)' }} />}
       <div ref={dialogRef} className="fixed inset-x-0 bottom-0 z-[80] mx-auto w-full max-w-mobile rounded-t-3xl bg-white px-5 pb-8 pt-5 text-fg shadow-xl" role="dialog" aria-modal="true" aria-labelledby="page-guide-title" aria-describedby="page-guide-description">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-xs font-semibold text-accent">{guide.name} 사용법 {step + 1} / {guide.steps.length}</span>
