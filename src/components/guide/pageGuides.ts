@@ -38,7 +38,7 @@ const guides: Record<string, PageGuide> = {
   ] },
   me: { id: 'me', name: '마이페이지', steps: [
     { title: '내 활동 확인하기', description: '공개 리뷰 수와 다른 사용자가 ‘도움이 돼요’를 누른 내 공개 리뷰 수를 볼 수 있어요.', target: '[data-guide="me-activity"]' },
-    { title: '나의 와인 셀러', description: '공개·나만 보기 기록을 합쳐 서로 다른 와인 수를 세요. 같은 와인을 여러 번 기록해도 한 병이에요. 오른쪽은 와키에 쌓인 전체 공개 리뷰 수예요.', target: '[data-guide="me-cellar"]' },
+    { title: '나의 와인 셀러', description: '공개 리뷰와 나만 보기 리뷰를 모두 합한 와인 기록 수예요. 같은 와인의 중복 기록은 제외해요. 오른쪽은 와키에 쌓인 전체 공개 리뷰 수예요.', target: '[data-guide="me-cellar"]' },
     { title: '내 기록 다시 보기', description: '좋아요한 와인과 내가 쓴 리뷰를 열어볼 수 있어요.', target: '[data-guide="me-records"]' },
     { title: '내 취향 분석', description: '내가 4점 이상 준 와인의 바디·당도·산도·탄닌을 평균내요. 같은 와인을 여러 번 기록했다면 최신 별점을 기준으로 하고, 특징이 없는 와인은 계산에서 빼요. 화이트 탭에는 스파클링도 포함돼요.', target: '[data-guide="me-taste"] h3' },
     { title: '좋아한 와인의 키워드', description: '4점 이상 준 와인의 리뷰에서 내가 선택한 느낌 태그예요. 자주 선택한 키워드일수록 크게 보여요.', target: '[data-guide="me-keywords"] h3' },
