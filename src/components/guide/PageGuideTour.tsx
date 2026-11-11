@@ -73,14 +73,20 @@ export function PageGuideTour({ guide, openRequest }: { guide: PageGuide; openRe
       }
     }
     const updateSpotlight = () => {
-      const current = selector ? document.querySelector<HTMLElement>(selector) : null;
-      if (!current) { setSpotlight(null); return; }
-      const rect = current.getBoundingClientRect();
-      if (rect.width < 1 || rect.height < 1 || rect.bottom < 65 || rect.top > window.innerHeight - 180) {
+      const targets = selector ? Array.from(document.querySelectorAll<HTMLElement>(selector)) : [];
+      const highlightedTargets = guide.steps[step].highlightAll ? targets : targets.slice(0, 1);
+      const rects = highlightedTargets.map((element) => element.getBoundingClientRect()).filter((rect) => rect.width > 0 && rect.height > 0);
+      if (rects.length === 0) { setSpotlight(null); return; }
+      const top = Math.min(...rects.map((rect) => rect.top));
+      const bottom = Math.max(...rects.map((rect) => rect.bottom));
+      const left = Math.min(...rects.map((rect) => rect.left));
+      const right = Math.max(...rects.map((rect) => rect.right));
+      if (bottom < 65 || top > window.innerHeight - 180) {
         setSpotlight(null);
         return;
       }
-      setSpotlight({ top: Math.max(64, rect.top - 5), left: Math.max(4, rect.left - 5), width: rect.width + 10, height: rect.height + 10 });
+      const visibleTop = Math.max(64, top - 5);
+      setSpotlight({ top: visibleTop, left: Math.max(4, left - 5), width: right - left + 10, height: bottom - visibleTop + 5 });
     };
     const timer = window.setTimeout(updateSpotlight, 300);
     updateSpotlight();

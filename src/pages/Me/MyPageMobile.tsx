@@ -180,7 +180,7 @@ export function MyPageMobile() {
       </section>
 
       {/* 내 리뷰 */}
-      <section className="mx-auto w-full max-w-mobile px-4">
+      <section data-guide="me-records" className="mx-auto w-full max-w-mobile px-4">
         <SectionTitle title="내 리뷰" action={<button className="text-xs text-muted" onClick={() => navigate('/me/reviews')}>더보기</button>} />
         <div className="grid grid-cols-3 gap-1">
           {myReviews.slice(0, 9).map((r) => {
