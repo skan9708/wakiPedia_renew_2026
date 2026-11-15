@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { NavLink } from 'react-router-dom';
-import { Home as HomeIcon, Search, MessageSquare, User, MessageSquarePlus, BookOpen, Info } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Home as HomeIcon, Search, MessageSquare, User, MessageSquarePlus, BookOpen, Info, LogIn, LogOut } from 'lucide-react';
+import { useAuthStore } from '@/store/auth';
 
 type SideDrawerProps = {
   open: boolean;
@@ -9,6 +10,9 @@ type SideDrawerProps = {
 
 export function SideDrawer({ open, onClose }: SideDrawerProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
+  const token = useAuthStore((state) => state.token);
+  const logout = useAuthStore((state) => state.logout);
   const items = [
     { to: '/', label: '홈', icon: HomeIcon },
     { to: '/search', label: '검색', icon: Search },
@@ -28,11 +32,17 @@ export function SideDrawer({ open, onClose }: SideDrawerProps) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, onClose]);
 
+  const onLogout = () => {
+    logout();
+    onClose();
+    navigate('/');
+  };
+
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-40"
+      className="fixed inset-0 z-[60]"
       role="dialog"
       aria-modal="true"
       aria-label="사이드 메뉴"
@@ -41,7 +51,7 @@ export function SideDrawer({ open, onClose }: SideDrawerProps) {
       <div className="absolute inset-0 bg-black/40" />
       <div
         ref={panelRef}
-        className="absolute left-0 top-0 h-full w-72 max-w-[80%] bg-white dark:bg-neutral-900 shadow-xl outline-none"
+        className="absolute left-0 top-0 flex h-full w-72 max-w-[80%] flex-col bg-white dark:bg-neutral-900 shadow-xl outline-none"
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
       >
@@ -56,7 +66,7 @@ export function SideDrawer({ open, onClose }: SideDrawerProps) {
             닫기
           </button>
         </div>
-        <nav className="p-2">
+        <nav className="min-h-0 flex-1 overflow-y-auto p-2">
           {items.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -74,6 +84,27 @@ export function SideDrawer({ open, onClose }: SideDrawerProps) {
             </NavLink>
           ))}
         </nav>
+        <div className="border-t border-neutral-200 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] dark:border-neutral-800">
+          {token ? (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex w-full items-center gap-3 rounded px-3 py-3 text-left text-sm text-fg hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              <LogOut className="h-5 w-5" aria-hidden="true" />
+              <span>로그아웃</span>
+            </button>
+          ) : (
+            <NavLink
+              to="/auth/login"
+              onClick={onClose}
+              className="flex items-center gap-3 rounded px-3 py-3 text-sm text-fg hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              <LogIn className="h-5 w-5" aria-hidden="true" />
+              <span>로그인</span>
+            </NavLink>
+          )}
+        </div>
       </div>
     </div>
   );
