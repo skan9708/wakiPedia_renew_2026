@@ -104,7 +104,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "user.User"
 
 REST_FRAMEWORK = {
-    "DEFAULT_THROTTLE_RATES": {"feedback": "5/hour"},
+    "DEFAULT_THROTTLE_RATES": {"feedback": "5/hour", "admin_password_change": "10/hour"},
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "user.token_auth.EpochJWTAuthentication",
     ],

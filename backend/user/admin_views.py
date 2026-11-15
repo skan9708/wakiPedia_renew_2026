@@ -1,9 +1,45 @@
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from rest_framework import serializers
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from user.models import User
+
+
+class AdminPasswordChangeSerializer(serializers.Serializer):
+    currentPassword = serializers.CharField(write_only=True)
+    newPassword = serializers.CharField(write_only=True, min_length=8)
+
+
+class AdminPasswordChangeView(APIView):
+    permission_classes = [IsAdminUser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "admin_password_change"
+
+    def post(self, request):
+        serializer = AdminPasswordChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        current_password = serializer.validated_data["currentPassword"]
+        new_password = serializer.validated_data["newPassword"]
+        user = request.user
+
+        if not user.check_password(current_password):
+            return Response({"detail": "현재 비밀번호가 올바르지 않습니다."}, status=400)
+        if current_password == new_password:
+            return Response({"detail": "새 비밀번호는 현재 비밀번호와 달라야 합니다."}, status=400)
+        try:
+            validate_password(new_password, user=user)
+        except ValidationError as exc:
+            return Response({"detail": exc.messages[0]}, status=400)
+
+        user.set_password(new_password)
+        user.auth_epoch += 1
+        user.save(update_fields=["password", "auth_epoch"])
+        return Response({"detail": "비밀번호가 변경되었습니다. 다시 로그인해주세요."})
 
 
 def require_staff(request):

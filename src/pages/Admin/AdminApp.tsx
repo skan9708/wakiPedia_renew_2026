@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { AdminWines } from './AdminWines';
 import { AdminReviews } from './AdminReviews';
@@ -9,7 +9,15 @@ import { AdminTags } from './AdminTags';
 import { AdminReviewDetail } from './AdminReviewDetail';
 import { AdminUserDetail } from './AdminUserDetail';
 import { AdminWineDetail } from './AdminWineDetail';
+import { AdminPasswordChange } from './AdminPasswordChange';
 import { api } from '@/lib/api';
+
+const REMEMBERED_ADMIN_EMAIL_KEY = 'waki_admin_remembered_email';
+
+function getRememberedAdminEmail() {
+  try { return localStorage.getItem(REMEMBERED_ADMIN_EMAIL_KEY) ?? ''; }
+  catch { return ''; }
+}
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -25,13 +33,15 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 function AdminLogin() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(getRememberedAdminEmail);
   const [pw, setPw] = useState('');
+  const [rememberEmail, setRememberEmail] = useState(() => Boolean(getRememberedAdminEmail()));
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, logout, user } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +55,10 @@ function AdminLogin() {
         setErr('관리자 권한이 없는 계정입니다.');
         return;
       }
+      try {
+        if (rememberEmail) localStorage.setItem(REMEMBERED_ADMIN_EMAIL_KEY, email.trim());
+        else localStorage.removeItem(REMEMBERED_ADMIN_EMAIL_KEY);
+      } catch { /* 저장소가 차단되면 현재 로그인만 계속한다. */ }
       login(data.access, data.user);
       navigate('/admin-panel/wines');
     } catch (e: any) {
@@ -69,10 +83,14 @@ function AdminLogin() {
         )}
 
         {err && <p className="text-red-500 text-sm mb-4 text-center bg-red-50 py-2 px-3 rounded-lg">{err}</p>}
+        {!err && (location.state as { passwordChanged?: boolean } | null)?.passwordChanged && (
+          <p className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-center text-sm text-green-700">비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.</p>
+        )}
 
         <form onSubmit={onSubmit} className="space-y-4">
           <input
             type="email"
+            autoComplete="username"
             placeholder="관리자 이메일"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -81,6 +99,7 @@ function AdminLogin() {
           <div className="relative">
             <input
               type={showPw ? 'text' : 'password'}
+              autoComplete="current-password"
               placeholder="비밀번호"
               value={pw}
               onChange={(e) => setPw(e.target.value)}
@@ -88,12 +107,27 @@ function AdminLogin() {
             />
             <button
               type="button"
+              aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 보기'}
               onClick={() => setShowPw((v) => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <EyeIcon open={showPw} />
             </button>
           </div>
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={rememberEmail}
+              onChange={(event) => {
+                setRememberEmail(event.target.checked);
+                if (!event.target.checked) {
+                  try { localStorage.removeItem(REMEMBERED_ADMIN_EMAIL_KEY); } catch { /* 접근 불가 */ }
+                }
+              }}
+              className="accent-[#c84b31]"
+            />
+            로그인 ID 기억하기
+          </label>
           <button
             type="submit"
             disabled={loading}
@@ -113,6 +147,7 @@ const NAV_ITEMS = [
   { to: '/admin-panel/reviews', label: '리뷰 관리', icon: '📝' },
   { to: '/admin-panel/users', label: '유저 관리', icon: '👤' },
   { to: '/admin-panel/tags', label: '태그 관리', icon: '🏷️' },
+  { to: '/admin-panel/password', label: '비밀번호 변경', icon: '🔒' },
 ];
 
 function AdminLayout() {
@@ -171,6 +206,7 @@ function AdminLayout() {
           <Route path="users/:id" element={<AdminUserDetail />} />
           <Route path="tags" element={<AdminTags />} />
           <Route path="feedback" element={<AdminFeedback />} />
+          <Route path="password" element={<AdminPasswordChange />} />
           <Route path="*" element={<Navigate to="/admin-panel/wines" replace />} />
         </Routes>
       </main>

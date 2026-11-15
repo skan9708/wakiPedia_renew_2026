@@ -4,10 +4,11 @@ from wine.admin_views import (
     AdminReviewListView, AdminReviewDetailView,
     AdminTagListView, AdminTagDetailView,
 )
-from user.admin_views import AdminUserListView, AdminUserDetailView
+from user.admin_views import AdminPasswordChangeView, AdminUserListView, AdminUserDetailView
 from feedback.views import AdminFeedbackListView, AdminFeedbackDetailView
 
 urlpatterns = [
+    path("password/change/", AdminPasswordChangeView.as_view()),
     path("wines/", AdminWineListView.as_view()),
     path("wines/<int:pk>/", AdminWineDetailView.as_view()),
     path("reviews/", AdminReviewListView.as_view()),

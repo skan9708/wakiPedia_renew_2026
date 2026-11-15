@@ -291,3 +291,50 @@ class KakaoAccountLinkTests(APITestCase):
         self.user.is_active = False
         self.user.save(update_fields=["kakao_id", "is_active"])
         self.assertEqual(self.kakao_login().status_code, 403)
+
+
+class AdminPasswordChangeTests(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="admin@example.com", password="oldpassword123", nickname="관리자", is_staff=True
+        )
+
+    def test_only_admin_can_change_password(self):
+        url = "/api/admin/password/change/"
+        data = {"currentPassword": "oldpassword123", "newPassword": "newpassword123"}
+        self.assertEqual(self.client.post(url, data).status_code, 401)
+        member = User.objects.create_user(
+            email="member@example.com", password="oldpassword123", nickname="회원"
+        )
+        self.client.force_authenticate(user=member)
+        self.assertEqual(self.client.post(url, data).status_code, 403)
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.check_password("oldpassword123"))
+
+    def test_change_checks_current_password_and_revokes_old_tokens(self):
+        url = "/api/admin/password/change/"
+        refresh = RefreshToken.for_user(self.admin)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        wrong = self.client.post(url, {"currentPassword": "wrongpassword", "newPassword": "newpassword123"})
+        self.assertEqual(wrong.status_code, 400)
+        same = self.client.post(url, {"currentPassword": "oldpassword123", "newPassword": "oldpassword123"})
+        self.assertEqual(same.status_code, 400)
+        weak = self.client.post(url, {"currentPassword": "oldpassword123", "newPassword": "short"})
+        self.assertEqual(weak.status_code, 400)
+
+        changed = self.client.post(url, {"currentPassword": "oldpassword123", "newPassword": "newpassword123"})
+        self.assertEqual(changed.status_code, 200)
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.check_password("newpassword123"))
+        self.assertEqual(self.admin.auth_epoch, 1)
+        self.assertEqual(self.client.get("/api/admin/wines/").status_code, 401)
+
+        self.client.credentials()
+        self.assertEqual(self.client.post("/api/auth/token/refresh/", {"refresh": str(refresh)}).status_code, 401)
+        self.assertEqual(self.client.post("/api/auth/login/", {
+            "email": self.admin.email, "password": "oldpassword123",
+        }).status_code, 401)
+        self.assertEqual(self.client.post("/api/auth/login/", {
+            "email": self.admin.email, "password": "newpassword123",
+        }).status_code, 200)
