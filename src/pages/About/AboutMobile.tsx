@@ -38,8 +38,8 @@ export function AboutMobile() {
           <h2 id="about-meaning-title" className="text-base font-semibold">와키피디아가 뜻하는 것</h2>
         </div>
         <p className="px-1 pt-4 text-sm leading-7 text-muted">
-          와인에 관한 작은 경험들이 모여 누구나 참고할 수 있는 기록이 됩니다.
-          와린이도 편하게 경험을 남기고, 서로 배우며 함께 채워가는 와인 공간을 만들고 있어요.
+          네이버 카페에서 시작한 와인 이야기가 이제 웹으로 이어졌어요.
+          여러분이 남기는 리뷰 한 편 한 편이 쌓여, 와린이도 서로 도움받을 수 있는 와키피디아를 함께 만들어갑니다.
         </p>
       </section>
 
@@ -66,9 +66,9 @@ export function AboutMobile() {
         <p className="text-xs font-semibold text-accent">REVIEW NOTE</p>
         <h2 id="about-cafe-title" className="mt-2 text-base font-semibold">네이버 카페 리뷰 안내</h2>
         <p className="mt-2 text-sm leading-7 text-muted">
-          와키피디아 네이버 카페에 남겨진 여러 사람의 리뷰도 옮겨왔어요.
-          이 리뷰들은 작성자명이 <strong className="font-semibold text-fg">‘와키 네이버카페 리뷰’</strong>로 표시됩니다.
-          여러 사람의 기록을 모아 보여주는 이름이에요.
+          네이버 카페에 남겨진 여러 사람의 리뷰도 이곳으로 옮겨왔어요.
+          옮겨온 리뷰의 작성자명은 <strong className="font-semibold text-fg">‘와키 네이버카페 리뷰’</strong>로 표시돼요.
+          여러 사람의 기록을 한곳에 모아 보여주는 이름입니다.
         </p>
       </section>
 
