@@ -13,10 +13,34 @@ import { AdminPasswordChange } from './AdminPasswordChange';
 import { api } from '@/lib/api';
 
 const REMEMBERED_ADMIN_EMAIL_KEY = 'waki_admin_remembered_email';
+const REMEMBER_ADMIN_ID_KEY = 'waki_admin_remember_id';
 
-function getRememberedAdminEmail() {
-  try { return localStorage.getItem(REMEMBERED_ADMIN_EMAIL_KEY) ?? ''; }
-  catch { return ''; }
+function getRememberedAdminLogin() {
+  try {
+    const email = localStorage.getItem(REMEMBERED_ADMIN_EMAIL_KEY) ?? '';
+    return {
+      email,
+      remember: localStorage.getItem(REMEMBER_ADMIN_ID_KEY) === '1' || Boolean(email),
+    };
+  } catch {
+    return { email: '', remember: false };
+  }
+}
+
+function saveRememberedAdminLogin(email: string, remember: boolean) {
+  try {
+    if (remember) {
+      localStorage.setItem(REMEMBER_ADMIN_ID_KEY, '1');
+      if (email.trim()) localStorage.setItem(REMEMBERED_ADMIN_EMAIL_KEY, email.trim());
+      else localStorage.removeItem(REMEMBERED_ADMIN_EMAIL_KEY);
+    } else {
+      localStorage.removeItem(REMEMBER_ADMIN_ID_KEY);
+      localStorage.removeItem(REMEMBERED_ADMIN_EMAIL_KEY);
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -33,9 +57,11 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 function AdminLogin() {
-  const [email, setEmail] = useState(getRememberedAdminEmail);
+  const [rememberedLogin] = useState(getRememberedAdminLogin);
+  const [email, setEmail] = useState(rememberedLogin.email);
   const [pw, setPw] = useState('');
-  const [rememberEmail, setRememberEmail] = useState(() => Boolean(getRememberedAdminEmail()));
+  const [rememberEmail, setRememberEmail] = useState(rememberedLogin.remember);
+  const [rememberError, setRememberError] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,10 +81,7 @@ function AdminLogin() {
         setErr('관리자 권한이 없는 계정입니다.');
         return;
       }
-      try {
-        if (rememberEmail) localStorage.setItem(REMEMBERED_ADMIN_EMAIL_KEY, email.trim());
-        else localStorage.removeItem(REMEMBERED_ADMIN_EMAIL_KEY);
-      } catch { /* 저장소가 차단되면 현재 로그인만 계속한다. */ }
+      if (!saveRememberedAdminLogin(email, rememberEmail)) setRememberError(true);
       login(data.access, data.user);
       navigate('/admin-panel/wines');
     } catch (e: any) {
@@ -93,7 +116,14 @@ function AdminLogin() {
             autoComplete="username"
             placeholder="관리자 이메일"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              const nextEmail = e.target.value;
+              setEmail(nextEmail);
+              if (rememberEmail && !saveRememberedAdminLogin(nextEmail, true)) {
+                setRememberEmail(false);
+                setRememberError(true);
+              }
+            }}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#c84b31]"
           />
           <div className="relative">
@@ -119,15 +149,24 @@ function AdminLogin() {
               type="checkbox"
               checked={rememberEmail}
               onChange={(event) => {
-                setRememberEmail(event.target.checked);
-                if (!event.target.checked) {
-                  try { localStorage.removeItem(REMEMBERED_ADMIN_EMAIL_KEY); } catch { /* 접근 불가 */ }
+                const checked = event.target.checked;
+                if (saveRememberedAdminLogin(email, checked)) {
+                  setRememberEmail(checked);
+                  setRememberError(false);
+                } else {
+                  setRememberEmail(false);
+                  setRememberError(true);
                 }
               }}
               className="accent-[#c84b31]"
             />
             로그인 ID 기억하기
           </label>
+          {rememberError && (
+            <p role="alert" className="text-xs text-red-600">
+              브라우저에서 사이트 데이터 저장이 차단되어 ID를 기억할 수 없어요. 사이트 데이터 저장을 허용해 주세요.
+            </p>
+          )}
           <button
             type="submit"
             disabled={loading}
