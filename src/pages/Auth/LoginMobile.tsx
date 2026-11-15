@@ -5,6 +5,36 @@ import { useAuthStore } from '@/store/auth';
 
 const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY ?? '';
 const KAKAO_REDIRECT_URI = `${window.location.origin}/auth/kakao/callback`;
+const REMEMBERED_LOGIN_EMAIL_KEY = 'waki_login_remembered_email';
+const REMEMBER_LOGIN_ID_KEY = 'waki_login_remember_id';
+
+function getRememberedLogin() {
+  try {
+    const email = localStorage.getItem(REMEMBERED_LOGIN_EMAIL_KEY) ?? '';
+    return {
+      email,
+      remember: localStorage.getItem(REMEMBER_LOGIN_ID_KEY) === '1' || Boolean(email),
+    };
+  } catch {
+    return { email: '', remember: false };
+  }
+}
+
+function saveRememberedLogin(email: string, remember: boolean) {
+  try {
+    if (remember) {
+      localStorage.setItem(REMEMBER_LOGIN_ID_KEY, '1');
+      if (email.trim()) localStorage.setItem(REMEMBERED_LOGIN_EMAIL_KEY, email.trim());
+      else localStorage.removeItem(REMEMBERED_LOGIN_EMAIL_KEY);
+    } else {
+      localStorage.removeItem(REMEMBER_LOGIN_ID_KEY);
+      localStorage.removeItem(REMEMBERED_LOGIN_EMAIL_KEY);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function kakaoLogin() {
   if (!KAKAO_REST_API_KEY) {
@@ -18,7 +48,10 @@ function kakaoLogin() {
 export function LoginMobile() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
-  const [email, setEmail] = useState('');
+  const [rememberedLogin] = useState(getRememberedLogin);
+  const [email, setEmail] = useState(rememberedLogin.email);
+  const [rememberEmail, setRememberEmail] = useState(rememberedLogin.remember);
+  const [rememberError, setRememberError] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,6 +70,7 @@ export function LoginMobile() {
     setError('');
     try {
       const { data } = await api.post('/auth/login/', { email, password });
+      if (!saveRememberedLogin(email, rememberEmail)) setRememberError(true);
       login(data.access, data.user);
       navigate('/');
     } catch (err: any) {
@@ -59,8 +93,17 @@ export function LoginMobile() {
             <span className="block text-sm text-muted mb-1">이메일</span>
             <input
               type="email"
+              name="email"
+              autoComplete="username"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                const nextEmail = e.target.value;
+                setEmail(nextEmail);
+                if (rememberEmail && !saveRememberedLogin(nextEmail, true)) {
+                  setRememberEmail(false);
+                  setRememberError(true);
+                }
+              }}
               className="w-full border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40"
               placeholder="you@example.com"
             />
@@ -69,12 +112,37 @@ export function LoginMobile() {
             <span className="block text-sm text-muted mb-1">비밀번호</span>
             <input
               type="password"
+              name="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40"
               placeholder="••••••••"
             />
           </label>
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-muted">
+            <input
+              type="checkbox"
+              checked={rememberEmail}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                if (saveRememberedLogin(email, checked)) {
+                  setRememberEmail(checked);
+                  setRememberError(false);
+                } else {
+                  setRememberEmail(false);
+                  setRememberError(true);
+                }
+              }}
+              className="accent-accent"
+            />
+            로그인 ID 기억하기
+          </label>
+          {rememberError && (
+            <p role="alert" className="text-xs text-red-600">
+              브라우저에서 사이트 데이터 저장이 차단되어 ID를 기억할 수 없어요. 사이트 데이터 저장을 허용해 주세요.
+            </p>
+          )}
           {(recovery.phoneEnabled || recovery.emailEnabled) && <p className="text-sm text-center text-muted space-x-2">
             {recovery.phoneEnabled && <button type="button" onClick={() => navigate('/auth/find-email')} className="text-accent underline">아이디 찾기</button>}
             {recovery.phoneEnabled && recovery.emailEnabled && <span>·</span>}
