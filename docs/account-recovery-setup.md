@@ -52,6 +52,8 @@ PUBLIC_SITE_URL=https://wakipedia.co.kr
 
 솔라피 키와 발신번호는 `PHONE_RECOVERY_ENABLED=false` 상태에서 먼저 저장할 수 있다. 실제 수신 시험과 개인정보처리방침 시행일 확인을 마친 뒤 `PHONE_RECOVERY_ENABLED=true`로 바꾸고 `waki.service`를 재시작해야 회원 화면에 번호 인증이 표시된다. 활성화 전 개인정보처리방침의 이메일·문자 발송업체, 보유기간, 시행일을 실제 설정과 대조하고 공지한다. 현재 개정 방침의 시행 예정일은 **2026년 11월 16일**이므로 새 이메일 인증과 선택형 휴대폰 인증은 그 전에는 켜지 않는다. 복구용 번호는 마케팅 수신 동의와 별개이며 광고 발송에 사용할 수 없다.
 
+키를 전달할 때는 저장소 밖의 개인 파일에 위 세 개의 `SOLAPI_` 값만 저장하고 채팅이나 커밋에 붙이지 않는다. 서버로 전송한 임시 파일은 권한 `0600`으로 두고 `sudo python3 scripts/stage_solapi_env.py 임시파일 /etc/waki.env`를 실행한다. 스크립트는 기존 환경변수를 백업·보존하고 솔라피 값만 갱신하며, 업로드 파일은 실행 뒤 삭제한다. `PHONE_RECOVERY_ENABLED=false`도 명시적으로 기록한다.
+
 ## 배포 점검
 
 1. DB 백업을 만든 후 `python manage.py migrate`를 실행한다. 이메일 인증 테이블과 인증 시각 필드가 추가된다.
