@@ -41,8 +41,10 @@ export function AboutMobile() {
             <path d="M20 39v18M8 63h24" />
           </svg>
         </div>
-        <p className="relative mx-auto mt-6 w-fit rounded-full bg-white/65 px-3 py-1.5 text-sm font-bold">
-          와키 · 와린이들이 키우다
+        <p className="relative mx-auto mt-6 flex w-fit items-baseline gap-1.5 rounded-full bg-white/65 px-3 py-1.5 text-sm font-bold">
+          <span className="font-black">와키</span>
+          <span className="font-black text-[#7b2641]">:</span>
+          <span><strong className="font-black text-[#7b2641]">와</strong>린이들이 <strong className="font-black text-[#7b2641]">키</strong>우다</span>
         </p>
         <h1 className="relative mt-4 text-center text-xl font-bold leading-snug">
           와린이들이 경험을 쌓고 나누며 만드는 곳
