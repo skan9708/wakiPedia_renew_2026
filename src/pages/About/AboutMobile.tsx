@@ -81,6 +81,9 @@ export function AboutMobile() {
           <p className="mt-3 text-sm leading-6 text-muted">
             혼자 쓰던 블로그가 서로의 솔직한 후기를 모으는 카페로 커졌고, 이제 웹에서 그 기록을 함께 이어갑니다.
           </p>
+          <p className="mt-4 border-t border-border pt-4 text-xs leading-5 text-muted">
+            * 네이버 카페에서 옮겨온 리뷰는 작성자명이 ‘와키 네이버카페 리뷰’로 표시돼요.
+          </p>
         </div>
 
         <div className="mt-3 rounded-2xl border border-border bg-white px-5 py-5">
@@ -124,15 +127,6 @@ export function AboutMobile() {
         <p className="mt-4 flex items-start gap-2 rounded-2xl bg-[#f6f7e9] px-4 py-4 text-sm leading-6 text-muted">
           <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
           <span>내 취향의 폭과 깊이가 넓어지고, 쌓인 리뷰는 다음 사람의 선택을 도와요. 한국 와린이들이 함께 채우는 와인 사전을 만들고 싶습니다.</span>
-        </p>
-      </section>
-
-      <section aria-labelledby="about-cafe-title" className="rounded-2xl border border-border bg-white px-5 py-5">
-        <p className="text-xs font-semibold text-accent">REVIEW NOTE</p>
-        <h2 id="about-cafe-title" className="mt-2 text-base font-semibold">네이버 카페 리뷰 안내</h2>
-        <p className="mt-2 text-sm leading-7 text-muted">
-          카페에서 옮겨온 리뷰는 작성자명이 <strong className="font-semibold text-fg">‘와키 네이버카페 리뷰’</strong>로 표시돼요.
-          여러 사람이 남긴 기록을 한곳에 모아 보여주는 이름입니다.
         </p>
       </section>
 
