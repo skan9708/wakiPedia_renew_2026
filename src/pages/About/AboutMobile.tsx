@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, NotebookPen, Search, Wine } from 'lucide-react';
+import { ArrowRight, BookOpen, NotebookPen, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const steps = [
@@ -25,15 +25,26 @@ export function AboutMobile() {
       <header className="relative overflow-hidden rounded-3xl bg-[#d8e027] px-5 pb-8 pt-7 text-[#171913]">
         <div aria-hidden="true" className="absolute -right-14 -top-16 h-44 w-44 rounded-full border-[28px] border-white/20" />
         <p className="relative text-xs font-semibold tracking-[0.2em]">ABOUT WAKIPEDIA</p>
-        <div className="relative mt-8 flex items-end gap-1" role="img" aria-label="WAKIpedia">
-          <span className="text-[clamp(2.7rem,13vw,5rem)] font-black italic leading-none tracking-[-0.1em]" aria-hidden="true">WAK</span>
-          <Wine className="mb-1 h-10 w-7 shrink-0" strokeWidth={3} aria-hidden="true" />
-          <span className="mb-0.5 font-brand text-[clamp(1.5rem,7vw,2.6rem)] leading-none" aria-hidden="true">pedia</span>
+        <div className="relative mt-8 flex items-end justify-center gap-0.5" role="img" aria-label="WAKI, 와키">
+          <span className="text-[clamp(3.3rem,16vw,4.9rem)] font-black leading-none tracking-[-0.09em]" aria-hidden="true">WAK</span>
+          <svg
+            viewBox="0 0 40 70"
+            className="h-[clamp(3.3rem,16vw,4.9rem)] w-[clamp(1.9rem,9.2vw,2.8rem)] shrink-0"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 11h30v9c0 10.5-6 17.5-15 18.5C11 37.5 5 30.5 5 20v-9Z" />
+            <path d="M20 39v18M8 63h24" />
+          </svg>
         </div>
-        <p className="relative mt-7 inline-block rounded-full bg-white/65 px-3 py-1.5 text-sm font-bold">
+        <p className="relative mx-auto mt-6 w-fit rounded-full bg-white/65 px-3 py-1.5 text-sm font-bold">
           와키 · 와린이들이 키우다
         </p>
-        <h1 className="relative mt-4 text-xl font-bold leading-snug">
+        <h1 className="relative mt-4 text-center text-xl font-bold leading-snug">
           와린이들이 경험을 쌓고 나누며 만드는 곳
         </h1>
       </header>
@@ -42,14 +53,22 @@ export function AboutMobile() {
         <div className="rounded-xl border-l-4 border-accent bg-[#eef1d2] px-4 py-3">
           <h2 id="about-meaning-title" className="text-base font-semibold">와키피디아가 뜻하는 것</h2>
         </div>
-        <div className="mt-4 flex items-center gap-2 rounded-2xl border border-border px-4 py-4 text-sm font-semibold">
-          <span className="rounded-lg bg-[#f6f7e9] px-3 py-2">네이버 카페</span>
-          <ArrowRight className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
-          <span className="rounded-lg bg-[#eef1d2] px-3 py-2">우리의 와키피디아</span>
+        <div className="mt-4 rounded-2xl border border-border bg-[#fafbf4] px-5 py-5">
+          <p className="text-base font-semibold leading-7">와인을 잘 몰라도, 한 잔의 경험은 나눌 수 있어요.</p>
+          <div className="mt-4 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted" aria-label="블로그에서 네이버 카페를 거쳐 와키피디아 웹으로 이어진 이야기">
+            <span className="rounded-lg bg-white px-2.5 py-1.5">블로그</span>
+            <ArrowRight className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+            <span className="rounded-lg bg-white px-2.5 py-1.5">네이버 카페</span>
+            <ArrowRight className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+            <span className="rounded-lg bg-[#eef1d2] px-2.5 py-1.5 text-fg">와키피디아 웹</span>
+          </div>
+          <p className="mt-4 text-sm leading-6 text-muted">
+            와인 초보가 배운 것을 쉽게 기록하던 블로그에서 시작해, 서로의 솔직한 후기를 모으는 네이버 카페로 이어졌어요.
+          </p>
+          <p className="mt-3 text-sm leading-6 text-muted">
+            이제 이곳에서 다른 사람의 리뷰를 찾아보고 내 경험도 남겨주세요. 처음엔 구경만 해도 좋아요.
+          </p>
         </div>
-        <p className="px-1 pt-3 text-sm leading-6 text-muted">
-          카페에서 시작한 와인 이야기를 웹에서 이어가요. 여러분의 리뷰가 쌓일수록, 다음 사람에게 더 도움이 되는 공간이 됩니다.
-        </p>
       </section>
 
       <section aria-labelledby="about-how-title">
