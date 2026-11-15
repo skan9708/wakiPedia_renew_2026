@@ -165,19 +165,24 @@ def send_sms(phone, code):
     try:
         response = requests.post(
             "https://api.solapi.com/messages/v4/send-many/detail",
-            json={"messages": [{
-                "to": phone,
-                "from": settings.SOLAPI_SENDER,
-                "text": f"[와키피디아] 인증번호 {code} (5분 유효)",
-                "type": "SMS",
-                "autoTypeDetect": False,
-            }]},
+            json={
+                "messages": [{
+                    "to": phone,
+                    "from": settings.SOLAPI_SENDER,
+                    "text": f"[와키피디아] 인증번호 {code} (5분 유효)",
+                    "type": "SMS",
+                    "autoTypeDetect": False,
+                }],
+                "showMessageList": True,
+            },
             headers={"Authorization": authorization},
             timeout=8,
         )
         response.raise_for_status()
         result = response.json()
-        if result.get("failedMessageList") or not result.get("messageList"):
+        messages = result.get("messageList")
+        if (result.get("failedMessageList") or not isinstance(messages, list) or len(messages) != 1
+                or not isinstance(messages[0], dict) or messages[0].get("statusCode") != "2000"):
             raise DeliveryError("문자 접수에 실패했습니다.")
     except (requests.RequestException, ValueError) as exc:
         raise DeliveryError("문자 발송에 실패했습니다.") from exc

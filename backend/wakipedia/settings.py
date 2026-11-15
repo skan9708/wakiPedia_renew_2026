@@ -158,7 +158,11 @@ KAKAO_REST_API_KEY = os.environ.get("KAKAO_REST_API_KEY", "")
 SOLAPI_API_KEY = os.environ.get("SOLAPI_API_KEY", "")
 SOLAPI_API_SECRET = os.environ.get("SOLAPI_API_SECRET", "")
 SOLAPI_SENDER = os.environ.get("SOLAPI_SENDER", "")
-PHONE_RECOVERY_ENABLED = all((SOLAPI_API_KEY, SOLAPI_API_SECRET, SOLAPI_SENDER))
+# Keep credentials staged without exposing the feature until it is explicitly enabled.
+PHONE_RECOVERY_ENABLED = (
+    os.environ.get("PHONE_RECOVERY_ENABLED", "false").lower() == "true"
+    and all((SOLAPI_API_KEY, SOLAPI_API_SECRET, SOLAPI_SENDER))
+)
 
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))

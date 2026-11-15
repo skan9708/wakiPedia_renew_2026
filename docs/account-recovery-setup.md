@@ -44,12 +44,13 @@ AWS SES 서울 리전에서 발신 주소 또는 도메인을 검증한다. 임�
 SOLAPI_API_KEY=...
 SOLAPI_API_SECRET=...
 SOLAPI_SENDER=등록된_발신번호_숫자만
+PHONE_RECOVERY_ENABLED=false
 SES_FROM_EMAIL=검증한_발신주소
 SES_REGION_NAME=ap-northeast-2
 PUBLIC_SITE_URL=https://wakipedia.co.kr
 ```
 
-활성화 전 개인정보처리방침의 이메일·문자 발송업체, 보유기간, 시행일을 실제 설정과 대조하고 공지한다. 현재 개정 방침의 시행 예정일은 **2026년 11월 16일**이므로 새 이메일 인증과 선택형 휴대폰 인증은 그 전에는 켜지 않는다. 복구용 번호는 마케팅 수신 동의와 별개이며 광고 발송에 사용할 수 없다.
+솔라피 키와 발신번호는 `PHONE_RECOVERY_ENABLED=false` 상태에서 먼저 저장할 수 있다. 실제 수신 시험과 개인정보처리방침 시행일 확인을 마친 뒤 `PHONE_RECOVERY_ENABLED=true`로 바꾸고 `waki.service`를 재시작해야 회원 화면에 번호 인증이 표시된다. 활성화 전 개인정보처리방침의 이메일·문자 발송업체, 보유기간, 시행일을 실제 설정과 대조하고 공지한다. 현재 개정 방침의 시행 예정일은 **2026년 11월 16일**이므로 새 이메일 인증과 선택형 휴대폰 인증은 그 전에는 켜지 않는다. 복구용 번호는 마케팅 수신 동의와 별개이며 광고 발송에 사용할 수 없다.
 
 ## 배포 점검
 

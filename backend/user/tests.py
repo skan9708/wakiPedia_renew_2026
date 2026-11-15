@@ -120,8 +120,12 @@ class AccountRecoveryTests(APITestCase):
         args, kwargs = post.call_args
         self.assertEqual(args[0], "https://api.solapi.com/messages/v4/send-many/detail")
         self.assertEqual(kwargs["json"]["messages"][0]["to"], "01012345678")
+        self.assertIs(kwargs["json"]["showMessageList"], True)
         self.assertIn("HMAC-SHA256 apiKey=test-key", kwargs["headers"]["Authorization"])
         post.return_value.json.return_value = {"messageList": [], "failedMessageList": [{"statusCode": "3040"}]}
+        with self.assertRaises(DeliveryError):
+            send_sms("01012345678", "123456")
+        post.return_value.json.return_value = {"messageList": [{"statusCode": "3040"}], "failedMessageList": []}
         with self.assertRaises(DeliveryError):
             send_sms("01012345678", "123456")
 
