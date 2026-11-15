@@ -27,6 +27,7 @@ import { AdminApp } from '@/pages/Admin/AdminApp';
 import { PrivacyPolicyMobile } from '@/pages/Legal/PrivacyPolicyMobile';
 import { TermsOfServiceMobile } from '@/pages/Legal/TermsOfServiceMobile';
 import { GuideMobile } from '@/pages/Guide/GuideMobile';
+import { AboutMobile } from '@/pages/About/AboutMobile';
 import { getPageGuide } from '@/components/guide/pageGuides';
 import { PageGuideTour } from '@/components/guide/PageGuideTour';
 
@@ -81,6 +82,7 @@ export function AppRoutes() {
           <Route path="/chat" element={<ChatMobile />} />
           <Route path="/feedback" element={<SupportMobile />} />
           <Route path="/guide" element={<GuideMobile />} />
+          <Route path="/about" element={<AboutMobile />} />
           <Route path="/support" element={<Navigate to="/feedback" replace />} />
           <Route path="/terms" element={<TermsOfServiceMobile />} />
           <Route path="/privacy" element={<PrivacyPolicyMobile />} />

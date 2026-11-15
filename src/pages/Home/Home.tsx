@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import SearchBar from '@/components/common/SearchBar';
 import { WineType } from '@/lib/types';
 import logoIcon from '@/assets/icons/icon.svg';
@@ -95,6 +95,11 @@ export function Home() {
           </div>
         </div>
       </header>
+
+      <Link to="/about" className="mx-auto flex w-full max-w-mobile items-center justify-between gap-3 px-6 py-4 text-sm text-white/90">
+        <span>와인 기록을 함께 채워가는 곳, 와키피디아</span>
+        <span className="flex shrink-0 items-center gap-1 text-accent">소개 <ArrowRight className="h-4 w-4" aria-hidden="true" /></span>
+      </Link>
 
       {/* 와인 카테고리 섹션 */}
       <section className="px-6 pt-4 pb-8 page-container">
