@@ -38,12 +38,11 @@ function AdminLogin() {
     if (!email.trim() || !pw.trim()) { setErr('이메일과 비밀번호를 입력해주세요.'); return; }
     setErr('');
     setLoading(true);
-    logout();
     try {
+      logout();
       const { data } = await api.post('/auth/login/', { email: email.trim(), password: pw });
       if (!data.user?.isStaff) {
         setErr('관리자 권한이 없는 계정입니다.');
-        setLoading(false);
         return;
       }
       login(data.access, data.user);
@@ -51,6 +50,7 @@ function AdminLogin() {
     } catch (e: any) {
       const msg = e.response?.data?.detail || e.response?.status;
       setErr(`로그인 실패 (${msg ?? '서버 오류'})`);
+    } finally {
       setLoading(false);
     }
   };

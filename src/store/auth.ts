@@ -23,13 +23,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: stored.token,
   user: stored.user,
   login: (token, user) => {
-    localStorage.setItem('waki_token', token);
-    localStorage.setItem('waki_user', JSON.stringify(user));
+    try {
+      localStorage.setItem('waki_token', token);
+      localStorage.setItem('waki_user', JSON.stringify(user));
+    } catch {
+      // 저장소 접근이 차단되어도 현재 탭에서는 로그인할 수 있게 한다.
+      try { localStorage.removeItem('waki_token'); } catch { /* 접근 불가 */ }
+      try { localStorage.removeItem('waki_user'); } catch { /* 접근 불가 */ }
+    }
     set({ token, user });
   },
   logout: () => {
-    localStorage.removeItem('waki_token');
-    localStorage.removeItem('waki_user');
+    try { localStorage.removeItem('waki_token'); } catch { /* 접근 불가 */ }
+    try { localStorage.removeItem('waki_user'); } catch { /* 접근 불가 */ }
     set({ token: null, user: null });
   },
 }));
