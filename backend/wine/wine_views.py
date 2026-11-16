@@ -3,9 +3,11 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db import transaction
 from django.db.models import OuterRef, Q, Subquery
 
 from wine.models import Wine, Country, GrapeVariety
+from wine.catalog_terms import resolve_catalog_term
 from wine.image_utils import public_review_image_names, wine_display_image_url
 from wine.serializers import WineListSerializer, WineDetailSerializer
 from wine.suggestions import has_searchable_name, search_hints, suggestion_score
@@ -68,11 +70,12 @@ class WineListView(APIView):
             "hasNext": end < total,
         })
 
+    @transaction.atomic
     def post(self, request):
-        name_kr = request.data.get("nameKr")
-        name_eng = request.data.get("nameEng")
+        name_kr = (request.data.get("nameKr") or "").strip()
+        name_eng = (request.data.get("nameEng") or "").strip()
         wine_type = request.data.get("wineType", "").lower()
-        country_name = request.data.get("regions")
+        country_name = (request.data.get("regions") or "").strip()
         breeds = request.data.get("breeds", [])
         image = request.FILES.get("image")
 
@@ -81,12 +84,13 @@ class WineListView(APIView):
                 {"detail": "nameKr, nameEng, wineType은 필수 입력 항목입니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if isinstance(breeds, str):
+            breeds = [b.strip() for b in breeds.split(",") if b.strip()]
+        if (len(name_kr) > 255 or len(name_eng) > 255 or len(country_name) > 255
+                or len(breeds) > 20 or any(len(breed) > 255 for breed in breeds)):
+            return Response({"detail": "이름은 255자 이내, 품종은 20개 이내로 입력해 주세요."}, status=400)
 
-        country = None
-        if country_name:
-            country, _ = Country.objects.get_or_create(
-                kor_name=country_name, defaults={"eng_name": country_name}
-            )
+        country = resolve_catalog_term(Country, country_name, approved=request.user.is_staff)
 
         wine = Wine.objects.create(
             kor_name=name_kr,
@@ -97,12 +101,8 @@ class WineListView(APIView):
             registered_by=request.user,
         )
 
-        if isinstance(breeds, str):
-            breeds = [b.strip() for b in breeds.split(",") if b.strip()]
         for breed_name in breeds:
-            gv, _ = GrapeVariety.objects.get_or_create(
-                kor_name=breed_name, defaults={"eng_name": breed_name}
-            )
+            gv = resolve_catalog_term(GrapeVariety, breed_name, approved=request.user.is_staff)
             wine.grape_varieties.add(gv)
 
         serializer = WineListSerializer(wine, context={"request": request})
@@ -185,9 +185,8 @@ class WineDetailView(APIView):
         if request.data.get("wineType"):
             wine.type = request.data["wineType"].lower()
         if request.data.get("regions"):
-            country, _ = Country.objects.get_or_create(
-                kor_name=request.data["regions"],
-                defaults={"eng_name": request.data["regions"]},
+            country = resolve_catalog_term(
+                Country, request.data["regions"], approved=request.user.is_staff,
             )
             wine.country = country
         if request.FILES.get("image"):
@@ -209,10 +208,10 @@ class WineFiltersView(APIView):
     def get(self, request):
         from wine.models import Country, GrapeVariety
         countries = list(
-            Country.objects.filter(wines__catalog_visible=True).values_list("kor_name", flat=True).distinct().order_by("kor_name")
+            Country.objects.filter(is_approved=True).values_list("kor_name", flat=True).distinct().order_by("kor_name")
         )
         breeds = list(
-            GrapeVariety.objects.filter(wines__catalog_visible=True).values_list("kor_name", flat=True).distinct().order_by("kor_name")
+            GrapeVariety.objects.filter(is_approved=True).values_list("kor_name", flat=True).distinct().order_by("kor_name")
         )
         return Response({"countries": countries, "breeds": breeds})
 

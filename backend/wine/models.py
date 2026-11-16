@@ -14,6 +14,7 @@ def validate_multiple_of_five(value):
 class Country(BaseModel):
     eng_name = models.CharField("영어 이름", max_length=255)
     kor_name = models.CharField("한국어 이름", max_length=255)
+    is_approved = models.BooleanField("선택 목록 승인", default=True, db_index=True)
 
     class Meta:
         verbose_name = "국가"
@@ -27,6 +28,7 @@ class Country(BaseModel):
 class GrapeVariety(BaseModel):
     eng_name = models.CharField("영어 이름", max_length=255)
     kor_name = models.CharField("한국어 이름", max_length=255)
+    is_approved = models.BooleanField("선택 목록 승인", default=True, db_index=True)
 
     class Meta:
         verbose_name = "품종"

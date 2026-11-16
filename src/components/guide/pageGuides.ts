@@ -55,7 +55,8 @@ const guides: Record<string, PageGuide> = {
   ] },
   wineNew: { id: 'wine-new', name: '와인 등록', steps: [
     { title: '등록 전 확인하기', description: '검색어를 입력하고 엔터를 눌러 같은 와인이 이미 있는지 먼저 확인해 주세요.', target: 'main h2' },
-    { title: '기본 정보 입력하기', description: '영문·한글 이름을 입력하면 비슷한 와인이 보여요. 같은 와인이 있다면 선택하고, 없다면 사진·원산지·품종도 알맞게 입력해 주세요.', target: '[data-guide="wine-new-info"]' },
+    { title: '기본 정보 입력하기', description: '영문·한글 이름을 입력하면 비슷한 와인이 보여요. 같은 와인이 있다면 선택해 주세요.', target: '[data-guide="wine-new-info"]' },
+    { title: '원산지와 품종 고르기', description: '목록에서 원산지 하나와 품종 여러 개를 고를 수 있어요. 목록에 없으면 직접 입력해 주세요. 새 항목은 관리자 확인 후 선택 목록에 추가돼요.', target: '[data-guide="wine-new-metadata"]' },
     { title: '등록 완료', description: '등록한 와인은 상세 화면에서 확인하고 리뷰를 남길 수 있어요.', target: 'main button[type="submit"]' },
   ] },
   login: { id: 'login', name: '로그인', steps: [

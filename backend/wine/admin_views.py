@@ -1,11 +1,11 @@
 from django.shortcuts import get_object_or_404
-from django.db.models import OuterRef, Subquery
+from django.db.models import Count, OuterRef, Q, Subquery
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import serializers, status
 
-from wine.models import Wine, WineReview, Tag, Country
+from wine.models import Wine, WineReview, Tag, Country, GrapeVariety
 from wine.image_utils import public_review_image_names, wine_display_image_url
 from wine.review_images import protect_review_images, publish_review_images, review_image_url
 
@@ -14,6 +14,51 @@ def require_staff(request):
     if not request.user or not request.user.is_authenticated or not request.user.is_staff:
         return Response({"detail": "관리자 권한이 필요합니다."}, status=403)
     return None
+
+
+class AdminCatalogTermListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        err = require_staff(request)
+        if err:
+            return err
+        results = []
+        for kind, model in (("country", Country), ("grape", GrapeVariety)):
+            pending = model.objects.filter(is_approved=False).annotate(
+                wine_count=Count("wines", filter=Q(wines__catalog_visible=True), distinct=True)
+            )
+            results.extend({
+                "kind": kind,
+                "id": term.id,
+                "name": term.kor_name,
+                "wineCount": term.wine_count,
+                "createdAt": term.created_at.isoformat(),
+            } for term in pending)
+        results.sort(key=lambda item: item["createdAt"], reverse=True)
+        return Response({"results": results, "total": len(results)})
+
+
+class AdminCatalogTermDecisionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, kind, pk):
+        err = require_staff(request)
+        if err:
+            return err
+        model = {"country": Country, "grape": GrapeVariety}.get(kind)
+        if model is None:
+            return Response({"detail": "알 수 없는 항목입니다."}, status=404)
+        decision = request.data.get("approved")
+        if type(decision) is not bool:
+            return Response({"detail": "승인 여부를 선택해 주세요."}, status=400)
+        term = get_object_or_404(model, pk=pk, is_approved=False)
+        if decision:
+            term.is_approved = True
+            term.save(update_fields=["is_approved", "updated_at"])
+        else:
+            term.delete()
+        return Response({"result": "approved" if decision else "rejected"})
 
 
 # ────────────── Wine ──────────────

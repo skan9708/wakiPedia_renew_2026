@@ -4,13 +4,15 @@ from wine.models import Wine, WineReview, WineReviewImage, Tag, Country, GrapeVa
 
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
-    list_display = ("kor_name", "eng_name")
+    list_display = ("kor_name", "eng_name", "is_approved")
+    list_filter = ("is_approved",)
     search_fields = ("kor_name", "eng_name")
 
 
 @admin.register(GrapeVariety)
 class GrapeVarietyAdmin(admin.ModelAdmin):
-    list_display = ("kor_name", "eng_name")
+    list_display = ("kor_name", "eng_name", "is_approved")
+    list_filter = ("is_approved",)
     search_fields = ("kor_name", "eng_name")
 
 
