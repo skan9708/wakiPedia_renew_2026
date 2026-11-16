@@ -4,6 +4,10 @@ import re
 import unicodedata
 from difflib import SequenceMatcher
 
+from django.db.models import Q
+
+from wine.models import Wine, WineDuplicateCandidate
+
 
 MIN_SUGGESTION_SCORE = 0.68
 COMMON_WORDS = {
@@ -78,3 +82,47 @@ def suggestion_score(name_eng, name_kr, candidate_eng, candidate_kr, aliases="",
     if country and normalized_name(country) == normalized_name(candidate_country):
         score += 0.01
     return score
+
+
+def ranked_wine_ids(name_eng, name_kr, *, wine_type="", country="", exclude_id=None, minimum=MIN_SUGGESTION_SCORE):
+    """Return up to five visible catalog matches, strongest name match first."""
+    if not has_searchable_name(name_eng, name_kr):
+        return []
+    candidates = {}
+    for hint in search_hints(name_eng, name_kr):
+        matches = Wine.objects.filter(catalog_visible=True)
+        if exclude_id is not None:
+            matches = matches.exclude(pk=exclude_id)
+        matches = (
+            matches.filter(
+                Q(eng_name__icontains=hint)
+                | Q(kor_name__icontains=hint)
+                | Q(search_aliases__icontains=hint)
+            )
+            .values_list("id", "eng_name", "kor_name", "search_aliases", "type", "country__kor_name")
+            .order_by("-id")[:150]
+        )
+        for row in matches:
+            candidates[row[0]] = row
+    ranked = []
+    for wine_id, candidate_eng, candidate_kr, aliases, candidate_type, candidate_country in candidates.values():
+        score = suggestion_score(
+            name_eng, name_kr, candidate_eng, candidate_kr, aliases,
+            wine_type, candidate_type, country, candidate_country,
+        )
+        if score >= minimum:
+            ranked.append((score, wine_id))
+    ranked.sort(reverse=True)
+    return ranked[:5]
+
+
+def queue_duplicate_candidates(wine):
+    """Queue plausible matches for a human; registration never merges automatically."""
+    country = wine.country.kor_name if wine.country_id else ""
+    for score, target_id in ranked_wine_ids(
+        wine.eng_name, wine.kor_name, wine_type=wine.type,
+        country=country, exclude_id=wine.pk, minimum=0.85,
+    ):
+        WineDuplicateCandidate.objects.get_or_create(
+            source=wine, target_id=target_id, defaults={"score": score},
+        )

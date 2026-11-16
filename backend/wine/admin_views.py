@@ -5,15 +5,94 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import serializers, status
 
-from wine.models import Wine, WineReview, Tag, Country, GrapeVariety
+from user.models import User
+from wine.models import Wine, WineReview, Tag, Country, GrapeVariety, WineDuplicateCandidate
 from wine.image_utils import public_review_image_names, wine_display_image_url
 from wine.review_images import protect_review_images, publish_review_images, review_image_url
+from wine.duplicate_review import DuplicateMergeError, decide_duplicate
+from wine.suggestions import queue_duplicate_candidates
 
 
 def require_staff(request):
     if not request.user or not request.user.is_authenticated or not request.user.is_staff:
         return Response({"detail": "관리자 권한이 필요합니다."}, status=403)
     return None
+
+
+class AdminDuplicateListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        err = require_staff(request)
+        if err:
+            return err
+        qs = WineDuplicateCandidate.objects.filter(status="pending").order_by("-created_at")
+        total = qs.count()
+        if request.query_params.get("countOnly") == "1":
+            return Response({"total": total})
+        try:
+            page = max(1, int(request.query_params.get("page", 1)))
+        except (ValueError, TypeError):
+            page = 1
+        items = list(qs[(page - 1) * 100:page * 100])
+        wine_ids = {wine_id for item in items for wine_id in (item.source_id, item.target_id)}
+        wines = Wine.objects.filter(pk__in=wine_ids).select_related("country").prefetch_related(
+            "grape_varieties"
+        ).annotate(review_cover_image=Subquery(public_review_image_names(OuterRef("pk"))[:1])).in_bulk()
+        review_counts = dict(WineReview.objects.filter(wine_id__in=wine_ids).values("wine_id").annotate(n=Count("id")).values_list("wine_id", "n"))
+        favorite_counts = dict(
+            User.favorite_wines.through.objects.filter(wine_id__in=wine_ids)
+            .values("wine_id").annotate(n=Count("id")).values_list("wine_id", "n")
+        )
+        def describe(wine):
+            return {
+                "id": wine.pk,
+                "nameKr": wine.kor_name,
+                "nameEng": wine.eng_name,
+                "wineType": wine.type,
+                "country": wine.country.kor_name if wine.country else "",
+                "grapes": [grape.kor_name for grape in wine.grape_varieties.all()],
+                "imageUrl": wine_display_image_url(wine, request) or "",
+                "reviewCount": review_counts.get(wine.pk, 0),
+                "favoriteCount": favorite_counts.get(wine.pk, 0),
+                "createdAt": wine.created_at.isoformat(),
+            }
+
+        return Response({
+            "results": [{
+                "id": item.pk,
+                "score": round(item.score, 3),
+                "createdAt": item.created_at.isoformat(),
+                "source": describe(wines[item.source_id]),
+                "target": describe(wines[item.target_id]),
+            } for item in items],
+            "total": total,
+        })
+
+
+class AdminDuplicateDecisionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        err = require_staff(request)
+        if err:
+            return err
+        approved = request.data.get("approved")
+        if type(approved) is not bool:
+            return Response({"detail": "통합 또는 별개 여부를 선택해 주세요."}, status=400)
+        try:
+            confirm_target_id = int(request.data.get("confirmTargetId")) if approved else None
+        except (ValueError, TypeError):
+            return Response({"detail": "기존 와인 번호를 확인해 주세요."}, status=400)
+        try:
+            candidate = decide_duplicate(
+                pk, approved=approved, reviewer=request.user, confirm_target_id=confirm_target_id,
+            )
+        except WineDuplicateCandidate.DoesNotExist:
+            return Response({"detail": "검토 후보가 없습니다."}, status=404)
+        except DuplicateMergeError as exc:
+            return Response({"detail": str(exc)}, status=409)
+        return Response({"result": candidate.status})
 
 
 class AdminCatalogTermListView(APIView):
@@ -144,6 +223,7 @@ class AdminWineListView(APIView):
             bubble_avg_rating=bubble_avg,
             registered_by=request.user,
         )
+        queue_duplicate_candidates(wine)
         return Response({
             "id": wine.id,
             "korName": wine.kor_name,

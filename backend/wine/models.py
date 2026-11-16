@@ -101,6 +101,26 @@ class Wine(BaseModel):
         return f"{self.kor_name} ({self.eng_name})"
 
 
+class WineDuplicateCandidate(BaseModel):
+    source = models.ForeignKey(Wine, on_delete=models.CASCADE, related_name="duplicate_candidates")
+    target = models.ForeignKey(Wine, on_delete=models.CASCADE, related_name="duplicate_targets")
+    score = models.FloatField()
+    status = models.CharField(
+        max_length=12,
+        choices=(("pending", "검토 대기"), ("merged", "통합"), ("rejected", "별개"), ("closed", "종료")),
+        default="pending", db_index=True,
+    )
+    reviewed_by = models.ForeignKey(
+        "user.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="reviewed_wine_duplicates",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["source", "target"], name="unique_wine_duplicate_candidate")]
+        ordering = ["-created_at"]
+
+
 class WineReview(BaseModel):
     wine = models.ForeignKey(Wine, on_delete=models.CASCADE, related_name="reviews")
     user = models.ForeignKey("user.User", on_delete=models.CASCADE, related_name="wine_reviews")

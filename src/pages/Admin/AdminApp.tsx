@@ -11,6 +11,7 @@ import { AdminUserDetail } from './AdminUserDetail';
 import { AdminWineDetail } from './AdminWineDetail';
 import { AdminPasswordChange } from './AdminPasswordChange';
 import { AdminCatalogTerms } from './AdminCatalogTerms';
+import { AdminDuplicates } from './AdminDuplicates';
 import { api } from '@/lib/api';
 
 const REMEMBERED_ADMIN_EMAIL_KEY = 'waki_admin_remembered_email';
@@ -185,6 +186,7 @@ const NAV_ITEMS = [
   { to: '/admin-panel/feedback', label: '피드백 관리', icon: '💬' },
   { to: '/admin-panel/wines', label: '와인 관리', icon: '🍷' },
   { to: '/admin-panel/catalog-terms', label: '원산지·품종 승인', icon: '🔔' },
+  { to: '/admin-panel/duplicates', label: '중복 의심 와인', icon: '🔎' },
   { to: '/admin-panel/reviews', label: '리뷰 관리', icon: '📝' },
   { to: '/admin-panel/users', label: '유저 관리', icon: '👤' },
   { to: '/admin-panel/tags', label: '태그 관리', icon: '🏷️' },
@@ -196,6 +198,7 @@ function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [pendingTermCount, setPendingTermCount] = useState(0);
+  const [pendingDuplicateCount, setPendingDuplicateCount] = useState(0);
 
   useEffect(() => {
     if (!user?.isStaff) return;
@@ -204,14 +207,19 @@ function AdminLayout() {
       api.get<{ total: number }>('/admin/catalog-terms/')
         .then(({ data }) => { if (active) setPendingTermCount(data.total); })
         .catch(() => {});
+      api.get<{ total: number }>('/admin/duplicates/?countOnly=1')
+        .then(({ data }) => { if (active) setPendingDuplicateCount(data.total); })
+        .catch(() => {});
     };
     refresh();
     const timer = window.setInterval(refresh, 60000);
     window.addEventListener('catalog-terms-updated', refresh);
+    window.addEventListener('duplicates-updated', refresh);
     return () => {
       active = false;
       window.clearInterval(timer);
       window.removeEventListener('catalog-terms-updated', refresh);
+      window.removeEventListener('duplicates-updated', refresh);
     };
   }, [user?.isStaff, location.pathname]);
 
@@ -245,6 +253,9 @@ function AdminLayout() {
               {to === '/admin-panel/catalog-terms' && pendingTermCount > 0 && (
                 <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">{pendingTermCount}</span>
               )}
+              {to === '/admin-panel/duplicates' && pendingDuplicateCount > 0 && (
+                <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">{pendingDuplicateCount}</span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -264,6 +275,7 @@ function AdminLayout() {
         <Routes>
           <Route path="wines" element={<AdminWines />} />
           <Route path="catalog-terms" element={<AdminCatalogTerms />} />
+          <Route path="duplicates" element={<AdminDuplicates />} />
           <Route path="wines/:id" element={<AdminWineDetail />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="reviews/:id" element={<AdminReviewDetail />} />
