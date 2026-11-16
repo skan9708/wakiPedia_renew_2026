@@ -76,3 +76,19 @@ class CatalogTermApprovalTests(TestCase):
         self.assertEqual(GrapeVariety.objects.filter(kor_name="새 품종").count(), 1)
         pending = self.staff_client.get("/api/admin/catalog-terms/").data["results"]
         self.assertTrue(all(item["wineCount"] == 2 for item in pending))
+
+    def test_country_buttons_are_ordered_by_visible_wine_count(self):
+        france = Country.objects.create(kor_name="프랑스", eng_name="France")
+        italy = Country.objects.create(kor_name="이탈리아", eng_name="Italy")
+        greece = Country.objects.create(kor_name="그리스", eng_name="Greece")
+        pending = Country.objects.create(kor_name="미승인", eng_name="Pending", is_approved=False)
+        for index in range(3):
+            Wine.objects.create(kor_name=f"프랑스 와인 {index}", eng_name=f"French {index}", country=france)
+        for index in range(2):
+            Wine.objects.create(kor_name=f"이탈리아 와인 {index}", eng_name=f"Italian {index}", country=italy)
+        Wine.objects.create(kor_name="숨긴 와인", eng_name="Hidden Wine", country=greece, catalog_visible=False)
+        Wine.objects.create(kor_name="승인 대기 와인", eng_name="Pending Wine", country=pending)
+
+        countries = self.member_client.get("/api/wines/filters/").data["countries"]
+        self.assertEqual(countries[:3], ["프랑스", "이탈리아", "그리스"])
+        self.assertNotIn("미승인", countries)

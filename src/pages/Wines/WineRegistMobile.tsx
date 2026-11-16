@@ -134,9 +134,10 @@ export function WineRegistMobile() {
     updateDraft({ grapes: [...grapes, name], grapeSearch: '' });
   };
 
-  const visibleRegions = (regionSearch.trim()
+  const matchingRegions = (regionSearch.trim()
     ? regions.filter((name) => name.toLocaleLowerCase().includes(regionSearch.trim().toLocaleLowerCase()))
-    : regions).slice(0, showAllRegions || regionSearch.trim() ? 30 : 12);
+    : regions);
+  const visibleRegions = showAllRegions || regionSearch.trim() ? matchingRegions : matchingRegions.slice(0, 12);
   const visibleGrapes = (grapeSearch.trim()
     ? grapeOptions.filter((name) => name.toLocaleLowerCase().includes(grapeSearch.trim().toLocaleLowerCase()))
     : grapeOptions).slice(0, showAllGrapes || grapeSearch.trim() ? 30 : 12);
@@ -258,15 +259,17 @@ export function WineRegistMobile() {
                     </button>
                   ))}
                 </div>
-                {!regionSearch && !showAllRegions && regions.length > 12 && (
-                  <button type="button" onClick={() => setShowAllRegions(true)} className="text-sm text-accent">전체 원산지 보기</button>
-                )}
               </>
             )}
-            <button type="button" onClick={() => updateDraft({ customRegion: !customRegion, region: '', regionSearch: '' })}
-              className="text-sm text-accent underline underline-offset-2">
-              {customRegion ? '목록에서 선택하기' : '목록에 없나요? 직접 입력하기'}
-            </button>
+            <div className="flex flex-col items-start gap-3 pt-2">
+              {!customRegion && !regionSearch && !showAllRegions && regions.length > 12 && (
+                <button type="button" onClick={() => setShowAllRegions(true)} className="text-sm text-accent">전체 원산지 보기</button>
+              )}
+              <button type="button" onClick={() => updateDraft({ customRegion: !customRegion, region: '', regionSearch: '' })}
+                className="text-sm text-accent underline underline-offset-2">
+                {customRegion ? '목록에서 선택하기' : '목록에 없나요? 직접 입력하기'}
+              </button>
+            </div>
             {customRegion && (
               <input value={region} onChange={(e) => updateDraft({ region: e.target.value })}
                 className="w-full border border-border rounded-lg px-3 py-2" placeholder="새 원산지 입력" aria-label="새 원산지 입력" maxLength={255} />
