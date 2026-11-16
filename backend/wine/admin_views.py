@@ -11,6 +11,7 @@ from wine.image_utils import public_review_image_names, wine_display_image_url
 from wine.review_images import protect_review_images, publish_review_images, review_image_url
 from wine.duplicate_review import DuplicateMergeError, decide_duplicate
 from wine.suggestions import queue_duplicate_candidates
+from wine.naming import normalize_wine_names
 
 
 def require_staff(request):
@@ -191,8 +192,9 @@ class AdminWineListView(APIView):
         if err:
             return err
 
-        kor_name = (request.data.get("korName") or "").strip()
-        eng_name = (request.data.get("engName") or "").strip()
+        kor_name, eng_name = normalize_wine_names(
+            request.data.get("korName"), request.data.get("engName"),
+        )
         wine_type = (request.data.get("type") or "").lower()
         country_name = (request.data.get("country") or "").strip()
         image_url = (request.data.get("imageUrl") or "").strip()

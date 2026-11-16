@@ -59,6 +59,20 @@ class WineNamingTests(TestCase):
         }, format="json")
         self.assertEqual(response.status_code, 400)
 
+    def test_admin_registration_uses_same_rules(self):
+        staff = User.objects.create_user(
+            email="naming-staff@example.com", password="pw", nickname="Staff", is_staff=True,
+        )
+        self.client.force_authenticate(user=staff)
+        response = self.client.post("/api/admin/wines/", {
+            "korName": "텍스트북 카브레네 소비뇽 2019",
+            "engName": "Textbook Cabernet Sauvignon (2019)", "type": "Red",
+        }, format="json")
+        self.assertEqual(response.status_code, 201)
+        wine = Wine.objects.get(pk=response.data["id"])
+        self.assertEqual((wine.kor_name, wine.eng_name),
+                         ("텍스트북 카베르네 소비뇽", "Textbook Cabernet Sauvignon"))
+
 
 class PendingApprovalDigestTests(TestCase):
     def setUp(self):
