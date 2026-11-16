@@ -25,3 +25,31 @@
 `send_pending_approvals_digest` 명령은 중복 의심 와인, 신규 원산지, 신규 품종의 **현재 승인 대기 건수**를 묶어 관리자에게 보낸다. 대기 건수가 0이면 보내지 않는다. 수신자는 `ADMIN_DIGEST_EMAILS`에 쉼표로 지정한 주소이며, 설정하지 않으면 활성 관리자 계정의 이메일이다.
 
 `ops/systemd/waki-pending-approvals.timer`는 매일 **한국 시간 오후 7시(UTC 10:00)**에 한 번 실행하도록 작성했다. `--dry-run`으로 건수와 수신자 수를 먼저 확인할 수 있다. 실제 발송에는 운영 서버의 SES 또는 SMTP 설정이 필요하다. 관리자 알림만 먼저 켜려면 `/etc/waki.env`에 `ADMIN_DIGEST_SES_FROM_EMAIL=검증된_발신주소`와 `ADMIN_DIGEST_EMAILS=받을_주소`를 설정한다. 이 설정은 회원가입 이메일 인증이나 비밀번호 재설정을 켜지 않는다. SES 샌드박스 상태라면 받을 주소도 같은 리전에서 검증해야 한다. 발신·수신 검증, EC2 역할의 `ses:SendEmail` 권한 및 시험 발송을 확인하기 전에는 타이머를 활성화하지 않는다. 설정 후에는 서비스와 타이머 파일을 `/etc/systemd/system/`에 설치하고 `sudo systemctl daemon-reload`, `sudo systemctl enable --now waki-pending-approvals.timer`를 실행한다. `systemctl list-timers waki-pending-approvals.timer`와 `journalctl -u waki-pending-approvals.service`로 상태를 확인한다.
+
+### 2026-11-17 운영 설정과 남은 AWS 작업
+
+운영 서버의 `/etc/waki.env`에는 `ADMIN_DIGEST_EMAILS`와 `ADMIN_DIGEST_SES_FROM_EMAIL`을 모두 `wakipedia1682@gmail.com`으로 설정했다. 예약 파일은 설치했지만 **비활성화** 상태다. EC2 역할 `waki-ec2-role`의 SES 조회·신원 생성·시험 발송 시도는 모두 `AccessDenied`였다. 서버 자격 증명으로 IAM 정책을 추가할 수 없으므로 AWS 계정 관리자 콘솔에서 아래 두 단계를 완료해야 한다.
+
+1. AWS 콘솔에서 **서울(ap-northeast-2)** 리전의 Amazon SES → **Verified identities** → **Create identity**로 `wakipedia1682@gmail.com`을 등록한다. 받은편지함의 검증 메일 링크를 클릭하고 상태가 **Verified**인지 확인한다. 발신자와 수신자가 같은 주소라면 SES 샌드박스 상태에서도 이 요약 메일의 시험 발송이 가능하다.
+2. IAM → Roles → `waki-ec2-role` → **Add permissions** → **Create inline policy**의 JSON 탭에 아래 정책을 넣고 저장한다. 이 정책은 검증한 주소에서 그 주소로 보내는 관리자 요약 메일만 허용한다.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SendWakiApprovalDigestOnly",
+      "Effect": "Allow",
+      "Action": "ses:SendEmail",
+      "Resource": "arn:aws:ses:ap-northeast-2:112361949141:identity/wakipedia1682@gmail.com",
+      "Condition": {
+        "ForAllValues:StringEquals": {
+          "ses:Recipients": ["wakipedia1682@gmail.com"]
+        }
+      }
+    }
+  ]
+}
+```
+
+완료 후 서버에서 같은 주소로 SES 시험 메일을 보내고 수신 여부를 확인한 다음에만 타이머를 활성화한다. 이 정책은 다른 회원 주소로 이메일 인증번호를 보내는 권한을 포함하지 않는다. 그 기능을 시작할 때는 SES 샌드박스 해제와 별도의 발송 권한을 검토한다.
