@@ -11,6 +11,7 @@ from wine.catalog_terms import resolve_catalog_term
 from wine.image_utils import public_review_image_names, wine_display_image_url
 from wine.serializers import WineListSerializer, WineDetailSerializer
 from wine.suggestions import queue_duplicate_candidates, ranked_wine_ids
+from wine.naming import normalize_wine_names
 
 
 class WineListView(APIView):
@@ -72,8 +73,9 @@ class WineListView(APIView):
 
     @transaction.atomic
     def post(self, request):
-        name_kr = (request.data.get("nameKr") or "").strip()
-        name_eng = (request.data.get("nameEng") or "").strip()
+        name_kr, name_eng = normalize_wine_names(
+            request.data.get("nameKr"), request.data.get("nameEng"),
+        )
         wine_type = request.data.get("wineType", "").lower()
         country_name = (request.data.get("regions") or "").strip()
         breeds = request.data.get("breeds", [])
@@ -115,8 +117,10 @@ class WineSuggestionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        name_eng = (request.query_params.get("nameEng") or "").strip()[:255]
-        name_kr = (request.query_params.get("nameKr") or "").strip()[:255]
+        name_kr, name_eng = normalize_wine_names(
+            (request.query_params.get("nameKr") or "")[:255],
+            (request.query_params.get("nameEng") or "")[:255],
+        )
         wine_type = (request.query_params.get("wineType") or "").strip().lower()
         country = (request.query_params.get("regions") or "").strip()[:255]
         ids = [wine_id for _, wine_id in ranked_wine_ids(
@@ -133,7 +137,9 @@ class WineSuggestionView(APIView):
             "regions": wine.country.kor_name if wine.country else "",
             "imageUrl": wine_display_image_url(wine, request),
         } for wine_id in ids if (wine := wines.get(wine_id))]
-        return Response({"results": results})
+        return Response({"results": results, "normalizedNames": {
+            "nameKr": name_kr, "nameEng": name_eng,
+        }})
 
 
 class WineDetailView(APIView):

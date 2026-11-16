@@ -176,6 +176,7 @@ SES_REGION_NAME = os.environ.get("SES_REGION_NAME", "ap-northeast-2")
 EMAIL_RECOVERY_ENABLED = bool(SES_FROM_EMAIL) or all((EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL))
 EMAIL_SIGNUP_VERIFICATION_ENABLED = EMAIL_RECOVERY_ENABLED
 PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "https://wakipedia.co.kr").rstrip("/")
+ADMIN_DIGEST_EMAILS = [email.strip() for email in os.environ.get("ADMIN_DIGEST_EMAILS", "").split(",") if email.strip()]
 PASSWORD_RESET_TIMEOUT = 3600
 
 # 500 오류의 traceback을 콘솔(journalctl -u waki)로 출력

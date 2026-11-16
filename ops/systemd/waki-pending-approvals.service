@@ -1,0 +1,12 @@
+[Unit]
+Description=Email Wakipedia administrator approval backlog
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/waki/backend
+EnvironmentFile=/etc/waki.env
+ExecStart=/home/ubuntu/waki/backend/venv/bin/python manage.py send_pending_approvals_digest
+

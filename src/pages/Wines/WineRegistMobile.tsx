@@ -14,6 +14,7 @@ type WineSuggestion = {
 };
 
 type BreedAlias = { kor_name: string; eng_name: string };
+type NormalizedNames = { nameEng: string; nameKr: string };
 
 type WineDraft = {
   nameEng: string;
@@ -63,6 +64,7 @@ export function WineRegistMobile() {
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState<WineSuggestion[]>([]);
   const [checkingSuggestions, setCheckingSuggestions] = useState(false);
+  const [normalizedNames, setNormalizedNames] = useState<NormalizedNames | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const updateDraft = (patch: Partial<WineDraft>) => {
@@ -91,20 +93,28 @@ export function WineRegistMobile() {
   useEffect(() => {
     if (!token || (nameEng.trim().length < 4 && nameKr.trim().length < 2)) {
       setSuggestions([]);
+      setNormalizedNames(null);
       setCheckingSuggestions(false);
       return;
     }
     const controller = new AbortController();
     setCheckingSuggestions(true);
+    setNormalizedNames(null);
     const timer = window.setTimeout(async () => {
       try {
-        const { data } = await api.get<{ results: WineSuggestion[] }>('/wines/suggestions/', {
+        const { data } = await api.get<{ results: WineSuggestion[]; normalizedNames: NormalizedNames }>('/wines/suggestions/', {
           params: { nameEng, nameKr, wineType: type, regions: region },
           signal: controller.signal,
         });
-        if (!controller.signal.aborted) setSuggestions(data.results);
+        if (!controller.signal.aborted) {
+          setSuggestions(data.results);
+          setNormalizedNames(data.normalizedNames);
+        }
       } catch {
-        if (!controller.signal.aborted) setSuggestions([]);
+        if (!controller.signal.aborted) {
+          setSuggestions([]);
+          setNormalizedNames(null);
+        }
       } finally {
         if (!controller.signal.aborted) setCheckingSuggestions(false);
       }
@@ -230,6 +240,14 @@ export function WineRegistMobile() {
             <span className="block text-sm text-muted mb-1">와인 한글 이름 *</span>
             <input value={nameKr} onChange={(e) => updateDraft({ nameKr: e.target.value })} className="w-full border border-border rounded-lg px-3 py-2" placeholder="샤또몽페라" />
           </label>
+          <p className="text-xs leading-5 text-muted">이름에는 빈티지 연도를 빼고, 품종은 목록의 표기로 적어 주세요. 확실한 오타와 연도는 등록할 때 바로잡아요.</p>
+          {normalizedNames && (normalizedNames.nameKr !== nameKr.trim() || normalizedNames.nameEng !== nameEng.trim()) && (
+            <div className="rounded-xl bg-accent/10 px-3 py-2 text-xs leading-5 text-[#596400]" aria-live="polite">
+              <span className="font-semibold">이 이름으로 저장돼요</span>
+              {normalizedNames.nameKr !== nameKr.trim() && <span className="block">한글: {normalizedNames.nameKr || '이름을 다시 입력해 주세요'}</span>}
+              {normalizedNames.nameEng !== nameEng.trim() && <span className="block">영문: {normalizedNames.nameEng || '이름을 다시 입력해 주세요'}</span>}
+            </div>
+          )}
           {(checkingSuggestions || suggestions.length > 0) && (
             <div className="rounded-xl border border-accent/35 bg-accent/5 p-3" aria-live="polite">
               <p className="font-semibold text-sm">혹시 이 와인인가요?</p>

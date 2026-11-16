@@ -1,0 +1,11 @@
+[Unit]
+Description=Evening Wakipedia administrator approval email
+
+[Timer]
+OnCalendar=*-*-* 10:00:00 UTC
+Persistent=true
+Unit=waki-pending-approvals.service
+
+[Install]
+WantedBy=timers.target
+
