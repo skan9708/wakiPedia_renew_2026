@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from user.models import User
-from user.recovery import DeliveryError, send_account_email
+from user.recovery import DeliveryError, send_account_email, send_ses_email
 from wine.models import Country, GrapeVariety, WineDuplicateCandidate
 
 
@@ -57,13 +57,18 @@ class Command(BaseCommand):
         if options["dry_run"]:
             self.stdout.write(f"Dry run; {len(recipients)} recipient(s), no email sent.")
             return
-        if not settings.EMAIL_RECOVERY_ENABLED:
-            raise CommandError("Email delivery is not configured; set SES or SMTP before enabling the timer.")
+        digest_sender = settings.ADMIN_DIGEST_SES_FROM_EMAIL
+        if not digest_sender and not settings.EMAIL_RECOVERY_ENABLED:
+            raise CommandError("Email delivery is not configured; set ADMIN_DIGEST_SES_FROM_EMAIL or account email delivery before enabling the timer.")
         body = digest_body(counts)
         failures = 0
         for recipient in recipients:
             try:
-                send_account_email(recipient, f"[와키피디아] 관리자 승인 대기 {total}건", body)
+                subject = f"[와키피디아] 관리자 승인 대기 {total}건"
+                if digest_sender:
+                    send_ses_email(recipient, subject, body, digest_sender)
+                else:
+                    send_account_email(recipient, subject, body)
             except DeliveryError:
                 failures += 1
         if failures:

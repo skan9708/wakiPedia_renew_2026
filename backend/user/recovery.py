@@ -84,27 +84,35 @@ def signup_email_code_digest(challenge_id, code):
     return salted_hmac("signup-email-verification-code", f"{challenge_id}:{code}").hexdigest()
 
 
+def send_ses_email(recipient, subject, body, sender):
+    """Send with the EC2 instance role from a verified SES identity."""
+    try:
+        import boto3
+        from botocore.config import Config
+
+        boto3.client(
+            "ses", region_name=settings.SES_REGION_NAME,
+            config=Config(connect_timeout=5, read_timeout=8, retries={"max_attempts": 1}),
+        ).send_email(
+            Source=sender,
+            Destination={"ToAddresses": [recipient]},
+            Message={
+                "Subject": {"Data": subject, "Charset": "UTF-8"},
+                "Body": {"Text": {"Data": body, "Charset": "UTF-8"}},
+            },
+        )
+    except Exception as exc:
+        raise DeliveryError("이메일 발송에 실패했습니다.") from exc
+
+
 def send_account_email(recipient, subject, body):
     if not settings.EMAIL_RECOVERY_ENABLED:
         raise DeliveryError("이메일 발송 서비스가 준비되지 않았습니다.")
+    if settings.SES_FROM_EMAIL:
+        send_ses_email(recipient, subject, body, settings.SES_FROM_EMAIL)
+        return
     try:
-        if settings.SES_FROM_EMAIL:
-            import boto3
-            from botocore.config import Config
-
-            boto3.client(
-                "ses", region_name=settings.SES_REGION_NAME,
-                config=Config(connect_timeout=5, read_timeout=8, retries={"max_attempts": 1}),
-            ).send_email(
-                Source=settings.SES_FROM_EMAIL,
-                Destination={"ToAddresses": [recipient]},
-                Message={
-                    "Subject": {"Data": subject, "Charset": "UTF-8"},
-                    "Body": {"Text": {"Data": body, "Charset": "UTF-8"}},
-                },
-            )
-        else:
-            send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=False)
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=False)
     except Exception as exc:
         raise DeliveryError("이메일 발송에 실패했습니다.") from exc
 

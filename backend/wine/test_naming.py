@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
@@ -106,6 +107,19 @@ class PendingApprovalDigestTests(TestCase):
         call_command("send_pending_approvals_digest", dry_run=True)
         with self.assertRaisesMessage(CommandError, "Email delivery is not configured"):
             call_command("send_pending_approvals_digest")
+
+    @override_settings(
+        EMAIL_RECOVERY_ENABLED=False, EMAIL_SIGNUP_VERIFICATION_ENABLED=False,
+        ADMIN_DIGEST_EMAILS=["wakipedia1682@gmail.com"],
+        ADMIN_DIGEST_SES_FROM_EMAIL="wakipedia1682@gmail.com",
+    )
+    @patch("wine.management.commands.send_pending_approvals_digest.send_ses_email")
+    def test_digest_ses_does_not_enable_signup_email(self, send):
+        Country.objects.create(kor_name="새 원산지", eng_name="New", is_approved=False)
+        call_command("send_pending_approvals_digest")
+        self.assertEqual(send.call_args.args[0], "wakipedia1682@gmail.com")
+        self.assertEqual(send.call_args.args[3], "wakipedia1682@gmail.com")
+        self.assertFalse(settings.EMAIL_SIGNUP_VERIFICATION_ENABLED)
 
     def test_message_does_not_include_user_data(self):
         body = digest_body({"duplicates": 1, "countries": 2, "grapes": 3})
