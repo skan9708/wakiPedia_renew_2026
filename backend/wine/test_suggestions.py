@@ -39,6 +39,22 @@ class WineSuggestionTests(TestCase):
                 response = self.client.get("/api/wines/suggestions/", params)
                 self.assertEqual([result["id"] for result in response.data["results"]], [wine.id])
 
+    def test_two_syllable_korean_input_finds_candidates_without_english(self):
+        wines = [Wine.objects.create(
+            kor_name=f"샤토 르 게이 {index}", eng_name=f"Chateau Le Gay {index}", type="red",
+        ) for index in range(6)]
+        response = self.client.get("/api/wines/suggestions/", {"nameKr": "샤또"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["results"]), 5)
+        self.assertTrue(all(item["id"] in {wine.pk for wine in wines} for item in response.data["results"]))
+
+    def test_korean_query_ignores_spacing_and_chateau_spelling(self):
+        wine = Wine.objects.create(
+            kor_name="샤토 르 게이", eng_name="Chateau Le Gay", type="red",
+        )
+        response = self.client.get("/api/wines/suggestions/", {"nameKr": "샤또르게이"})
+        self.assertEqual([item["id"] for item in response.data["results"]], [wine.pk])
+
     def test_hidden_merged_wines_are_not_suggested(self):
         canonical = Wine.objects.create(
             kor_name="새 이름", eng_name="New Name", type="red",

@@ -4,7 +4,8 @@ import re
 import unicodedata
 from difflib import SequenceMatcher
 
-from django.db.models import Q
+from django.db.models import F, Q, Value
+from django.db.models.functions import Length, Replace
 
 from wine.models import Wine, WineDuplicateCandidate
 
@@ -17,7 +18,8 @@ COMMON_WORDS = {
 
 
 def normalized_name(value):
-    value = unicodedata.normalize("NFKD", unicodedata.normalize("NFKC", value or ""))
+    value = unicodedata.normalize("NFKC", value or "").replace("샤또", "샤토")
+    value = unicodedata.normalize("NFKD", value)
     value = "".join(char for char in value if not unicodedata.combining(char))
     value = unicodedata.normalize("NFKC", value).casefold()
     value = value.replace("œ", "oe").replace("æ", "ae")
@@ -25,7 +27,7 @@ def normalized_name(value):
 
 
 def has_searchable_name(name_eng, name_kr):
-    return len(normalized_name(name_eng)) >= 4 or len(normalized_name(name_kr)) >= 3
+    return len(normalized_name(name_eng)) >= 4 or len(normalized_name(name_kr)) >= 2
 
 
 def search_hints(name_eng, name_kr):
@@ -58,6 +60,8 @@ def _similarity(query, candidate):
     if query == candidate:
         return 1.0
     score = SequenceMatcher(None, query, candidate).ratio()
+    if 2 <= len(query) <= 3 and any("가" <= char <= "힣" for char in query) and query in candidate:
+        score = max(score, 0.68 + 0.17 * len(query) / len(candidate))
     if len(query) >= 4 and query in candidate:
         score = max(score, 0.68 + 0.22 * len(query) / len(candidate))
     if len(candidate) >= 4 and candidate in query:
@@ -103,6 +107,22 @@ def ranked_wine_ids(name_eng, name_kr, *, wine_type="", country="", exclude_id=N
             .order_by("-id")[:150]
         )
         for row in matches:
+            candidates[row[0]] = row
+    compact_korean = normalized_name(name_kr)
+    if len(compact_korean) >= 2 and any("가" <= char <= "힣" for char in compact_korean):
+        # Find Korean names across spaces, hyphens and the common 샤또/샤토 spelling.
+        compact_field = Replace(Replace(Replace(
+            F("kor_name"), Value(" "), Value(""),
+        ), Value("-"), Value("")), Value("샤또"), Value("샤토"))
+        matches = Wine.objects.filter(catalog_visible=True).annotate(
+            compact_korean=compact_field,
+        ).filter(compact_korean__icontains=compact_korean)
+        if exclude_id is not None:
+            matches = matches.exclude(pk=exclude_id)
+        for row in (
+            matches.order_by(Length("kor_name"), "-id")
+            .values_list("id", "eng_name", "kor_name", "search_aliases", "type", "country__kor_name")[:300]
+        ):
             candidates[row[0]] = row
     ranked = []
     for wine_id, candidate_eng, candidate_kr, aliases, candidate_type, candidate_country in candidates.values():

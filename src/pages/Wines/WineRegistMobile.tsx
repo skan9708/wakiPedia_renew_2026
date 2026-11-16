@@ -82,7 +82,7 @@ export function WineRegistMobile() {
   }, []);
 
   useEffect(() => {
-    if (!token || (nameEng.trim().length < 4 && nameKr.trim().length < 3)) {
+    if (!token || (nameEng.trim().length < 4 && nameKr.trim().length < 2)) {
       setSuggestions([]);
       setCheckingSuggestions(false);
       return;
