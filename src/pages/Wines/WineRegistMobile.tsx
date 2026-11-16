@@ -1,7 +1,17 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import defaultWineImg from '@/assets/default-wine.jpg';
+
+type WineSuggestion = {
+  id: number;
+  nameEng: string;
+  nameKr: string;
+  wineType: string;
+  regions: string;
+  imageUrl: string | null;
+};
 
 export function WineRegistMobile() {
   const navigate = useNavigate();
@@ -15,7 +25,36 @@ export function WineRegistMobile() {
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [suggestions, setSuggestions] = useState<WineSuggestion[]>([]);
+  const [checkingSuggestions, setCheckingSuggestions] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!token || (nameEng.trim().length < 4 && nameKr.trim().length < 3)) {
+      setSuggestions([]);
+      setCheckingSuggestions(false);
+      return;
+    }
+    const controller = new AbortController();
+    setCheckingSuggestions(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const { data } = await api.get<{ results: WineSuggestion[] }>('/wines/suggestions/', {
+          params: { nameEng, nameKr, wineType: type, regions: region },
+          signal: controller.signal,
+        });
+        if (!controller.signal.aborted) setSuggestions(data.results);
+      } catch {
+        if (!controller.signal.aborted) setSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) setCheckingSuggestions(false);
+      }
+    }, 450);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [token, nameEng, nameKr, type, region]);
 
   if (!token) {
     return (
@@ -108,6 +147,29 @@ export function WineRegistMobile() {
             <span className="block text-sm text-muted mb-1">와인 한글 이름 *</span>
             <input value={nameKr} onChange={(e) => setNameKr(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2" placeholder="샤또몽페라" />
           </label>
+          {(checkingSuggestions || suggestions.length > 0) && (
+            <div className="rounded-xl border border-accent/35 bg-accent/5 p-3" aria-live="polite">
+              <p className="font-semibold text-sm">혹시 이 와인인가요?</p>
+              <p className="text-xs text-muted mt-1">같은 와인이 있다면 선택해 주세요.</p>
+              {checkingSuggestions && <p className="text-xs text-muted mt-3">기존 와인을 확인하고 있어요...</p>}
+              {!checkingSuggestions && suggestions.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {suggestions.map((wine) => (
+                    <button key={wine.id} type="button" onClick={() => navigate(`/wines/${wine.id}`)}
+                      className="flex w-full items-center gap-3 rounded-lg border border-border bg-white p-2 text-left">
+                      <img src={wine.imageUrl || defaultWineImg} alt="" className="h-14 w-14 shrink-0 rounded-md bg-bgsubtle object-contain" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{wine.nameKr}</span>
+                        <span className="block truncate text-xs text-muted">{wine.nameEng}</span>
+                        <span className="block truncate text-xs text-muted">{[wine.wineType, wine.regions].filter(Boolean).join(' · ')}</span>
+                      </span>
+                      <span className="shrink-0 text-xs text-accent">보기</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <label className="block">
             <span className="block text-sm text-muted mb-1">원산지</span>
             <input value={region} onChange={(e) => setRegion(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2" placeholder="프랑스" />

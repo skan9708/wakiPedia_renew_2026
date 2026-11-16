@@ -6,8 +6,9 @@ from rest_framework.views import APIView
 from django.db.models import OuterRef, Q, Subquery
 
 from wine.models import Wine, Country, GrapeVariety
-from wine.image_utils import public_review_image_names
+from wine.image_utils import public_review_image_names, wine_display_image_url
 from wine.serializers import WineListSerializer, WineDetailSerializer
+from wine.suggestions import has_searchable_name, search_hints, suggestion_score
 
 
 class WineListView(APIView):
@@ -106,6 +107,56 @@ class WineListView(APIView):
 
         serializer = WineListSerializer(wine, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class WineSuggestionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        name_eng = (request.query_params.get("nameEng") or "").strip()[:255]
+        name_kr = (request.query_params.get("nameKr") or "").strip()[:255]
+        if not has_searchable_name(name_eng, name_kr):
+            return Response({"results": []})
+
+        wine_type = (request.query_params.get("wineType") or "").strip().lower()
+        country = (request.query_params.get("regions") or "").strip()[:255]
+        candidates = {}
+        for hint in search_hints(name_eng, name_kr):
+            matches = (
+                Wine.objects.filter(catalog_visible=True)
+                .filter(
+                    Q(eng_name__icontains=hint)
+                    | Q(kor_name__icontains=hint)
+                    | Q(search_aliases__icontains=hint)
+                )
+                .values_list("id", "eng_name", "kor_name", "search_aliases", "type", "country__kor_name")
+                .order_by("-id")[:150]
+            )
+            for row in matches:
+                candidates[row[0]] = row
+
+        ranked = []
+        for wine_id, candidate_eng, candidate_kr, aliases, candidate_type, candidate_country in candidates.values():
+            score = suggestion_score(
+                name_eng, name_kr, candidate_eng, candidate_kr, aliases,
+                wine_type, candidate_type, country, candidate_country,
+            )
+            if score:
+                ranked.append((score, wine_id))
+        ranked.sort(reverse=True)
+        ids = [wine_id for _, wine_id in ranked[:5]]
+        wines = Wine.objects.filter(pk__in=ids).select_related("country").annotate(
+            review_cover_image=Subquery(public_review_image_names(OuterRef("pk"))[:1])
+        ).in_bulk()
+        results = [{
+            "id": wine.pk,
+            "nameEng": wine.eng_name,
+            "nameKr": wine.kor_name,
+            "wineType": wine.type,
+            "regions": wine.country.kor_name if wine.country else "",
+            "imageUrl": wine_display_image_url(wine, request),
+        } for wine_id in ids if (wine := wines.get(wine_id))]
+        return Response({"results": results})
 
 
 class WineDetailView(APIView):
