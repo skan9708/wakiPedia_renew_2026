@@ -53,3 +53,11 @@
 ```
 
 완료 후 서버에서 같은 주소로 SES 시험 메일을 보내고 수신 여부를 확인한 다음에만 타이머를 활성화한다. 이 정책은 다른 회원 주소로 이메일 인증번호를 보내는 권한을 포함하지 않는다. 그 기능을 시작할 때는 SES 샌드박스 해제와 별도의 발송 권한을 검토한다.
+
+### Gmail로 관리자 알림만 보내기
+
+AWS SES 권한 설정 대신 Gmail 앱 비밀번호로 관리자 승인 알림을 보낼 수 있다. 운영 환경의 `/etc/waki.env`에 `ADMIN_DIGEST_GMAIL_USER=wakipedia1682@gmail.com`, `ADMIN_DIGEST_GMAIL_APP_PASSWORD=앱_비밀번호`, `ADMIN_DIGEST_EMAILS=wakipedia1682@gmail.com`을 설정한다. 발송은 `smtp.gmail.com:587`의 TLS 연결을 사용한다. 이 설정은 회원가입 이메일 인증이나 비밀번호 재설정을 켜지 않는다. Gmail 설정이 완성되면 승인 알림은 기존 SES 설정보다 우선한다.
+
+앱 비밀번호는 Google 계정의 2단계 인증을 켠 뒤 [앱 비밀번호](https://myaccount.google.com/apppasswords)에서 만든다. 계정 비밀번호를 넣지 말고, 발급된 앱 비밀번호만 서버 환경 파일에 저장한다. 비밀값을 채팅이나 저장소에 기록하지 않는다. 계정 보안 설정에 따라 앱 비밀번호를 만들 수 없는 경우도 있다.
+
+설정 후 시험 발송과 수신 여부를 확인한 뒤에만 `waki-pending-approvals.timer`를 켠다. 현재 대기 건수가 0이면 명령이 메일을 보내지 않으므로, 시험 발송은 같은 SMTP 연결로 별도 메일을 한 번 보내 확인한다.

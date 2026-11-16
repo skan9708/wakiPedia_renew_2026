@@ -121,6 +121,40 @@ class PendingApprovalDigestTests(TestCase):
         self.assertEqual(send.call_args.args[3], "wakipedia1682@gmail.com")
         self.assertFalse(settings.EMAIL_SIGNUP_VERIFICATION_ENABLED)
 
+    @override_settings(
+        EMAIL_RECOVERY_ENABLED=False, EMAIL_SIGNUP_VERIFICATION_ENABLED=False,
+        ADMIN_DIGEST_EMAILS=["wakipedia1682@gmail.com"],
+        ADMIN_DIGEST_SES_FROM_EMAIL="wakipedia1682@gmail.com",
+        ADMIN_DIGEST_GMAIL_USER="wakipedia1682@gmail.com",
+        ADMIN_DIGEST_GMAIL_APP_PASSWORD="example-app-password",
+    )
+    @patch("wine.management.commands.send_pending_approvals_digest.send_ses_email")
+    @patch("wine.management.commands.send_pending_approvals_digest.send_mail", return_value=1)
+    @patch("wine.management.commands.send_pending_approvals_digest.get_connection")
+    def test_digest_gmail_sends_without_enabling_signup_email(self, get_connection, send_mail, send_ses):
+        Country.objects.create(kor_name="새 원산지", eng_name="New", is_approved=False)
+        call_command("send_pending_approvals_digest")
+        send_ses.assert_not_called()
+        get_connection.assert_called_once_with(
+            "django.core.mail.backends.smtp.EmailBackend",
+            host="smtp.gmail.com", port=587,
+            username="wakipedia1682@gmail.com", password="example-app-password",
+            use_tls=True, timeout=10,
+        )
+        self.assertEqual(send_mail.call_args.args[2], "wakipedia1682@gmail.com")
+        self.assertEqual(send_mail.call_args.args[3], ["wakipedia1682@gmail.com"])
+        self.assertFalse(settings.EMAIL_RECOVERY_ENABLED)
+        self.assertFalse(settings.EMAIL_SIGNUP_VERIFICATION_ENABLED)
+
+    @override_settings(
+        EMAIL_RECOVERY_ENABLED=False, ADMIN_DIGEST_EMAILS=["wakipedia1682@gmail.com"],
+        ADMIN_DIGEST_GMAIL_USER="wakipedia1682@gmail.com", ADMIN_DIGEST_GMAIL_APP_PASSWORD="",
+    )
+    def test_incomplete_gmail_configuration_fails_before_sending(self):
+        Country.objects.create(kor_name="새 원산지", eng_name="New", is_approved=False)
+        with self.assertRaisesMessage(CommandError, "Gmail digest delivery is incomplete"):
+            call_command("send_pending_approvals_digest")
+
     def test_message_does_not_include_user_data(self):
         body = digest_body({"duplicates": 1, "countries": 2, "grapes": 3})
         self.assertIn("원산지·품종", body)

@@ -178,6 +178,8 @@ EMAIL_SIGNUP_VERIFICATION_ENABLED = EMAIL_RECOVERY_ENABLED
 PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "https://wakipedia.co.kr").rstrip("/")
 ADMIN_DIGEST_EMAILS = [email.strip() for email in os.environ.get("ADMIN_DIGEST_EMAILS", "").split(",") if email.strip()]
 ADMIN_DIGEST_SES_FROM_EMAIL = os.environ.get("ADMIN_DIGEST_SES_FROM_EMAIL", "")
+ADMIN_DIGEST_GMAIL_USER = os.environ.get("ADMIN_DIGEST_GMAIL_USER", "")
+ADMIN_DIGEST_GMAIL_APP_PASSWORD = os.environ.get("ADMIN_DIGEST_GMAIL_APP_PASSWORD", "").replace(" ", "")
 PASSWORD_RESET_TIMEOUT = 3600
 
 # 500 오류의 traceback을 콘솔(journalctl -u waki)로 출력

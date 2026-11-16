@@ -1,6 +1,7 @@
 """Send one evening email with the current administrator approval backlog."""
 
 from django.conf import settings
+from django.core.mail import get_connection, send_mail
 from django.core.management.base import BaseCommand, CommandError
 
 from user.models import User
@@ -38,6 +39,28 @@ def digest_body(counts):
     )
 
 
+def send_digest_via_gmail(recipient, subject, body):
+    """Keep the administrator digest's Gmail credentials separate from account email."""
+    try:
+        connection = get_connection(
+            "django.core.mail.backends.smtp.EmailBackend",
+            host="smtp.gmail.com", port=587,
+            username=settings.ADMIN_DIGEST_GMAIL_USER,
+            password=settings.ADMIN_DIGEST_GMAIL_APP_PASSWORD,
+            use_tls=True, timeout=10,
+        )
+        sent = send_mail(
+            subject, body, settings.ADMIN_DIGEST_GMAIL_USER, [recipient],
+            fail_silently=False, connection=connection,
+        )
+        if sent != 1:
+            raise DeliveryError("Administrator digest was not sent.")
+    except DeliveryError:
+        raise
+    except Exception as exc:
+        raise DeliveryError("Administrator digest delivery failed.") from exc
+
+
 class Command(BaseCommand):
     help = "Email pending duplicate and catalog-term approvals to active administrators."
 
@@ -58,14 +81,20 @@ class Command(BaseCommand):
             self.stdout.write(f"Dry run; {len(recipients)} recipient(s), no email sent.")
             return
         digest_sender = settings.ADMIN_DIGEST_SES_FROM_EMAIL
-        if not digest_sender and not settings.EMAIL_RECOVERY_ENABLED:
-            raise CommandError("Email delivery is not configured; set ADMIN_DIGEST_SES_FROM_EMAIL or account email delivery before enabling the timer.")
+        gmail_user = settings.ADMIN_DIGEST_GMAIL_USER
+        gmail_password = settings.ADMIN_DIGEST_GMAIL_APP_PASSWORD
+        if bool(gmail_user) != bool(gmail_password):
+            raise CommandError("Gmail digest delivery is incomplete; set both ADMIN_DIGEST_GMAIL_USER and ADMIN_DIGEST_GMAIL_APP_PASSWORD.")
+        if not gmail_user and not digest_sender and not settings.EMAIL_RECOVERY_ENABLED:
+            raise CommandError("Email delivery is not configured; set digest Gmail, digest SES, or account email delivery before enabling the timer.")
         body = digest_body(counts)
         failures = 0
         for recipient in recipients:
             try:
                 subject = f"[와키피디아] 관리자 승인 대기 {total}건"
-                if digest_sender:
+                if gmail_user:
+                    send_digest_via_gmail(recipient, subject, body)
+                elif digest_sender:
                     send_ses_email(recipient, subject, body, digest_sender)
                 else:
                     send_account_email(recipient, subject, body)
