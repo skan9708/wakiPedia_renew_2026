@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db import transaction
-from django.db.models import Count, OuterRef, Q, Subquery
+from django.db.models import Case, Count, IntegerField, OuterRef, Q, Subquery, When
 
 from wine.models import Wine, Country, GrapeVariety
 from wine.catalog_terms import resolve_catalog_term
@@ -195,10 +195,22 @@ class WineFiltersView(APIView):
             GrapeVariety.objects.filter(is_approved=True)
             .values("kor_name")
             .annotate(wine_count=Count("wines", filter=Q(wines__catalog_visible=True), distinct=True))
-            .order_by("-wine_count", "kor_name")
+            .order_by(
+                Case(
+                    When(kor_name__in=["기타품종", "기타 품종", "블렌드"], then=1),
+                    default=0,
+                    output_field=IntegerField(),
+                ),
+                "-wine_count", "kor_name",
+            )
             .values_list("kor_name", flat=True)
         )
-        return Response({"countries": countries, "breeds": breeds})
+        breed_aliases = list(
+            GrapeVariety.objects.filter(is_approved=True)
+            .exclude(eng_name="")
+            .values("kor_name", "eng_name")
+        )
+        return Response({"countries": countries, "breeds": breeds, "breedAliases": breed_aliases})
 
 
 class WineFavoriteView(APIView):

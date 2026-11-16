@@ -13,6 +13,8 @@ type WineSuggestion = {
   imageUrl: string | null;
 };
 
+type BreedAlias = { kor_name: string; eng_name: string };
+
 type WineDraft = {
   nameEng: string;
   nameKr: string;
@@ -53,8 +55,10 @@ export function WineRegistMobile() {
   const { nameEng, nameKr, region, grapes, type, image, preview, regionSearch, grapeSearch, customRegion } = draft;
   const [regions, setRegions] = useState<string[]>([]);
   const [grapeOptions, setGrapeOptions] = useState<string[]>([]);
+  const [grapeAliases, setGrapeAliases] = useState<BreedAlias[]>([]);
+  const [filterState, setFilterState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [filterRetry, setFilterRetry] = useState(0);
   const [showAllRegions, setShowAllRegions] = useState(false);
-  const [showAllGrapes, setShowAllGrapes] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState<WineSuggestion[]>([]);
@@ -73,13 +77,16 @@ export function WineRegistMobile() {
   }, [userId]);
 
   useEffect(() => {
-    api.get<{ countries: string[]; breeds: string[] }>('/wines/filters/')
+    setFilterState('loading');
+    api.get<{ countries: string[]; breeds: string[]; breedAliases: BreedAlias[] }>('/wines/filters/')
       .then(({ data }) => {
         setRegions(data.countries ?? []);
         setGrapeOptions(data.breeds ?? []);
+        setGrapeAliases(data.breedAliases ?? []);
+        setFilterState('ready');
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => setFilterState('error'));
+  }, [filterRetry]);
 
   useEffect(() => {
     if (!token || (nameEng.trim().length < 4 && nameKr.trim().length < 2)) {
@@ -138,10 +145,13 @@ export function WineRegistMobile() {
     ? regions.filter((name) => name.toLocaleLowerCase().includes(regionSearch.trim().toLocaleLowerCase()))
     : regions);
   const visibleRegions = showAllRegions || regionSearch.trim() ? matchingRegions : matchingRegions.slice(0, 12);
-  const matchingGrapes = (grapeSearch.trim()
-    ? grapeOptions.filter((name) => name.toLocaleLowerCase().includes(grapeSearch.trim().toLocaleLowerCase()))
-    : grapeOptions);
-  const visibleGrapes = showAllGrapes || grapeSearch.trim() ? matchingGrapes : matchingGrapes.slice(0, 12);
+  const grapeQuery = grapeSearch.trim().toLocaleLowerCase();
+  const matchingGrapes = grapeQuery
+    ? grapeOptions.filter((name) =>
+        name.toLocaleLowerCase().includes(grapeQuery)
+        || grapeAliases.some((alias) => alias.kor_name === name && alias.eng_name.toLocaleLowerCase().includes(grapeQuery)))
+    : grapeOptions;
+  const visibleGrapes = grapeQuery ? matchingGrapes : matchingGrapes.slice(0, 20);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,19 +299,22 @@ export function WineRegistMobile() {
               </div>
             )}
             <input value={grapeSearch} onChange={(e) => updateDraft({ grapeSearch: e.target.value })}
-              className="w-full border border-border rounded-lg px-3 py-2" placeholder="품종 검색 또는 새 품종 입력" aria-label="품종 검색 또는 새 품종 입력" />
-            <div className="flex flex-wrap gap-2">
+              className="w-full border border-border rounded-lg px-3 py-2" placeholder="목록에 없는 품종 검색" aria-label="품종 검색" />
+            {filterState === 'loading' && <p className="text-sm text-muted">품종 목록을 불러오는 중...</p>}
+            {filterState === 'error' && (
+              <button type="button" onClick={() => setFilterRetry((current) => current + 1)} className="text-sm text-accent underline underline-offset-2">
+                품종 목록을 불러오지 못했어요. 다시 시도하기
+              </button>
+            )}
+            <div className={grapeQuery ? 'flex flex-wrap gap-2' : 'grid grid-cols-2 gap-2'}>
               {visibleGrapes.map((name) => (
                 <button key={name} type="button" onClick={() => toggleGrape(name)}
-                  className={`rounded-full border px-3 py-1.5 text-sm ${grapes.includes(name) ? 'border-accent bg-accent text-white' : 'border-border'}`}>
+                  className={`min-w-0 rounded-full border px-3 py-1.5 text-sm ${grapes.includes(name) ? 'border-accent bg-accent text-white' : 'border-border'}`}>
                   {name}
                 </button>
               ))}
             </div>
-            {!grapeSearch && !showAllGrapes && grapeOptions.length > 12 && (
-              <button type="button" onClick={() => setShowAllGrapes(true)} className="text-sm text-accent">전체 품종 보기</button>
-            )}
-            {grapeSearch.trim() && !grapeOptions.some((name) => name.toLocaleLowerCase() === grapeSearch.trim().toLocaleLowerCase()) && (
+            {filterState === 'ready' && grapeQuery && matchingGrapes.length === 0 && !grapes.some((name) => name.toLocaleLowerCase() === grapeQuery) && (
               <button type="button" onClick={addCustomGrape}
                 className="rounded-full border border-accent px-3 py-1.5 text-sm text-accent">
                 ‘{grapeSearch.trim()}’ 새 품종으로 추가

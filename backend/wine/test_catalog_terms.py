@@ -95,8 +95,10 @@ class CatalogTermApprovalTests(TestCase):
 
     def test_grape_buttons_are_ordered_by_visible_wine_count(self):
         syrah = GrapeVariety.objects.create(kor_name="Syrah", eng_name="Syrah")
-        merlot = GrapeVariety.objects.create(kor_name="Merlot", eng_name="Merlot")
+        merlot = GrapeVariety.objects.create(kor_name="메를로", eng_name="Merlot")
         cabernet = GrapeVariety.objects.create(kor_name="Cabernet", eng_name="Cabernet")
+        other = GrapeVariety.objects.create(kor_name="기타품종", eng_name="Other")
+        blend = GrapeVariety.objects.create(kor_name="블렌드", eng_name="Blend")
         pending = GrapeVariety.objects.create(kor_name="Pending", eng_name="Pending", is_approved=False)
 
         for index in range(3):
@@ -107,9 +109,15 @@ class CatalogTermApprovalTests(TestCase):
 
         hidden = Wine.objects.create(kor_name="Hidden Wine", eng_name="Hidden Wine", catalog_visible=False)
         hidden.grape_varieties.add(cabernet)
+        for index in range(4):
+            wine = Wine.objects.create(kor_name=f"Other Wine {index}", eng_name=f"Other {index}")
+            wine.grape_varieties.add(other)
+        blend_wine = Wine.objects.create(kor_name="Blend Wine", eng_name="Blend Wine")
+        blend_wine.grape_varieties.add(blend)
         pending_wine = Wine.objects.create(kor_name="Pending Wine", eng_name="Pending Wine")
         pending_wine.grape_varieties.add(pending)
 
-        breeds = self.member_client.get("/api/wines/filters/").data["breeds"]
-        self.assertEqual(breeds[:3], ["Syrah", "Merlot", "Cabernet"])
-        self.assertNotIn("Pending", breeds)
+        filters = self.member_client.get("/api/wines/filters/").data
+        self.assertEqual(filters["breeds"], ["Syrah", "메를로", "Cabernet", "기타품종", "블렌드"])
+        self.assertNotIn("Pending", filters["breeds"])
+        self.assertIn({"kor_name": "메를로", "eng_name": "Merlot"}, filters["breedAliases"])
