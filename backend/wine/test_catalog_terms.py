@@ -92,3 +92,24 @@ class CatalogTermApprovalTests(TestCase):
         countries = self.member_client.get("/api/wines/filters/").data["countries"]
         self.assertEqual(countries[:3], ["프랑스", "이탈리아", "그리스"])
         self.assertNotIn("미승인", countries)
+
+    def test_grape_buttons_are_ordered_by_visible_wine_count(self):
+        syrah = GrapeVariety.objects.create(kor_name="Syrah", eng_name="Syrah")
+        merlot = GrapeVariety.objects.create(kor_name="Merlot", eng_name="Merlot")
+        cabernet = GrapeVariety.objects.create(kor_name="Cabernet", eng_name="Cabernet")
+        pending = GrapeVariety.objects.create(kor_name="Pending", eng_name="Pending", is_approved=False)
+
+        for index in range(3):
+            wine = Wine.objects.create(kor_name=f"Syrah Wine {index}", eng_name=f"Syrah {index}")
+            wine.grape_varieties.add(syrah)
+            if index < 2:
+                wine.grape_varieties.add(merlot)
+
+        hidden = Wine.objects.create(kor_name="Hidden Wine", eng_name="Hidden Wine", catalog_visible=False)
+        hidden.grape_varieties.add(cabernet)
+        pending_wine = Wine.objects.create(kor_name="Pending Wine", eng_name="Pending Wine")
+        pending_wine.grape_varieties.add(pending)
+
+        breeds = self.member_client.get("/api/wines/filters/").data["breeds"]
+        self.assertEqual(breeds[:3], ["Syrah", "Merlot", "Cabernet"])
+        self.assertNotIn("Pending", breeds)

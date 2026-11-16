@@ -138,9 +138,10 @@ export function WineRegistMobile() {
     ? regions.filter((name) => name.toLocaleLowerCase().includes(regionSearch.trim().toLocaleLowerCase()))
     : regions);
   const visibleRegions = showAllRegions || regionSearch.trim() ? matchingRegions : matchingRegions.slice(0, 12);
-  const visibleGrapes = (grapeSearch.trim()
+  const matchingGrapes = (grapeSearch.trim()
     ? grapeOptions.filter((name) => name.toLocaleLowerCase().includes(grapeSearch.trim().toLocaleLowerCase()))
-    : grapeOptions).slice(0, showAllGrapes || grapeSearch.trim() ? 30 : 12);
+    : grapeOptions);
+  const visibleGrapes = showAllGrapes || grapeSearch.trim() ? matchingGrapes : matchingGrapes.slice(0, 12);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

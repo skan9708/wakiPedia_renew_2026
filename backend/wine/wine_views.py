@@ -192,7 +192,11 @@ class WineFiltersView(APIView):
             .values_list("kor_name", flat=True)
         )
         breeds = list(
-            GrapeVariety.objects.filter(is_approved=True).values_list("kor_name", flat=True).distinct().order_by("kor_name")
+            GrapeVariety.objects.filter(is_approved=True)
+            .values("kor_name")
+            .annotate(wine_count=Count("wines", filter=Q(wines__catalog_visible=True), distinct=True))
+            .order_by("-wine_count", "kor_name")
+            .values_list("kor_name", flat=True)
         )
         return Response({"countries": countries, "breeds": breeds})
 
