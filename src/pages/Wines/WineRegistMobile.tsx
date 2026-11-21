@@ -240,7 +240,10 @@ export function WineRegistMobile() {
             <span className="block text-sm text-muted mb-1">와인 한글 이름 *</span>
             <input value={nameKr} onChange={(e) => updateDraft({ nameKr: e.target.value })} className="w-full border border-border rounded-lg px-3 py-2" placeholder="샤또몽페라" />
           </label>
-          <p className="text-xs leading-5 text-muted">이름에는 빈티지 연도를 빼고, 품종은 목록의 표기로 적어 주세요. 확실한 오타와 연도는 등록할 때 바로잡아요.</p>
+          <div className="rounded-xl bg-accent/10 px-3 py-2 text-xs leading-5 text-muted">
+            <span className="font-semibold text-fg">와인 이름 기준</span>
+            <p>영문·한글 이름을 함께 적고, 빈티지 연도는 빼 주세요. 품종명은 목록의 표기를 사용해요. 저장 전 확실한 오타·연도는 바로잡아 미리 보여드려요.</p>
+          </div>
           {normalizedNames && (normalizedNames.nameKr !== nameKr.trim() || normalizedNames.nameEng !== nameEng.trim()) && (
             <div className="rounded-xl bg-accent/10 px-3 py-2 text-xs leading-5 text-[#596400]" aria-live="polite">
               <span className="font-semibold">이 이름으로 저장돼요</span>

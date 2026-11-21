@@ -91,6 +91,9 @@ export function Home() {
                 className="bg-white/95 backdrop-blur-sm border-0 shadow-lg"
                 enableSuggestions
               />
+              <p className="mt-2 text-center text-xs leading-5 text-white/80">
+                와인명은 빈티지 연도 없이 관리해요. 한글·영문 이름으로 검색해 보세요.
+              </p>
             </div>
           </div>
         </div>

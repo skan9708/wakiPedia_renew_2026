@@ -8,7 +8,7 @@ const guides: Record<string, PageGuide> = {
     { title: '메뉴로 이동하세요', description: '화면 아래 메뉴에서 검색, 공개 리뷰, 마이페이지로 바로 갈 수 있어요.', target: '[data-guide="bottom-nav"]' },
   ] },
   search: { id: 'search', name: '검색', steps: [
-    { title: '검색어 입력하기', description: '와인 이름·품종·지역을 입력하세요. 추천 목록에서 고르거나 엔터·검색 버튼으로 전체 결과를 확인할 수 있어요.', target: '[data-guide="search-input"]' },
+    { title: '검색어 입력하기', description: '와인명은 빈티지 연도 없이 관리해요. 한글·영문 이름, 품종·지역을 입력하고 추천 목록에서 고르거나 엔터·검색 버튼으로 전체 결과를 확인하세요.', target: '[data-guide="search-input"]' },
     { title: '검색 필터 사용하기', description: '와인 종류, 원산지, 품종과 정렬 순서를 고른 뒤 필터를 적용하세요.', target: '[data-guide="search-filter"]' },
     { title: '결과 확인하기', description: '와인을 누르면 상세 화면이 열려요. 결과가 없으면 ‘새로운 와인 등록하기’로 직접 등록할 수 있어요.', target: '[data-guide="search-results"]' },
   ] },

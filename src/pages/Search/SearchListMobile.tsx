@@ -104,6 +104,9 @@ export function SearchListMobile() {
         <div className="mx-auto w-full max-w-mobile px-4 space-y-3">
           <div data-guide="search-input">
             <SearchBar enableSuggestions />
+            <p className="mt-2 px-1 text-xs leading-5 text-muted">
+              와인명은 빈티지 연도 없이 관리해요. 한글·영문 이름, 품종·지역으로 검색해 보세요.
+            </p>
           </div>
           <div data-guide="search-filter">
             <button
