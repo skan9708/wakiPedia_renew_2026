@@ -66,12 +66,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--dry-run", action="store_true", help="Show counts without sending email")
+        parser.add_argument("--test-email", action="store_true", help="Send a test email even when nothing is pending")
 
     def handle(self, *args, **options):
         counts = pending_counts()
         total = sum(counts.values())
         self.stdout.write(f"Pending: duplicates={counts['duplicates']}, countries={counts['countries']}, grapes={counts['grapes']}")
-        if not total:
+        if not total and not options["test_email"]:
             self.stdout.write("Nothing pending; no email sent.")
             return
         recipients = digest_recipients()
@@ -87,11 +88,17 @@ class Command(BaseCommand):
             raise CommandError("Gmail digest delivery is incomplete; set both ADMIN_DIGEST_GMAIL_USER and ADMIN_DIGEST_GMAIL_APP_PASSWORD.")
         if not gmail_user and not digest_sender and not settings.EMAIL_RECOVERY_ENABLED:
             raise CommandError("Email delivery is not configured; set digest Gmail, digest SES, or account email delivery before enabling the timer.")
-        body = digest_body(counts)
+        body = (
+            "관리자 승인 알림 이메일 발송 설정을 확인하는 시험 메일입니다."
+            if options["test_email"] else digest_body(counts)
+        )
         failures = 0
         for recipient in recipients:
             try:
-                subject = f"[와키피디아] 관리자 승인 대기 {total}건"
+                subject = (
+                    "[와키피디아] 관리자 알림 시험"
+                    if options["test_email"] else f"[와키피디아] 관리자 승인 대기 {total}건"
+                )
                 if gmail_user:
                     send_digest_via_gmail(recipient, subject, body)
                 elif digest_sender:

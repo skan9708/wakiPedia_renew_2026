@@ -60,4 +60,6 @@ AWS SES 권한 설정 대신 Gmail 앱 비밀번호로 관리자 승인 알림�
 
 앱 비밀번호는 Google 계정의 2단계 인증을 켠 뒤 [앱 비밀번호](https://myaccount.google.com/apppasswords)에서 만든다. 계정 비밀번호를 넣지 말고, 발급된 앱 비밀번호만 서버 환경 파일에 저장한다. 비밀값을 채팅이나 저장소에 기록하지 않는다. 계정 보안 설정에 따라 앱 비밀번호를 만들 수 없는 경우도 있다.
 
-설정 후 시험 발송과 수신 여부를 확인한 뒤에만 `waki-pending-approvals.timer`를 켠다. 현재 대기 건수가 0이면 명령이 메일을 보내지 않으므로, 시험 발송은 같은 SMTP 연결로 별도 메일을 한 번 보내 확인한다.
+앱 비밀번호는 `ops/set_admin_digest_gmail.py`의 표준 입력으로만 전달해 `/etc/waki.env`에 설치한다. 이 스크립트는 기존 파일의 소유자와 권한을 유지하고 이전 SES 전용 발신 설정을 제거한다. 비밀값을 명령 인수나 로그에 넣지 않는다.
+
+설정 후 `send_pending_approvals_digest --test-email`로 대기 건수와 관계없이 시험 메일을 한 번 보내 수신 여부를 확인한 뒤에만 `waki-pending-approvals.timer`를 켠다.

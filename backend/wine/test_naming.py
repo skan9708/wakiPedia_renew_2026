@@ -155,6 +155,18 @@ class PendingApprovalDigestTests(TestCase):
         with self.assertRaisesMessage(CommandError, "Gmail digest delivery is incomplete"):
             call_command("send_pending_approvals_digest")
 
+    @override_settings(
+        EMAIL_RECOVERY_ENABLED=False, ADMIN_DIGEST_EMAILS=["wakipedia1682@gmail.com"],
+        ADMIN_DIGEST_SES_FROM_EMAIL="", ADMIN_DIGEST_GMAIL_USER="wakipedia1682@gmail.com",
+        ADMIN_DIGEST_GMAIL_APP_PASSWORD="example-app-password",
+    )
+    @patch("wine.management.commands.send_pending_approvals_digest.send_digest_via_gmail")
+    def test_explicit_test_email_works_without_pending_approvals(self, send):
+        call_command("send_pending_approvals_digest", test_email=True)
+        send.assert_called_once()
+        self.assertEqual(send.call_args.args[0], "wakipedia1682@gmail.com")
+        self.assertIn("시험", send.call_args.args[1])
+
     def test_message_does_not_include_user_data(self):
         body = digest_body({"duplicates": 1, "countries": 2, "grapes": 3})
         self.assertIn("원산지·품종", body)
