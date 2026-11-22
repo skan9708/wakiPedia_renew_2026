@@ -106,9 +106,9 @@ export function AddToHomeScreen({ variant }: { variant: 'menu' | 'guide' }) {
             </div>
             {phone === 'ios' ? (
               <ol className="mt-5 space-y-3 text-sm leading-6">
-                <li><strong className="mr-2 text-[#7b8b11]">1</strong>사파리·크롬 등에서 와키피디아를 열어요.</li>
+                <li><strong className="mr-2 text-[#7b8b11]">1</strong>사파리에서 와키피디아를 열어요.</li>
                 <li><strong className="mr-2 text-[#7b8b11]">2</strong>브라우저의 <b>공유</b> 버튼을 누르고 <b>홈 화면에 추가</b>를 골라요.</li>
-                <li><strong className="mr-2 text-[#7b8b11]">3</strong>오른쪽 위 <b>추가</b>를 누르면 완료돼요.</li>
+                <li><strong className="mr-2 text-[#7b8b11]">3</strong><b>웹앱으로 열기</b>가 보이면 켜고 <b>추가</b>를 눌러요.</li>
               </ol>
             ) : (
               <ol className="mt-5 space-y-3 text-sm leading-6">
