@@ -184,9 +184,9 @@ function AdminLogin() {
 
 const NAV_ITEMS = [
   { to: '/admin-panel/feedback', label: '피드백 관리', icon: '💬' },
-  { to: '/admin-panel/wines', label: '와인 관리', icon: '🍷' },
   { to: '/admin-panel/catalog-terms', label: '원산지·품종 승인', icon: '🔔' },
   { to: '/admin-panel/duplicates', label: '중복 의심 와인', icon: '🔎' },
+  { to: '/admin-panel/wines', label: '와인 관리', icon: '🍷' },
   { to: '/admin-panel/reviews', label: '리뷰 관리', icon: '📝' },
   { to: '/admin-panel/users', label: '유저 관리', icon: '👤' },
   { to: '/admin-panel/tags', label: '태그 관리', icon: '🏷️' },
@@ -236,27 +236,31 @@ function AdminLayout() {
           <div className="text-xs text-gray-400 mt-0.5">관리자 패널</div>
         </div>
         <nav className="flex-1 py-3 space-y-0.5 px-2">
-          {NAV_ITEMS.map(({ to, label, icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? 'bg-[#c84b31]/10 text-[#c84b31] font-medium'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`
-              }
-            >
-              <span>{icon}</span>
-              {label}
-              {to === '/admin-panel/catalog-terms' && pendingTermCount > 0 && (
-                <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">{pendingTermCount}</span>
+          {NAV_ITEMS.map(({ to, label, icon }, index) => (
+            <div key={to}>
+              {(index === 0 || index === 3) && (
+                <p className="px-3 pb-1 pt-4 text-xs font-semibold text-gray-400">{index === 0 ? '승인·검토' : '관리'}</p>
               )}
-              {to === '/admin-panel/duplicates' && pendingDuplicateCount > 0 && (
-                <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">{pendingDuplicateCount}</span>
-              )}
-            </NavLink>
+              <NavLink
+                to={to}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    isActive
+                      ? 'bg-[#c84b31]/10 text-[#c84b31] font-medium'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`
+                }
+              >
+                <span>{icon}</span>
+                {label}
+                {to === '/admin-panel/catalog-terms' && pendingTermCount > 0 && (
+                  <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">{pendingTermCount}</span>
+                )}
+                {to === '/admin-panel/duplicates' && pendingDuplicateCount > 0 && (
+                  <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">{pendingDuplicateCount}</span>
+                )}
+              </NavLink>
+            </div>
           ))}
         </nav>
         <div className="px-4 py-3 border-t border-gray-100">

@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
-from django.db.models import Count, OuterRef, Q, Subquery
+from django.db.models import Count, F, OuterRef, Q, Subquery
+from django.utils.dateparse import parse_date
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -154,7 +155,9 @@ class AdminWineListView(APIView):
         if err:
             return err
 
-        qs = Wine.objects.filter(catalog_visible=True).select_related("country").order_by("-created_at")
+        qs = Wine.objects.filter(catalog_visible=True).select_related("country").annotate(
+            review_count=Count("reviews")
+        )
 
         q = request.query_params.get("q", "")
         wine_type = request.query_params.get("type", "")
@@ -162,6 +165,24 @@ class AdminWineListView(APIView):
             qs = (qs.filter(kor_name__icontains=q) | qs.filter(eng_name__icontains=q)).distinct()
         if wine_type:
             qs = qs.filter(type=wine_type)
+        country = request.query_params.get("country", "").strip()
+        if country:
+            qs = qs.filter(country__kor_name__icontains=country)
+        for param, lookup in (("date_from", "created_at__date__gte"), ("date_to", "created_at__date__lte")):
+            date = parse_date(request.query_params.get(param, ""))
+            if date:
+                qs = qs.filter(**{lookup: date})
+        ordering = {
+            "newest": ("-created_at", "-id"),
+            "oldest": ("created_at", "id"),
+            "name_asc": ("kor_name", "id"),
+            "name_desc": ("-kor_name", "-id"),
+            "reviews_desc": ("-review_count", "-created_at", "-id"),
+            "reviews_asc": ("review_count", "-created_at", "-id"),
+            "rating_desc": (F("bubble_avg_rating").desc(nulls_last=True), "-id"),
+            "rating_asc": (F("bubble_avg_rating").asc(nulls_last=True), "id"),
+        }
+        qs = qs.order_by(*ordering.get(request.query_params.get("sort", "newest"), ordering["newest"]))
 
         try:
             page = max(1, int(request.query_params.get("page", 1)))
@@ -186,6 +207,7 @@ class AdminWineListView(APIView):
                 "country": w.country.kor_name if w.country else "",
                 "imageUrl": img,
                 "bubbleAvgRating": w.bubble_avg_rating,
+                "reviewCount": w.review_count,
                 "createdAt": w.created_at.isoformat(),
             })
         return Response({"results": results, "total": total, "page": page, "hasNext": end < total})
@@ -350,7 +372,7 @@ class AdminReviewListView(APIView):
         if err:
             return err
 
-        qs = WineReview.objects.select_related("wine", "user").order_by("-created_at")
+        qs = WineReview.objects.select_related("wine", "user")
 
         q = request.query_params.get("q", "")
         wine_id = request.query_params.get("wine_id", "")
@@ -362,6 +384,25 @@ class AdminReviewListView(APIView):
             ).distinct()
         if wine_id:
             qs = qs.filter(wine_id=wine_id)
+        visibility = request.query_params.get("visibility", "")
+        if visibility in ("public", "private"):
+            qs = qs.filter(is_public=visibility == "public")
+        for param, lookup in (("date_from", "created_at__date__gte"), ("date_to", "created_at__date__lte")):
+            date = parse_date(request.query_params.get(param, ""))
+            if date:
+                qs = qs.filter(**{lookup: date})
+        sort = request.query_params.get("sort", "newest")
+        if sort in ("helpful_desc", "helpful_asc"):
+            qs = qs.annotate(helpful_count=Count("likes"))
+        ordering = {
+            "newest": ("-created_at", "-id"),
+            "oldest": ("created_at", "id"),
+            "rating_desc": ("-rating", "-created_at", "-id"),
+            "rating_asc": ("rating", "-created_at", "-id"),
+            "helpful_desc": ("-helpful_count", "-created_at", "-id"),
+            "helpful_asc": ("helpful_count", "-created_at", "-id"),
+        }
+        qs = qs.order_by(*ordering.get(sort, ordering["newest"]))
 
         try:
             page = max(1, int(request.query_params.get("page", 1)))

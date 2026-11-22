@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { DateRangeFields, SortHeader } from './AdminListFilters';
 
 export type Review = {
   id: number;
@@ -258,26 +259,38 @@ export function AdminReviews() {
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
   const [qInput, setQInput] = useState('');
+  const [visibility, setVisibility] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sort, setSort] = useState('newest');
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState<Review | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [delId, setDelId] = useState<number | null>(null);
   const navigate = useNavigate();
+  const requestId = useRef(0);
 
   const limit = 20;
 
   const load = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     try {
       const params: any = { page, limit };
       if (q) params.q = q;
+      if (visibility) params.visibility = visibility;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+      params.sort = sort;
       const { data } = await api.get('/admin/reviews/', { params });
-      setReviews(data.results);
-      setTotal(data.total);
+      if (currentRequest === requestId.current) {
+        setReviews(data.results);
+        setTotal(data.total);
+      }
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
-  }, [page, q]);
+  }, [page, q, visibility, dateFrom, dateTo, sort]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -286,6 +299,8 @@ export function AdminReviews() {
     setQ(qInput);
     setPage(1);
   };
+
+  const changeSort = (value: string) => { setSort(value); setPage(1); };
 
   const onDelete = async (id: number) => {
     await api.delete(`/admin/reviews/${id}/`);
@@ -307,7 +322,8 @@ export function AdminReviews() {
         </button>
       </div>
 
-      <form onSubmit={onSearch} className="flex gap-2 mb-4">
+      <div className="mb-4 space-y-2 rounded-xl border border-gray-200 bg-white p-3">
+      <form onSubmit={onSearch} className="flex gap-2">
         <input
           value={qInput}
           onChange={(e) => setQInput(e.target.value)}
@@ -316,19 +332,27 @@ export function AdminReviews() {
         />
         <button type="submit" className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50">검색</button>
       </form>
+      <div className="flex flex-wrap items-center gap-3">
+        <select aria-label="공개 여부 필터" value={visibility} onChange={e => { setVisibility(e.target.value); setPage(1); }} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm">
+          <option value="">전체 리뷰</option><option value="public">공개</option><option value="private">나만 보기</option>
+        </select>
+        <DateRangeFields from={dateFrom} to={dateTo} label="리뷰 작성일" onFrom={value => { setDateFrom(value); setPage(1); }} onTo={value => { setDateTo(value); setPage(1); }} />
+        <button type="button" onClick={() => { setQ(''); setQInput(''); setVisibility(''); setDateFrom(''); setDateTo(''); setSort('newest'); setPage(1); }} className="text-xs text-gray-500 underline">필터 초기화</button>
+      </div>
+      </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs">
             <tr>
               <th className="whitespace-nowrap text-left px-4 py-3 w-10">ID</th>
               <th className="whitespace-nowrap text-left px-4 py-3">와인</th>
               <th className="whitespace-nowrap text-left px-4 py-3 w-24">작성자</th>
-              <th className="whitespace-nowrap text-left px-4 py-3 w-16">평점</th>
+              <SortHeader label="평점" sort={sort} asc="rating_asc" desc="rating_desc" onSort={changeSort} className="w-16" />
               <th className="whitespace-nowrap text-left px-4 py-3">내용</th>
               <th className="whitespace-nowrap text-left px-4 py-3 w-14">공개</th>
-              <th className="whitespace-nowrap text-left px-4 py-3 w-14">좋아요</th>
-              <th className="whitespace-nowrap text-left px-4 py-3 w-24">날짜</th>
+              <SortHeader label="도움이 돼요" sort={sort} asc="helpful_asc" desc="helpful_desc" onSort={changeSort} className="w-24" />
+              <SortHeader label="작성일" sort={sort} asc="oldest" desc="newest" onSort={changeSort} className="w-24" />
               <th className="whitespace-nowrap text-left px-4 py-3 w-20">관리</th>
             </tr>
           </thead>

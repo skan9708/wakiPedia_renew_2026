@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.utils.dateparse import parse_date
 from rest_framework import serializers
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
@@ -57,11 +58,28 @@ class AdminUserListView(APIView):
             return err
 
         from django.db.models import Count
-        qs = User.objects.annotate(review_count=Count("wine_reviews")).order_by("-created_at")
+        qs = User.objects.annotate(review_count=Count("wine_reviews"))
 
         q = request.query_params.get("q", "")
         if q:
             qs = (qs.filter(email__icontains=q) | qs.filter(nickname__icontains=q)).distinct()
+        account_status = request.query_params.get("status", "")
+        if account_status in ("active", "inactive"):
+            qs = qs.filter(is_active=account_status == "active")
+        role = request.query_params.get("role", "")
+        if role in ("staff", "member"):
+            qs = qs.filter(is_staff=role == "staff")
+        for param, lookup in (("date_from", "created_at__date__gte"), ("date_to", "created_at__date__lte")):
+            date = parse_date(request.query_params.get(param, ""))
+            if date:
+                qs = qs.filter(**{lookup: date})
+        ordering = {
+            "newest": ("-created_at", "-id"),
+            "oldest": ("created_at", "id"),
+            "reviews_desc": ("-review_count", "-created_at", "-id"),
+            "reviews_asc": ("review_count", "-created_at", "-id"),
+        }
+        qs = qs.order_by(*ordering.get(request.query_params.get("sort", "newest"), ordering["newest"]))
 
         try:
             page = max(1, int(request.query_params.get("page", 1)))
