@@ -63,6 +63,26 @@ class WineImageSimilarityTests(TestCase):
         self.assertTrue(Wine.objects.get(pk=wine.pk).image_hash)
         get.assert_called_once()
 
+    @override_settings(AWS_S3_CUSTOM_DOMAIN="wakipedia-media.s3.ap-northeast-2.amazonaws.com")
+    @patch("wine.image_similarity.requests.get")
+    def test_admin_photo_change_replaces_stale_fingerprint(self, get):
+        wine = Wine.objects.create(kor_name="사진 교체", eng_name="Changed Photo", type="red")
+        old_hash = fingerprint(io.BytesIO(photo_bytes()))
+        Wine.objects.filter(pk=wine.pk).update(
+            image_hash=old_hash[0], image_crop_hash=old_hash[1], image_color=old_hash[2],
+        )
+        response = Mock(status_code=200, headers={"Content-Type": "image/jpeg"})
+        response.iter_content.return_value = [photo_bytes(different=True)]
+        get.return_value = response
+        staff_client = APIClient()
+        staff_client.force_authenticate(user=self.staff)
+        result = staff_client.put(f"/api/admin/wines/{wine.pk}/", {
+            "imageUrl": "https://wakipedia-media.s3.ap-northeast-2.amazonaws.com/wines/replaced.jpg",
+        }, format="json")
+        self.assertEqual(result.status_code, 200)
+        wine.refresh_from_db()
+        self.assertNotEqual(wine.image_hash, old_hash[0])
+
     def test_photo_only_match_enters_admin_queue_without_merging(self):
         target = Wine.objects.create(kor_name="기존 이름", eng_name="Original Bottle", type="red")
         target.image.save("target.jpg", ContentFile(photo_bytes()), save=True)

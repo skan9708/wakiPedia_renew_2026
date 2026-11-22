@@ -8,6 +8,7 @@ from rest_framework import serializers, status
 from user.models import User
 from wine.models import Wine, WineReview, Tag, Country, GrapeVariety, WineDuplicateCandidate
 from wine.image_utils import public_review_image_names, wine_display_image_url
+from wine.image_similarity import save_wine_fingerprint
 from wine.review_images import protect_review_images, publish_review_images, review_image_url
 from wine.duplicate_review import DuplicateMergeError, decide_duplicate
 from wine.suggestions import queue_duplicate_candidates, suggestion_score
@@ -234,6 +235,8 @@ class AdminWineListView(APIView):
             bubble_avg_rating=bubble_avg,
             registered_by=request.user,
         )
+        if image_url:
+            save_wine_fingerprint(wine, include_remote=True)
         queue_duplicate_candidates(wine)
         return Response({
             "id": wine.id,
@@ -311,8 +314,13 @@ class AdminWineDetailView(APIView):
             w.eng_name = request.data["engName"]
         if "type" in request.data:
             w.type = (request.data["type"] or "").lower()
+        image_changed = "imageUrl" in request.data and (request.data["imageUrl"] or "") != w.image_url
         if "imageUrl" in request.data:
             w.image_url = request.data["imageUrl"] or ""
+        if image_changed and not w.image:
+            w.image_hash = ""
+            w.image_crop_hash = ""
+            w.image_color = ""
         if "bubbleAvgRating" in request.data:
             v = request.data["bubbleAvgRating"]
             w.bubble_avg_rating = round(float(v), 1) if v not in (None, "") else None
@@ -326,6 +334,9 @@ class AdminWineDetailView(APIView):
             else:
                 w.country = None
         w.save()
+        if image_changed and not w.image:
+            save_wine_fingerprint(w, include_remote=True)
+            queue_duplicate_candidates(w)
         return Response({"id": w.id, "korName": w.kor_name, "engName": w.eng_name})
 
     def delete(self, request, pk):
