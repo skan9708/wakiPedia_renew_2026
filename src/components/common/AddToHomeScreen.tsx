@@ -69,7 +69,7 @@ export function AddToHomeScreen({ variant }: { variant: 'menu' | 'guide' }) {
         <button
           type="button"
           onClick={onAdd}
-          className="flex w-full items-center gap-3 rounded px-3 py-3 text-left text-sm text-fg hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          className="flex w-full items-center gap-3 rounded-lg bg-[#eef1d2] px-3 py-3 text-left text-sm font-semibold text-[#566400] hover:bg-[#e4eab9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7b8b11] dark:bg-[#30391d] dark:text-[#d8e027] dark:hover:bg-[#3d4925]"
         >
           <Smartphone className="h-5 w-5" aria-hidden="true" />
           <span>홈 화면에 추가</span>
