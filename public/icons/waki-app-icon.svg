@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 200 200" role="img" aria-labelledby="title">
+  <title id="title">와키피디아 와인잔과 연필 아이콘</title>
+  <rect width="200" height="200" fill="#161b23"/>
+  <defs>
+    <filter id="shadow" x="-30%" y="-20%" width="160%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="1" stdDeviation="2.7" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+  <g transform="translate(-15 -15) scale(2.1)" filter="url(#shadow)" fill="#a7b621">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M56.9859 17.25H52.4859V21.8954H44.4569C36.207 29.3954 32.4571 44.0204 36.207 49.6454C39.4619 54.5278 45.5422 57.4326 52.4859 58.1144V83.8486L54.7359 90.75L56.9859 83.8486V58.2417C64.129 57.9233 71.6674 54.9573 74.082 49.6454C77.832 41.3954 73.3318 29.0204 66.2069 21.8954H56.9859V17.25ZM56.9859 21.8954H52.4859V58.1144C53.542 58.2181 54.618 58.2704 55.7071 58.2704C56.1311 58.2704 56.5578 58.2608 56.9859 58.2417V21.8954Z"/>
+    <path d="M67.75 92.25H42.25" stroke="#a7b621" stroke-width="3"/>
+  </g>
+</svg>
