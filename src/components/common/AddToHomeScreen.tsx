@@ -9,7 +9,7 @@ function initialPhone(): Phone {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'ios' : 'android';
 }
 
-export function AddToHomeScreen({ variant }: { variant: 'home' | 'guide' }) {
+export function AddToHomeScreen({ variant }: { variant: 'menu' | 'guide' }) {
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState<Phone>(initialPhone);
   const [available, setAvailable] = useState(canPromptInstall);
@@ -63,25 +63,17 @@ export function AddToHomeScreen({ variant }: { variant: 'home' | 'guide' }) {
     }
   };
 
-  if (variant === 'home' && installed) return null;
-
   return (
     <>
-      {variant === 'home' ? (
-        <section className="mx-auto w-full max-w-mobile px-6 py-2" aria-label="홈 화면에 와키피디아 추가">
-          <div className="flex items-center gap-3 rounded-2xl border border-[#a7b621]/45 bg-[#202a24] p-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#a7b621] text-[#17200c]">
-              <Smartphone className="h-6 w-6" aria-hidden="true" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold">와키를 홈 화면에 추가해요</h2>
-              <p className="mt-0.5 text-xs text-white/70">와인 찾고 기록할 때 바로 열 수 있어요.</p>
-            </div>
-            <button type="button" onClick={onAdd} className="shrink-0 rounded-lg bg-[#a7b621] px-3 py-2 text-xs font-semibold text-[#17200c]">
-              추가하기
-            </button>
-          </div>
-        </section>
+      {variant === 'menu' ? (
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex w-full items-center gap-3 rounded px-3 py-3 text-left text-sm text-fg hover:bg-neutral-100 dark:hover:bg-neutral-800"
+        >
+          <Smartphone className="h-5 w-5" aria-hidden="true" />
+          <span>홈 화면에 추가</span>
+        </button>
       ) : (
         <section aria-labelledby="home-screen-title" className="rounded-2xl border border-[#d9df9c] bg-[#f6f7e9] p-5">
           <div className="flex items-start gap-3">

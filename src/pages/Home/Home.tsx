@@ -3,7 +3,6 @@ import { ArrowRight } from 'lucide-react';
 import SearchBar from '@/components/common/SearchBar';
 import { WineType } from '@/lib/types';
 import logoIcon from '@/assets/icons/icon.svg';
-import { AddToHomeScreen } from '@/components/common/AddToHomeScreen';
 
 function BottleIcon({ className }: { className?: string }) {
   return (
@@ -104,7 +103,6 @@ export function Home() {
         <span>와인 기록을 함께 채워가는 곳, 와키피디아</span>
         <span className="flex shrink-0 items-center gap-1 text-accent">소개 <ArrowRight className="h-4 w-4" aria-hidden="true" /></span>
       </Link>
-      <AddToHomeScreen variant="home" />
 
       {/* 와인 카테고리 섹션 */}
       <section className="px-6 pt-4 pb-8 page-container">
