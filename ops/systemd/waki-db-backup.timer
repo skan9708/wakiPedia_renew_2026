@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Wakipedia database backup
+
+[Timer]
+OnCalendar=*-*-* 18:00:00 UTC
+Persistent=true
+Unit=waki-db-backup.service
+
+[Install]
+WantedBy=timers.target

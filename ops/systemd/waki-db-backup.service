@@ -1,0 +1,7 @@
+[Unit]
+Description=Back up Wakipedia SQLite database
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/waki/backend/venv/bin/python /home/ubuntu/waki/scripts/backup_waki_db.py
