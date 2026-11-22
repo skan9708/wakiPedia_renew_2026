@@ -174,7 +174,12 @@ class WineDetailView(APIView):
             wine.country = country
         if request.FILES.get("image"):
             wine.image = request.FILES["image"]
+            wine.image_hash = ""
+            wine.image_crop_hash = ""
+            wine.image_color = ""
         wine.save()
+        if request.FILES.get("image"):
+            queue_duplicate_candidates(wine)
         return Response(WineDetailSerializer(wine, context={"request": request}).data)
 
     def delete(self, request, pk):

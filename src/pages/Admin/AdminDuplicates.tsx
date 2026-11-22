@@ -16,6 +16,8 @@ type WineSummary = {
 type Candidate = {
   id: number;
   score: number;
+  nameScore: number;
+  imageScore: number | null;
   createdAt: string;
   source: WineSummary;
   target: WineSummary;
@@ -23,7 +25,7 @@ type Candidate = {
 
 const T = {
   title: '\uc911\ubcf5 \uc758\uc2ec \uc640\uc778 \uac80\ud1a0',
-  intro: '\uc0c8\ub85c \ub4f1\ub85d\ub41c \uc640\uc778\uacfc \uae30\uc874 \uc640\uc778\uc744 \ube44\uad50\ud574 \uc8fc\uc138\uc694. \ube44\uc2b7\ud55c \uc774\ub984\ub9cc\uc73c\ub85c\ub294 \ud1b5\ud569\ub418\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.',
+  intro: '\uc0c8\ub85c \ub4f1\ub85d\ub41c \uc640\uc778\uacfc \uae30\uc874 \uc640\uc778\uc744 \ube44\uad50\ud574 \uc8fc\uc138\uc694. \uc774\ub984\uacfc \uc0ac\uc9c4 \uc720\uc0ac\ub3c4\ub294 \uac80\ud1a0 \ud6c4\ubcf4\ub97c \ucc3e\uae30 \uc704\ud55c \ucc38\uace0\uc6a9\uc774\uba70, \uc790\ub3d9\uc73c\ub85c \ud1b5\ud569\ub418\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.',
   empty: '\uac80\ud1a0\ud560 \uc911\ubcf5 \uc758\uc2ec \uc640\uc778\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.',
   loading: '\ubd88\ub7ec\uc624\ub294 \uc911...',
   loadError: '\ud6c4\ubcf4\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.',
@@ -41,6 +43,7 @@ const T = {
   merge: '\uac19\uc740 \uc640\uc778\uc73c\ub85c \ud1b5\ud569',
   noInfo: '\ubbf8\uc785\ub825',
   score: '\uc774\ub984 \uc720\uc0ac\ub3c4',
+  imageScore: '\uc0ac\uc9c4 \ud2b9\uc9d5 \uc720\uc0ac\ub3c4',
   caution: '\ud1b5\ud569\ud558\uba74 \uc0c8 \uc640\uc778\uc758 \ub9ac\ubdf0\uc640 \ucc1c\uc774 \uae30\uc874 \uc640\uc778\uc73c\ub85c \uc62e\uaca8\uc9c0\uace0, \uc0c8 \uc640\uc778 \uc8fc\uc18c\ub294 \uae30\uc874 \uc640\uc778\uc73c\ub85c \uc5f0\uacb0\ub429\ub2c8\ub2e4. \uc0ac\uc9c4\u00b7\ub77c\ubca8\u00b7\ube48\ud2f0\uc9c0\uae4c\uc9c0 \uc9c1\uc811 \ud655\uc778\ud574 \uc8fc\uc138\uc694.',
   conflict: '\uc885\ub958\ub098 \uc6d0\uc0b0\uc9c0, \ud488\uc885\uc774 \ub2e4\ub985\ub2c8\ub2e4. \uc815\ubcf4\ub97c \uc218\uc815\ud558\uac70\ub098 \ub2e4\ub978 \uc640\uc778\uc73c\ub85c \ucc98\ub9ac\ud574 \uc8fc\uc138\uc694.',
   mergeConfirm: '\ub450 \uc640\uc778\uc758 \uc0ac\uc9c4\uacfc \uc774\ub984, \uc885\ub958, \uc6d0\uc0b0\uc9c0, \ud488\uc885\uc744 \ud655\uc778\ud588\ub098\uc694? \uc0c8 \uc640\uc778\uc758 \ub9ac\ubdf0\uc640 \ucc1c\uc744 \uae30\uc874 \uc640\uc778\uc73c\ub85c \uc62e\uae41\ub2c8\ub2e4.',
@@ -136,7 +139,11 @@ export function AdminDuplicates() {
             );
             return (
               <article key={item.id} className="rounded-2xl bg-white p-5 shadow-sm">
-                <p className="mb-4 text-sm text-gray-500">{T.score} {Math.min(100, Math.round(item.score * 100))}% / {item.createdAt.slice(0, 10)}</p>
+                <p className="mb-4 text-sm text-gray-500">
+                  {item.nameScore > 0 && <span className="mr-3">{T.score} {Math.min(100, Math.round(item.nameScore * 100))}%</span>}
+                  {item.imageScore !== null && <span className="mr-3">{T.imageScore} {Math.round(item.imageScore * 100)}%</span>}
+                  <span>{item.createdAt.slice(0, 10)}</span>
+                </p>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <WineCard wine={item.source} title={T.newWine} />
                   <WineCard wine={item.target} title={T.existingWine} />

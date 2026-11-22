@@ -7,6 +7,7 @@ from difflib import SequenceMatcher
 from django.db.models import F, Q, Value
 from django.db.models.functions import Length, Replace
 
+from wine.image_similarity import image_similarity, save_wine_fingerprint
 from wine.models import Wine, WineDuplicateCandidate
 
 
@@ -139,10 +140,36 @@ def ranked_wine_ids(name_eng, name_kr, *, wine_type="", country="", exclude_id=N
 def queue_duplicate_candidates(wine):
     """Queue plausible matches for a human; registration never merges automatically."""
     country = wine.country.kor_name if wine.country_id else ""
-    for score, target_id in ranked_wine_ids(
+    name_matches = {target_id: score for score, target_id in ranked_wine_ids(
         wine.eng_name, wine.kor_name, wine_type=wine.type,
         country=country, exclude_id=wine.pk, minimum=0.85,
-    ):
-        WineDuplicateCandidate.objects.get_or_create(
-            source=wine, target_id=target_id, defaults={"score": score},
+    )}
+    # A newly uploaded photo is available after Wine.objects.create() saves it.
+    if wine.image and not wine.image_hash:
+        save_wine_fingerprint(wine)
+    image_matches = {}
+    if wine.image_hash and wine.image_crop_hash and wine.image_color:
+        candidates = Wine.objects.filter(catalog_visible=True).exclude(pk=wine.pk).exclude(image_hash="")
+        if wine.type:
+            candidates = candidates.filter(type=wine.type)
+        for target in candidates.only("id", "image_hash", "image_crop_hash", "image_color", "country_id").iterator(chunk_size=500):
+            if wine.country_id and target.country_id and wine.country_id != target.country_id:
+                continue
+            score = image_similarity(wine, target)
+            if score is not None:
+                image_matches[target.pk] = score
+        image_matches = dict(sorted(image_matches.items(), key=lambda item: item[1], reverse=True)[:5])
+    for target_id in set(name_matches) | set(image_matches):
+        name_score = name_matches.get(target_id, 0)
+        image_score = image_matches.get(target_id)
+        score = max(name_score, image_score or 0)
+        candidate, created = WineDuplicateCandidate.objects.get_or_create(
+            source=wine, target_id=target_id,
+            defaults={"score": score, "image_score": image_score},
         )
+        if not created and candidate.status == "pending" and (
+            score > candidate.score or (image_score is not None and (candidate.image_score is None or image_score > candidate.image_score))
+        ):
+            candidate.score = max(score, candidate.score)
+            candidate.image_score = max(image_score or 0, candidate.image_score or 0) or None
+            candidate.save(update_fields=["score", "image_score", "updated_at"])

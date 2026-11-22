@@ -8,6 +8,8 @@ from rest_framework.views import APIView
 from wine.models import Wine, WineReview, WineReviewImage
 from wine.serializers import ReviewSerializer, ReviewCreateSerializer
 from wine.review_images import protect_review_images, publish_review_images, validate_review_photos
+from wine.image_similarity import save_wine_fingerprint
+from wine.suggestions import queue_duplicate_candidates
 
 
 class ReviewListView(APIView):
@@ -68,6 +70,9 @@ class ReviewListView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         review = serializer.save()
+        if review.is_public and images and not (review.wine.image or review.wine.image_url or review.wine.image_hash):
+            if save_wine_fingerprint(review.wine):
+                queue_duplicate_candidates(review.wine)
         return Response(
             ReviewSerializer(review, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -134,6 +139,10 @@ class ReviewDetailView(APIView):
                 WineReviewImage.objects.create(review=review, image=image_file)
             else:
                 WineReviewImage.objects.create(review=review, private_image=image_file)
+
+        if review.is_public and not (review.wine.image or review.wine.image_url or review.wine.image_hash):
+            if save_wine_fingerprint(review.wine):
+                queue_duplicate_candidates(review.wine)
 
         feels = request.data.getlist("feels") if hasattr(request.data, "getlist") and "feels" in request.data else request.data.get("feels")
         if feels is not None:

@@ -70,7 +70,13 @@ def decide_duplicate(candidate_id, *, approved, reviewer, confirm_target_id=None
     if not target.image and not target.image_url:
         target.image = source.image
         target.image_url = source.image_url
-    target.save(update_fields=["search_aliases", "image", "image_url", "updated_at"])
+        if source.image_hash and not target.image_hash:
+            target.image_hash = source.image_hash
+            target.image_crop_hash = source.image_crop_hash
+            target.image_color = source.image_color
+    target.save(update_fields=[
+        "search_aliases", "image", "image_url", "image_hash", "image_crop_hash", "image_color", "updated_at",
+    ])
     if not target.grape_varieties.exists() and source_grapes:
         target.grape_varieties.set(source_grapes)
     Wine.objects.filter(pk__in=[wine.pk for wine in descendants]).update(canonical_wine=target)

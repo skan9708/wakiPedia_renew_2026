@@ -77,6 +77,9 @@ class Wine(BaseModel):
     grape_varieties = models.ManyToManyField(GrapeVariety, related_name="wines", blank=True)
     image = models.ImageField("와인 이미지", upload_to="wines/", null=True, blank=True)
     image_url = models.URLField("외부 이미지 URL", blank=True, default="")
+    image_hash = models.CharField(max_length=16, blank=True, default="", db_index=True)
+    image_crop_hash = models.CharField(max_length=16, blank=True, default="")
+    image_color = models.CharField(max_length=6, blank=True, default="")
     bubble_avg_rating = models.FloatField("버블 평균 평점", null=True, blank=True)
     catalog_visible = models.BooleanField(default=True, db_index=True)
     canonical_wine = models.ForeignKey(
@@ -105,6 +108,7 @@ class WineDuplicateCandidate(BaseModel):
     source = models.ForeignKey(Wine, on_delete=models.CASCADE, related_name="duplicate_candidates")
     target = models.ForeignKey(Wine, on_delete=models.CASCADE, related_name="duplicate_targets")
     score = models.FloatField()
+    image_score = models.FloatField(null=True, blank=True)
     status = models.CharField(
         max_length=12,
         choices=(("pending", "검토 대기"), ("merged", "통합"), ("rejected", "별개"), ("closed", "종료")),
