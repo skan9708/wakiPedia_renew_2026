@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
-import { DateRangeFields, SortHeader } from './AdminListFilters';
+import { ColumnFilterRow, downloadAdminExcel, SortHeader, useDebouncedValue, type ColumnFilter } from './AdminListFilters';
 
 export type Wine = {
   id: number;
@@ -123,13 +123,15 @@ export function AdminWines() {
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
   const [qInput, setQInput] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [country, setCountry] = useState('');
-  const [countryInput, setCountryInput] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const appliedFilters = useDebouncedValue(filters);
+  const [countries, setCountries] = useState<string[]>([]);
+  const [types, setTypes] = useState<string[]>([]);
+  const [ratings, setRatings] = useState<string[]>([]);
   const [sort, setSort] = useState('newest');
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editWine, setEditWine] = useState<Wine | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
@@ -142,33 +144,66 @@ export function AdminWines() {
     const currentRequest = ++requestId.current;
     setLoading(true);
     try {
-      const params: any = { page, limit };
+      const params: Record<string, string | number> = { page, limit, sort, ...appliedFilters };
       if (q) params.q = q;
-      if (typeFilter) params.type = typeFilter;
-      if (country) params.country = country;
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
-      params.sort = sort;
       const { data } = await api.get('/admin/wines/', { params });
       if (currentRequest === requestId.current) {
         setWines(data.results);
         setTotal(data.total);
+        setError('');
       }
+    } catch {
+      if (currentRequest === requestId.current) setError('와인 목록을 불러오지 못했습니다.');
     } finally {
       if (currentRequest === requestId.current) setLoading(false);
     }
-  }, [page, q, typeFilter, country, dateFrom, dateTo, sort]);
+  }, [page, q, appliedFilters, sort]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    api.get('/admin/wines/', { params: { options: 1 } })
+      .then(({ data }) => {
+        setCountries(data.countries ?? []);
+        setTypes(data.types ?? []);
+        setRatings((data.ratings ?? []).map(String));
+      })
+      .catch(() => setError('필터 선택지를 불러오지 못했습니다.'));
+  }, []);
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setQ(qInput);
-    setCountry(countryInput);
     setPage(1);
   };
 
   const changeSort = (value: string) => { setSort(value); setPage(1); };
+  const changeFilter = (key: string, value: string) => {
+    setFilters(previous => ({ ...previous, [key]: value }));
+    setPage(1);
+  };
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      await downloadAdminExcel('/admin/wines/', { ...appliedFilters, sort, ...(q ? { q } : {}) }, '와키_와인목록.xlsx');
+      setError('');
+    } catch {
+      setError('엑셀 파일을 내려받지 못했습니다. 다시 시도해 주세요.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const filterColumns: ColumnFilter[] = [
+    { label: 'ID', key: 'id', kind: 'number' },
+    { label: '한글명', key: 'kor_name' },
+    { label: '영문명', key: 'eng_name' },
+    { label: '타입', key: 'type', kind: 'select', options: [...types.map(value => ({ value, label: TYPE_LABELS[value] ?? value })), { value: 'none', label: '미분류' }] },
+    { label: '국가', key: 'country', kind: 'select', options: [...countries.map(value => ({ value, label: value })), { value: 'none', label: '미입력' }] },
+    { label: '리뷰 수', key: 'review_count', kind: 'number' },
+    { label: '평점', key: 'rating', kind: 'select', options: [...ratings.map(value => ({ value, label: value })), { value: 'none', label: '평점 없음' }] },
+    { label: '등록일', key: 'date_from', kind: 'date' },
+    { label: '관리' },
+  ];
 
   const onDelete = async (id: number) => {
     await api.delete(`/admin/wines/${id}/`);
@@ -190,8 +225,7 @@ export function AdminWines() {
         </button>
       </div>
 
-      {/* Search / Filter */}
-      <div className="mb-4 space-y-2 rounded-xl border border-gray-200 bg-white p-3">
+      <div className="mb-4 rounded-xl border border-gray-200 bg-white p-3">
         <form onSubmit={onSearch} className="flex flex-wrap gap-2">
           <input
             value={qInput}
@@ -199,25 +233,13 @@ export function AdminWines() {
             placeholder="와인명 검색..."
             className="min-w-44 flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#c84b31]"
           />
-          <input value={countryInput} onChange={e => setCountryInput(e.target.value)} placeholder="원산지 검색" aria-label="원산지 검색" className="w-32 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#c84b31]" />
           <button type="submit" className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50">검색</button>
+          <button type="button" onClick={() => { setQ(''); setQInput(''); setFilters({}); setSort('newest'); setPage(1); }} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm">초기화</button>
+          <button type="button" onClick={exportExcel} disabled={exporting} className="rounded-lg bg-[#a4b51c] px-3 py-1.5 text-sm text-white disabled:opacity-50">{exporting ? '내려받는 중...' : '엑셀 다운로드'}</button>
         </form>
-        <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={typeFilter}
-          onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none"
-        >
-          <option value="">전체 타입</option>
-          <option value="red">레드</option>
-          <option value="white">화이트</option>
-          <option value="sparkling">스파클링</option>
-          <option value="rose">로제</option>
-        </select>
-        <DateRangeFields from={dateFrom} to={dateTo} label="와인 등록일" onFrom={value => { setDateFrom(value); setPage(1); }} onTo={value => { setDateTo(value); setPage(1); }} />
-        <button type="button" onClick={() => { setQ(''); setQInput(''); setCountry(''); setCountryInput(''); setTypeFilter(''); setDateFrom(''); setDateTo(''); setSort('newest'); setPage(1); }} className="text-xs text-gray-500 underline">필터 초기화</button>
-        </div>
+        <p className="mt-2 text-xs text-gray-500">아래 열마다 조건을 고르거나 입력하면 함께 적용됩니다. 엑셀에는 조건에 맞는 전체 결과가 담깁니다.</p>
       </div>
+      {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
@@ -234,6 +256,7 @@ export function AdminWines() {
               <SortHeader label="등록일" sort={sort} asc="oldest" desc="newest" onSort={changeSort} className="w-28" />
               <th className="whitespace-nowrap text-left px-4 py-3 w-20">관리</th>
             </tr>
+            <ColumnFilterRow columns={filterColumns} values={filters} onChange={changeFilter} />
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (

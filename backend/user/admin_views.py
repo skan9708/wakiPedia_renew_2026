@@ -9,6 +9,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from user.models import User
+from wakipedia.admin_excel import admin_excel_response
 
 
 class AdminPasswordChangeSerializer(serializers.Serializer):
@@ -63,6 +64,18 @@ class AdminUserListView(APIView):
         q = request.query_params.get("q", "")
         if q:
             qs = (qs.filter(email__icontains=q) | qs.filter(nickname__icontains=q)).distinct()
+        user_id = request.query_params.get("id", "")
+        if user_id.isdigit():
+            qs = qs.filter(pk=int(user_id))
+        email = request.query_params.get("email", "").strip()
+        if email:
+            qs = qs.filter(email__icontains=email)
+        nickname = request.query_params.get("nickname", "").strip()
+        if nickname:
+            qs = qs.filter(nickname__icontains=nickname)
+        review_count = request.query_params.get("review_count", "")
+        if review_count.isdigit():
+            qs = qs.filter(review_count=int(review_count))
         account_status = request.query_params.get("status", "")
         if account_status in ("active", "inactive"):
             qs = qs.filter(is_active=account_status == "active")
@@ -80,6 +93,18 @@ class AdminUserListView(APIView):
             "reviews_asc": ("review_count", "-created_at", "-id"),
         }
         qs = qs.order_by(*ordering.get(request.query_params.get("sort", "newest"), ordering["newest"]))
+
+        if request.query_params.get("export") == "xlsx":
+            rows = (
+                (u.pk, u.email, u.nickname, u.review_count,
+                 "활성" if u.is_active else "비활성", "관리자" if u.is_staff else "일반 회원",
+                 u.created_at.strftime("%Y-%m-%d %H:%M"))
+                for u in qs.iterator(chunk_size=500)
+            )
+            return admin_excel_response("wakipedia-users.xlsx", "유저 관리", [
+                ("ID", 10), ("이메일", 35), ("닉네임", 24), ("리뷰 수", 12),
+                ("상태", 12), ("권한", 14), ("가입일", 20),
+            ], rows)
 
         try:
             page = max(1, int(request.query_params.get("page", 1)))

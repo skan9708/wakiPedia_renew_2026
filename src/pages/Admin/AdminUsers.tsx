@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
-import { DateRangeFields, SortHeader } from './AdminListFilters';
+import { ColumnFilterRow, downloadAdminExcel, SortHeader, useDebouncedValue, type ColumnFilter } from './AdminListFilters';
 
 type AdminUser = {
   id: number;
@@ -125,12 +125,12 @@ export function AdminUsers() {
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
   const [qInput, setQInput] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const appliedFilters = useDebouncedValue(filters);
   const [sort, setSort] = useState('newest');
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
@@ -143,22 +143,20 @@ export function AdminUsers() {
     const currentRequest = ++requestId.current;
     setLoading(true);
     try {
-      const params: any = { page, limit };
+      const params: Record<string, string | number> = { page, limit, sort, ...appliedFilters };
       if (q) params.q = q;
-      if (statusFilter) params.status = statusFilter;
-      if (roleFilter) params.role = roleFilter;
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
-      params.sort = sort;
       const { data } = await api.get('/admin/users/', { params });
       if (currentRequest === requestId.current) {
         setUsers(data.results);
         setTotal(data.total);
+        setError('');
       }
+    } catch {
+      if (currentRequest === requestId.current) setError('유저 목록을 불러오지 못했습니다.');
     } finally {
       if (currentRequest === requestId.current) setLoading(false);
     }
-  }, [page, q, statusFilter, roleFilter, dateFrom, dateTo, sort]);
+  }, [page, q, appliedFilters, sort]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -169,6 +167,32 @@ export function AdminUsers() {
   };
 
   const changeSort = (value: string) => { setSort(value); setPage(1); };
+  const changeFilter = (key: string, value: string) => {
+    setFilters(previous => ({ ...previous, [key]: value }));
+    setPage(1);
+  };
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      await downloadAdminExcel('/admin/users/', { ...appliedFilters, sort, ...(q ? { q } : {}) }, '와키_유저목록.xlsx');
+      setError('');
+    } catch {
+      setError('엑셀 파일을 내려받지 못했습니다. 다시 시도해 주세요.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const filterColumns: ColumnFilter[] = [
+    { label: 'ID', key: 'id', kind: 'number' },
+    { label: '이메일', key: 'email' },
+    { label: '닉네임', key: 'nickname' },
+    { label: '리뷰 수', key: 'review_count', kind: 'number' },
+    { label: '상태', key: 'status', kind: 'select', options: [{ value: 'active', label: '활성' }, { value: 'inactive', label: '비활성' }] },
+    { label: '권한', key: 'role', kind: 'select', options: [{ value: 'staff', label: '관리자' }, { value: 'member', label: '일반 회원' }] },
+    { label: '가입일', key: 'date_from', kind: 'date' },
+    { label: '관리' },
+  ];
 
   const onDelete = async (id: number) => {
     await api.delete(`/admin/users/${id}/`);
@@ -190,8 +214,8 @@ export function AdminUsers() {
         </button>
       </div>
 
-      <div className="mb-4 space-y-2 rounded-xl border border-gray-200 bg-white p-3">
-      <form onSubmit={onSearch} className="flex gap-2">
+      <div className="mb-4 rounded-xl border border-gray-200 bg-white p-3">
+      <form onSubmit={onSearch} className="flex flex-wrap gap-2">
         <input
           value={qInput}
           onChange={(e) => setQInput(e.target.value)}
@@ -199,18 +223,12 @@ export function AdminUsers() {
           className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#c84b31]"
         />
         <button type="submit" className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50">검색</button>
+        <button type="button" onClick={() => { setQ(''); setQInput(''); setFilters({}); setSort('newest'); setPage(1); }} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm">초기화</button>
+        <button type="button" onClick={exportExcel} disabled={exporting} className="rounded-lg bg-[#a4b51c] px-3 py-1.5 text-sm text-white disabled:opacity-50">{exporting ? '내려받는 중...' : '엑셀 다운로드'}</button>
       </form>
-      <div className="flex flex-wrap items-center gap-3">
-        <select aria-label="계정 상태 필터" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm">
-          <option value="">전체 상태</option><option value="active">활성</option><option value="inactive">비활성</option>
-        </select>
-        <select aria-label="계정 권한 필터" value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm">
-          <option value="">전체 권한</option><option value="staff">관리자</option><option value="member">일반 회원</option>
-        </select>
-        <DateRangeFields from={dateFrom} to={dateTo} label="가입일" onFrom={value => { setDateFrom(value); setPage(1); }} onTo={value => { setDateTo(value); setPage(1); }} />
-        <button type="button" onClick={() => { setQ(''); setQInput(''); setStatusFilter(''); setRoleFilter(''); setDateFrom(''); setDateTo(''); setSort('newest'); setPage(1); }} className="text-xs text-gray-500 underline">필터 초기화</button>
+      <p className="mt-2 text-xs text-gray-500">아래 열마다 조건을 고르거나 입력하면 함께 적용됩니다. 엑셀에는 조건에 맞는 전체 결과가 담깁니다.</p>
       </div>
-      </div>
+      {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
 
       <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
@@ -225,6 +243,7 @@ export function AdminUsers() {
               <SortHeader label="가입일" sort={sort} asc="oldest" desc="newest" onSort={changeSort} className="w-24" />
               <th className="whitespace-nowrap text-left px-4 py-3 w-20">관리</th>
             </tr>
+            <ColumnFilterRow columns={filterColumns} values={filters} onChange={changeFilter} />
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (

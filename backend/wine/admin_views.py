@@ -14,6 +14,7 @@ from wine.review_images import protect_review_images, publish_review_images, rev
 from wine.duplicate_review import DuplicateMergeError, decide_duplicate
 from wine.suggestions import name_review_score, queue_duplicate_candidates
 from wine.naming import normalize_wine_names
+from wakipedia.admin_excel import admin_excel_response
 
 
 def require_staff(request):
@@ -155,6 +156,16 @@ class AdminWineListView(APIView):
         if err:
             return err
 
+        if request.query_params.get("options") == "1":
+            visible = Wine.objects.filter(catalog_visible=True)
+            return Response({
+                "countries": list(visible.filter(country__isnull=False).order_by("country__kor_name")
+                                  .values_list("country__kor_name", flat=True).distinct()),
+                "types": list(visible.exclude(type="").order_by("type").values_list("type", flat=True).distinct()),
+                "ratings": list(visible.filter(bubble_avg_rating__isnull=False).order_by("bubble_avg_rating")
+                                .values_list("bubble_avg_rating", flat=True).distinct()),
+            })
+
         qs = Wine.objects.filter(catalog_visible=True).select_related("country").annotate(
             review_count=Count("reviews")
         )
@@ -163,11 +174,35 @@ class AdminWineListView(APIView):
         wine_type = request.query_params.get("type", "")
         if q:
             qs = (qs.filter(kor_name__icontains=q) | qs.filter(eng_name__icontains=q)).distinct()
-        if wine_type:
+        if wine_type == "none":
+            qs = qs.filter(type="")
+        elif wine_type:
             qs = qs.filter(type=wine_type)
+        wine_id = request.query_params.get("id", "")
+        if wine_id.isdigit():
+            qs = qs.filter(pk=int(wine_id))
+        kor_name = request.query_params.get("kor_name", "").strip()
+        if kor_name:
+            qs = qs.filter(kor_name__icontains=kor_name)
+        eng_name = request.query_params.get("eng_name", "").strip()
+        if eng_name:
+            qs = qs.filter(eng_name__icontains=eng_name)
         country = request.query_params.get("country", "").strip()
-        if country:
-            qs = qs.filter(country__kor_name__icontains=country)
+        if country == "none":
+            qs = qs.filter(country__isnull=True)
+        elif country:
+            qs = qs.filter(country__kor_name=country)
+        review_count = request.query_params.get("review_count", "")
+        if review_count.isdigit():
+            qs = qs.filter(review_count=int(review_count))
+        rating = request.query_params.get("rating", "")
+        if rating == "none":
+            qs = qs.filter(bubble_avg_rating__isnull=True)
+        elif rating:
+            try:
+                qs = qs.filter(bubble_avg_rating=float(rating))
+            except (TypeError, ValueError, OverflowError):
+                pass
         for param, lookup in (("date_from", "created_at__date__gte"), ("date_to", "created_at__date__lte")):
             date = parse_date(request.query_params.get(param, ""))
             if date:
@@ -183,6 +218,17 @@ class AdminWineListView(APIView):
             "rating_asc": (F("bubble_avg_rating").asc(nulls_last=True), "id"),
         }
         qs = qs.order_by(*ordering.get(request.query_params.get("sort", "newest"), ordering["newest"]))
+
+        if request.query_params.get("export") == "xlsx":
+            rows = (
+                (w.pk, w.kor_name, w.eng_name, w.type, w.country.kor_name if w.country else "",
+                 w.review_count, w.bubble_avg_rating, w.created_at.strftime("%Y-%m-%d %H:%M"))
+                for w in qs.iterator(chunk_size=500)
+            )
+            return admin_excel_response("wakipedia-wines.xlsx", "와인 관리", [
+                ("ID", 10), ("한글명", 35), ("영문명", 45), ("종류", 16),
+                ("국가", 18), ("리뷰 수", 12), ("평점", 12), ("등록일", 20),
+            ], rows)
 
         try:
             page = max(1, int(request.query_params.get("page", 1)))
@@ -382,8 +428,28 @@ class AdminReviewListView(APIView):
                 | qs.filter(user__nickname__icontains=q)
                 | qs.filter(text__icontains=q)
             ).distinct()
-        if wine_id:
+        if wine_id.isdigit():
             qs = qs.filter(wine_id=wine_id)
+        review_id = request.query_params.get("id", "")
+        if review_id.isdigit():
+            qs = qs.filter(pk=int(review_id))
+        wine_name = request.query_params.get("wine_name", "").strip()
+        if wine_name:
+            qs = qs.filter(Q(wine__kor_name__icontains=wine_name) | Q(wine__eng_name__icontains=wine_name))
+        author = request.query_params.get("author", "").strip()
+        if author:
+            qs = qs.filter(user__nickname__icontains=author)
+        review_text = request.query_params.get("text", "").strip()
+        if review_text:
+            qs = qs.filter(text__icontains=review_text)
+        rating = request.query_params.get("rating", "")
+        if rating:
+            try:
+                db_rating = float(rating) * 10
+                if db_rating.is_integer() and 0 <= db_rating <= 50:
+                    qs = qs.filter(rating=int(db_rating))
+            except (ValueError, OverflowError):
+                pass
         visibility = request.query_params.get("visibility", "")
         if visibility in ("public", "private"):
             qs = qs.filter(is_public=visibility == "public")
@@ -392,8 +458,11 @@ class AdminReviewListView(APIView):
             if date:
                 qs = qs.filter(**{lookup: date})
         sort = request.query_params.get("sort", "newest")
-        if sort in ("helpful_desc", "helpful_asc"):
+        helpful_count = request.query_params.get("helpful_count", "")
+        if sort in ("helpful_desc", "helpful_asc") or helpful_count.isdigit() or request.query_params.get("export") == "xlsx":
             qs = qs.annotate(helpful_count=Count("likes"))
+        if helpful_count.isdigit():
+            qs = qs.filter(helpful_count=int(helpful_count))
         ordering = {
             "newest": ("-created_at", "-id"),
             "oldest": ("created_at", "id"),
@@ -403,6 +472,19 @@ class AdminReviewListView(APIView):
             "helpful_asc": ("helpful_count", "-created_at", "-id"),
         }
         qs = qs.order_by(*ordering.get(sort, ordering["newest"]))
+
+        if request.query_params.get("export") == "xlsx":
+            rows = (
+                (r.pk, r.wine_id, r.wine.kor_name, r.user_id, r.user.nickname,
+                 round(r.rating / 10, 1), r.text, "공개" if r.is_public else "나만 보기",
+                 r.helpful_count, r.created_at.strftime("%Y-%m-%d %H:%M"))
+                for r in qs.iterator(chunk_size=500)
+            )
+            return admin_excel_response("wakipedia-reviews.xlsx", "리뷰 관리", [
+                ("ID", 10), ("와인 ID", 12), ("와인", 35), ("작성자 ID", 12),
+                ("작성자", 20), ("평점", 10), ("내용", 75), ("공개", 14),
+                ("도움이 돼요", 16), ("작성일", 20),
+            ], rows)
 
         try:
             page = max(1, int(request.query_params.get("page", 1)))
@@ -424,7 +506,7 @@ class AdminReviewListView(APIView):
                 "rating": round(r.rating / 10, 1),
                 "text": r.text,
                 "isPublic": r.is_public,
-                "likeCount": r.likes.count(),
+                "likeCount": r.helpful_count if hasattr(r, "helpful_count") else r.likes.count(),
                 "createdAt": r.created_at.isoformat(),
             })
         return Response({"results": results, "total": total, "page": page, "hasNext": end < total})
