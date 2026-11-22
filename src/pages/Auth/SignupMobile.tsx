@@ -203,7 +203,7 @@ export function SignupMobile() {
             </button>
             {(emailChallengeId || previewOnly) && <div className="flex gap-2">
               <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} aria-label="이메일 인증번호" value={emailCode} onChange={e => { emailRequestVersion.current += 1; setEmailCode(e.target.value); setEmailVerifyError(''); setEmailVerified(false); setEmailExpiresAt(0); }} placeholder="이메일 인증번호 6자리" disabled={previewOnly || emailVerifyBusy || emailVerified} className="min-w-0 flex-1 border border-border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" />
-              {!previewOnly && <button type="button" onClick={verifyEmailCode} disabled={emailVerified || emailVerifyBusy || !/^[0-9]{6}$/.test(emailCode)} className="shrink-0 rounded-lg border border-accent px-3 text-sm text-accent disabled:opacity-50">{emailVerifyBusy ? '확인 중' : '인증 확인'}</button>}
+              <button type="button" onClick={verifyEmailCode} disabled={previewOnly || emailVerified || emailVerifyBusy || !/^[0-9]{6}$/.test(emailCode)} className="shrink-0 rounded-lg border border-accent px-3 text-sm text-accent disabled:opacity-50">{emailVerifyBusy ? '확인 중' : '인증 확인'}</button>
             </div>}
             {emailMessage && <p role="status" className="text-xs text-accent">{emailMessage}</p>}
             {emailVerifyError && <p role="alert" className="text-xs text-red-500">{emailVerifyError}</p>}
@@ -239,7 +239,7 @@ export function SignupMobile() {
               </div>
               {(phoneChallengeId || previewOnly) && <div className="flex gap-2">
                 <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} aria-label="휴대폰 인증번호" value={phoneCode} onChange={e => { phoneRequestVersion.current += 1; setPhoneCode(e.target.value); setPhoneVerifyError(''); setPhoneVerified(false); setPhoneExpiresAt(0); }} placeholder="문자 인증번호 6자리" disabled={previewOnly || phoneVerifyBusy || phoneVerified} className="min-w-0 flex-1 border border-border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" />
-                {!previewOnly && <button type="button" onClick={verifyPhoneCode} disabled={phoneVerified || phoneVerifyBusy || !/^[0-9]{6}$/.test(phoneCode)} className="shrink-0 rounded-lg border border-accent px-3 text-sm text-accent disabled:opacity-50">{phoneVerifyBusy ? '확인 중' : '인증 확인'}</button>}
+                <button type="button" onClick={verifyPhoneCode} disabled={previewOnly || phoneVerified || phoneVerifyBusy || !/^[0-9]{6}$/.test(phoneCode)} className="shrink-0 rounded-lg border border-accent px-3 text-sm text-accent disabled:opacity-50">{phoneVerifyBusy ? '확인 중' : '인증 확인'}</button>
               </div>}
               {phoneMessage && <p role="status" className="text-xs text-accent">{phoneMessage}</p>}
               {phoneVerifyError && <p role="alert" className="text-xs text-red-500">{phoneVerifyError}</p>}
