@@ -65,8 +65,8 @@ const guides: Record<string, PageGuide> = {
     { title: '계정 찾기', description: '아이디 찾기는 인증해 등록한 휴대폰 번호가 있어야 해요. 재설정 메일 기능이 활성화되면 가입 이메일로 비밀번호를 바꿀 수 있어요.', target: 'main input[type="password"]' },
   ] },
   signup: { id: 'signup', name: '회원가입', steps: [
-    { title: '이메일 인증하기', description: '이메일 가입 시 인증번호를 받아 입력해 주세요. 인증번호는 10분간 유효해요.', target: 'main input[type="email"]' },
-    { title: '아이디 찾기용 번호', description: '휴대폰 번호 등록은 선택 사항이에요. 문자 인증 서비스가 활성화되면 등록해 이메일 아이디 찾기에 쓸 수 있어요. 광고 문자에는 사용하지 않아요.', target: 'main details summary' },
+    { title: '이메일 인증하기', description: '이메일 인증번호를 입력하고 인증 확인을 눌러주세요. 인증 완료가 표시되면 가입할 수 있어요. 인증번호는 10분간 유효해요.', target: 'main input[type="email"]' },
+    { title: '아이디 찾기용 번호', description: '휴대폰 번호 등록은 선택 사항이에요. 등록하려면 문자 인증번호를 입력하고 인증 확인을 눌러주세요. 인증 완료된 번호는 이메일 아이디 찾기에 쓸 수 있어요.', target: 'main details summary' },
     { title: '약관 확인 후 가입', description: '개인정보처리방침과 이용약관을 확인하고 동의해 주세요. 카카오로 시작할 수도 있어요.', target: 'main button[type="submit"]' },
   ] },
   findEmail: { id: 'find-email', name: '아이디 찾기', steps: [

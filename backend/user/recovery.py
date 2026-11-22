@@ -150,11 +150,12 @@ def check_signup_email_challenge(challenge_id, code, email):
     ).first()
     if not challenge or challenge.used_at or challenge.expires_at <= timezone.now() or challenge.attempts >= 5:
         return None
-    challenge.attempts += 1
     valid = hmac.compare_digest(
         challenge.code_hash, signup_email_code_digest(challenge.id, str(code))
     )
-    challenge.save(update_fields=["attempts"])
+    if not valid:
+        challenge.attempts += 1
+        challenge.save(update_fields=["attempts"])
     return challenge if valid else None
 
 
@@ -218,6 +219,20 @@ def create_phone_challenge(phone, purpose, request, user=None):
         phone_number=phone, purpose=purpose, used_at__isnull=True
     ).exclude(pk=challenge.pk).update(used_at=timezone.now())
     return challenge
+
+
+@transaction.atomic
+def check_signup_phone_challenge(challenge_id, code, phone):
+    challenge = PhoneChallenge.objects.select_for_update().filter(
+        pk=challenge_id, purpose=PhoneChallenge.PURPOSE_SIGNUP, phone_number=phone
+    ).first()
+    if not challenge or challenge.used_at or challenge.expires_at <= timezone.now() or challenge.attempts >= 5:
+        return None
+    valid = hmac.compare_digest(challenge.code_hash, code_digest(challenge.id, str(code)))
+    if not valid:
+        challenge.attempts += 1
+        challenge.save(update_fields=["attempts"])
+    return challenge if valid else None
 
 
 @transaction.atomic

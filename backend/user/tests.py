@@ -8,7 +8,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from user.models import RecoveryRequest, SignupEmailChallenge, User
+from user.models import PhoneChallenge, RecoveryRequest, SignupEmailChallenge, User
 from user.recovery import DeliveryError, rate_limited, request_ip, send_sms, send_password_reset_email
 
 
@@ -51,13 +51,19 @@ class AccountRecoveryTests(APITestCase):
         self.assertEqual(self.client.post("/api/auth/signup/phone/send/", {"phone": "01099998888"}).status_code, 400)
         response = self.client.post("/api/auth/signup/phone/send/", {"phone": "010-9999-8888", "phoneConsent": True})
         self.assertEqual(response.status_code, 200)
+        code = sms.call_args.args[1]
+        verify_data = {"phone": "010-9999-8888", "challengeId": response.data["challengeId"], "code": code}
+        self.assertEqual(self.client.post("/api/auth/signup/phone/verify/", verify_data | {"phone": "010-1111-2222"}).status_code, 400)
+        self.assertEqual(self.client.post("/api/auth/signup/phone/verify/", verify_data | {"code": "000000" if code != "000000" else "111111"}).status_code, 400)
+        self.assertEqual(self.client.post("/api/auth/signup/phone/verify/", verify_data).status_code, 200)
+        self.assertIsNone(PhoneChallenge.objects.get(pk=response.data["challengeId"]).used_at)
         data = {
             "email": "new@example.com", "nickname": "새 회원",
             "password": "newpassword123", "passwordConfirm": "newpassword123",
             "phoneChallengeId": response.data["challengeId"], "phoneCode": "123456", "phoneConsent": True,
         }
         self.assertEqual(self.client.post("/api/auth/signup/", data).status_code, 400)
-        data["phoneCode"] = sms.call_args.args[1]
+        data["phoneCode"] = code
         self.assertEqual(self.client.post("/api/auth/signup/", data).status_code, 201)
         self.assertEqual(User.objects.get(email="new@example.com").phone_number, "01099998888")
 
@@ -173,6 +179,13 @@ class SignupEmailVerificationTests(APITestCase):
         sent = self.client.post("/api/auth/signup/email/send/", {"email": data["email"]})
         self.assertEqual(sent.status_code, 200)
         code = re.search(r"\d{6}", send_email.call_args.args[2]).group()
+        verify_data = {"email": data["email"], "challengeId": sent.data["challengeId"], "code": code}
+        self.assertEqual(self.client.post("/api/auth/signup/email/verify/", verify_data | {"email": "other@example.com"}).status_code, 400)
+        self.assertEqual(self.client.post("/api/auth/signup/email/verify/", verify_data | {"code": "000000" if code != "000000" else "111111"}).status_code, 400)
+        verified = self.client.post("/api/auth/signup/email/verify/", verify_data)
+        self.assertEqual(verified.status_code, 200)
+        self.assertTrue(verified.data["verified"])
+        self.assertIsNone(SignupEmailChallenge.objects.get(pk=sent.data["challengeId"]).used_at)
         data.update(emailChallengeId=sent.data["challengeId"], emailCode=code)
         self.assertEqual(self.client.post("/api/auth/signup/", self.signup_data("other@example.com") | {
             "emailChallengeId": sent.data["challengeId"], "emailCode": code,

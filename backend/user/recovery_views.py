@@ -18,8 +18,9 @@ from rest_framework.views import APIView
 
 from user.models import PhoneChallenge, User
 from user.recovery import (
-    DeliveryError, consume_phone_challenge, create_phone_challenge,
-    create_signup_email_challenge, normalize_phone, rate_limited, send_password_reset_email,
+    DeliveryError, check_signup_email_challenge, check_signup_phone_challenge,
+    consume_phone_challenge, create_phone_challenge, create_signup_email_challenge,
+    normalize_phone, rate_limited, send_password_reset_email,
 )
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,20 @@ class CodeSerializer(serializers.Serializer):
     code = serializers.RegexField(r"^\d{6}$")
 
 
+class SignupEmailVerifySerializer(CodeSerializer):
+    email = serializers.EmailField()
+
+
+class SignupPhoneVerifySerializer(CodeSerializer):
+    phone = serializers.CharField(max_length=30)
+
+    def validate_phone(self, value):
+        try:
+            return normalize_phone(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+
+
 class RecoveryStatusView(APIView):
     permission_classes = [AllowAny]
 
@@ -88,6 +103,23 @@ class SignupEmailSendView(APIView):
         if not challenge:
             return Response({"detail": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."}, status=429)
         return Response({"challengeId": str(challenge.id), "detail": "가입 가능한 이메일이라면 인증번호를 보냈습니다."})
+
+
+class SignupEmailVerifyView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if not settings.EMAIL_SIGNUP_VERIFICATION_ENABLED:
+            return Response({"detail": "이메일 인증 서비스가 준비되지 않았습니다."}, status=503)
+        serializer = SignupEmailVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        challenge = check_signup_email_challenge(
+            data["challengeId"], data["code"], data["email"].strip().lower()
+        )
+        if not challenge:
+            return Response({"detail": "인증번호가 올바르지 않거나 만료되었습니다."}, status=400)
+        return Response({"verified": True, "expiresAt": challenge.expires_at.isoformat()})
 
 
 class LinkPhoneSendView(APIView):
@@ -130,6 +162,21 @@ class SignupPhoneSendView(APIView):
         if not challenge:
             return Response({"detail": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."}, status=429)
         return Response({"challengeId": str(challenge.id)})
+
+
+class SignupPhoneVerifyView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if not settings.PHONE_RECOVERY_ENABLED:
+            return Response({"detail": "휴대폰 인증 서비스가 준비되지 않았습니다."}, status=503)
+        serializer = SignupPhoneVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        challenge = check_signup_phone_challenge(data["challengeId"], data["code"], data["phone"])
+        if not challenge:
+            return Response({"detail": "인증번호가 올바르지 않거나 만료되었습니다."}, status=400)
+        return Response({"verified": True, "expiresAt": challenge.expires_at.isoformat()})
 
 
 class LinkPhoneVerifyView(APIView):
