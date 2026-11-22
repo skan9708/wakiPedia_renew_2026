@@ -8,11 +8,13 @@ class Feedback(BaseModel):
         ("bug", "불편한 점"),
         ("idea", "원하는 기능"),
         ("other", "기타 의견"),
+        ("wine", "와인 정보 수정 요청"),
     ]
     STATUS_CHOICES = [("new", "새 피드백"), ("handled", "확인 완료")]
 
     category = models.CharField(max_length=10, choices=CATEGORY_CHOICES)
     message = models.TextField()
+    wine = models.ForeignKey("wine.Wine", on_delete=models.SET_NULL, null=True, blank=True, related_name="correction_requests")
     email = models.EmailField(blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="new")
     handled_at = models.DateTimeField(null=True, blank=True)

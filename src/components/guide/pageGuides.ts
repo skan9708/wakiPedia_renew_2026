@@ -13,7 +13,7 @@ const guides: Record<string, PageGuide> = {
     { title: '결과 확인하기', description: '와인을 누르면 상세 화면이 열려요. 결과가 없으면 ‘새로운 와인 등록하기’로 직접 등록할 수 있어요.', target: '[data-guide="search-results"]' },
   ] },
   wine: { id: 'wine', name: '와인 상세', steps: [
-    { title: '와인 정보 확인하기', description: '이름·원산지·품종을 확인하세요. 하트를 누르면 관심 와인으로 저장되고, 사진을 누르면 크게 볼 수 있어요.', target: '[data-guide="wine-summary"] > div:first-child' },
+    { title: '와인 정보 확인하기', description: '이름·원산지·품종을 확인하세요. 하트를 누르면 관심 와인으로 저장되고, 사진을 누르면 크게 볼 수 있어요. 정보가 잘못됐다면 ‘와인 정보 수정 요청’으로 알려주세요.', target: '[data-guide="wine-summary"] > div:first-child' },
     { title: '평점과 특징 읽기', description: '사용자 총 평점은 공개 리뷰 별점의 평균이에요. 공개 리뷰가 없으면 이전 서비스 평점이 보일 수 있어요. 바디·당도·산도·탄닌도 함께 살펴보세요.', target: '[data-guide="wine-style"]' },
     { title: '내 기록 남기기', description: '‘리뷰 등록하기’에서 별점과 짧은 후기를 남길 수 있어요. 나만 보기 기록도 선택할 수 있어요.', target: '[data-guide="wine-record"]' },
     { title: '다른 사람의 리뷰 보기', description: '최신 리뷰는 최근 작성순, 인기 리뷰는 ‘도움이 돼요’를 많이 받은 순서예요.', target: '[data-guide="wine-reviews"] > div:first-child' },

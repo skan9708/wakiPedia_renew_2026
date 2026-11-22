@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
 
 type Feedback = {
   id: number;
-  category: 'bug' | 'idea' | 'other';
+  category: 'bug' | 'idea' | 'other' | 'wine';
   message: string;
+  wineId: number | null;
+  wineNameKr: string | null;
+  wineNameEng: string | null;
   email: string;
   status: 'new' | 'handled';
   createdAt: string;
@@ -15,6 +19,7 @@ const categories: Record<Feedback['category'], string> = {
   bug: '불편한 점',
   idea: '원하는 기능',
   other: '기타 의견',
+  wine: '와인 정보 수정 요청',
 };
 
 export function AdminFeedback() {
@@ -103,6 +108,11 @@ export function AdminFeedback() {
                 <time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString('ko-KR')}</time>
               </div>
               <p className="mt-3 whitespace-pre-wrap break-words text-sm text-gray-800">{item.message}</p>
+              {item.wineId && (
+                <Link to={`/admin-panel/wines/${item.wineId}`} className="mt-3 inline-flex text-sm font-medium text-[#697600] underline underline-offset-2">
+                  {item.wineNameKr || `와인 #${item.wineId}`}{item.wineNameEng ? ` · ${item.wineNameEng}` : ''} (#{item.wineId}) 관리 화면 열기
+                </Link>
+              )}
               {item.email && <p className="mt-3 text-xs text-gray-500">답변용 이메일: <a href={`mailto:${item.email}`} className="text-blue-600 underline">{item.email}</a></p>}
               <div className="mt-4 flex gap-3 border-t border-gray-100 pt-3 text-xs">
                 <button type="button" disabled={busyId === item.id} onClick={() => void setHandled(item)} className="text-[#c84b31] disabled:opacity-50">{item.status === 'new' ? '확인 완료로 표시' : '새 피드백으로 되돌리기'}</button>

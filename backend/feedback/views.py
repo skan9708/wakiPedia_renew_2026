@@ -15,6 +15,9 @@ def feedback_data(item):
         "id": item.id,
         "category": item.category,
         "message": item.message,
+        "wineId": item.wine_id,
+        "wineNameKr": item.wine.kor_name if item.wine else None,
+        "wineNameEng": item.wine.eng_name if item.wine else None,
         "email": item.email,
         "status": item.status,
         "createdAt": item.created_at.isoformat(),
@@ -38,7 +41,7 @@ class AdminFeedbackListView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        qs = Feedback.objects.all()
+        qs = Feedback.objects.select_related("wine")
         category = request.query_params.get("category")
         state = request.query_params.get("status")
         if category in dict(Feedback.CATEGORY_CHOICES):

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CardReview, Review } from '@/components/common/CardReview';
 import { RatingStars } from '@/components/common/RatingStars';
-import { Heart } from 'lucide-react';
+import { Heart, MessageSquarePlus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { trackWineDetail } from '@/lib/analytics';
 import { useAuthStore } from '@/store/auth';
@@ -164,6 +164,13 @@ export function WineDetailMobile() {
         <div className="text-sm text-muted mt-2">
           {wine.regions} {wine.breed && <><span>·</span> <span className="text-accent">{wine.breed}</span></>}
         </div>
+        <button
+          type="button"
+          onClick={() => navigate(`/feedback?wine_id=${wine.id}`)}
+          className="mt-2 inline-flex items-center gap-1 text-xs text-muted underline underline-offset-2 hover:text-accent"
+        >
+          <MessageSquarePlus className="h-3.5 w-3.5" />와인 정보 수정 요청
+        </button>
 
         {/* 별점 요약 */}
         <div className="mt-3 grid grid-cols-2 gap-6 items-center">
