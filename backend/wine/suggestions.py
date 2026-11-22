@@ -2,6 +2,7 @@
 
 import re
 import unicodedata
+from collections import Counter
 from difflib import SequenceMatcher
 
 from django.db.models import F, Q, Value
@@ -89,8 +90,9 @@ def suggestion_score(name_eng, name_kr, candidate_eng, candidate_kr, aliases="",
     return score
 
 
-def ranked_wine_ids(name_eng, name_kr, *, wine_type="", country="", exclude_id=None, minimum=MIN_SUGGESTION_SCORE):
-    """Return up to five visible catalog matches, strongest name match first."""
+def ranked_wine_ids(name_eng, name_kr, *, wine_type="", country="", exclude_id=None,
+                    minimum=MIN_SUGGESTION_SCORE, limit=5):
+    """Return visible catalog matches, strongest broad name match first."""
     if not has_searchable_name(name_eng, name_kr):
         return []
     candidates = {}
@@ -134,16 +136,91 @@ def ranked_wine_ids(name_eng, name_kr, *, wine_type="", country="", exclude_id=N
         if score >= minimum:
             ranked.append((score, wine_id))
     ranked.sort(reverse=True)
-    return ranked[:5]
+    return ranked[:limit] if limit is not None else ranked
+
+
+def _distinctive_pair_score(first, second, grape_terms):
+    """Compare the parts left after shared words or known grape names are removed."""
+    first_name, second_name = normalized_name(first), normalized_name(second)
+    if not first_name or not second_name:
+        return 0.0
+    first_identity, second_identity = first_name, second_name
+    for term in grape_terms:
+        first_identity = first_identity.replace(term, "")
+        second_identity = second_identity.replace(term, "")
+    if first_identity != first_name or second_identity != second_name:
+        if min(len(first_identity), len(second_identity)) < 2:
+            return 0.0
+        return SequenceMatcher(None, first_identity, second_identity).ratio()
+
+    first_words = [normalized_name(word) for word in re.findall(r"[^\W_]+", first)]
+    second_words = [normalized_name(word) for word in re.findall(r"[^\W_]+", second)]
+    shared = Counter(first_words) & Counter(second_words)
+
+    def remaining(words):
+        counts = shared.copy()
+        rest = []
+        for word in words:
+            if counts[word]:
+                counts[word] -= 1
+            else:
+                rest.append(word)
+        return "".join(rest)
+
+    first_identity, second_identity = remaining(first_words), remaining(second_words)
+    if not first_identity and not second_identity:
+        return 1.0
+    if min(len(first_identity), len(second_identity)) < 2:
+        return 0.0
+    return SequenceMatcher(None, first_identity, second_identity).ratio()
+
+
+def name_review_score(source, target, source_grapes=None):
+    """Require a plausible producer or label match before an admin review is queued."""
+    if source.type and target.type and source.type.casefold() != target.type.casefold():
+        return 0.0
+    if source.country_id and target.country_id and source.country_id != target.country_id:
+        return 0.0
+    source_grapes = list(source_grapes if source_grapes is not None else source.grape_varieties.all())
+    target_grapes = list(target.grape_varieties.all())
+    source_grape_ids = {grape.pk for grape in source_grapes}
+    target_grape_ids = {grape.pk for grape in target_grapes}
+    if source_grape_ids and target_grape_ids and source_grape_ids.isdisjoint(target_grape_ids):
+        return 0.0
+    grape_terms = sorted({
+        normalized_name(value)
+        for grape in (*source_grapes, *target_grapes)
+        for value in (grape.eng_name, grape.kor_name)
+        if len(normalized_name(value)) >= 2
+    }, key=len, reverse=True)
+    score = max(
+        _distinctive_pair_score(source.eng_name, target.eng_name, grape_terms),
+        _distinctive_pair_score(source.kor_name, target.kor_name, grape_terms),
+        *(
+            _distinctive_pair_score(source_name, alias, grape_terms)
+            for alias in target.search_aliases.split(",") if alias.strip()
+            for source_name in (source.eng_name, source.kor_name)
+        ),
+    )
+    return round(score, 3) if score >= 0.82 else 0.0
 
 
 def queue_duplicate_candidates(wine):
     """Queue plausible matches for a human; registration never merges automatically."""
     country = wine.country.kor_name if wine.country_id else ""
-    name_matches = {target_id: score for score, target_id in ranked_wine_ids(
+    broad_matches = ranked_wine_ids(
         wine.eng_name, wine.kor_name, wine_type=wine.type,
-        country=country, exclude_id=wine.pk, minimum=0.85,
-    )}
+        country=country, exclude_id=wine.pk, limit=None,
+    )
+    source_grapes = list(wine.grape_varieties.all())
+    targets = Wine.objects.filter(pk__in=[target_id for _, target_id in broad_matches]).prefetch_related("grape_varieties").in_bulk()
+    name_matches = sorted((
+        (review_score, target_id)
+        for _, target_id in broad_matches
+        if (target := targets.get(target_id))
+        if (review_score := name_review_score(wine, target, source_grapes))
+    ), reverse=True)[:5]
+    name_matches = {target_id: score for score, target_id in name_matches}
     # A newly uploaded photo is available after Wine.objects.create() saves it.
     if wine.image and not wine.image_hash:
         save_wine_fingerprint(wine)

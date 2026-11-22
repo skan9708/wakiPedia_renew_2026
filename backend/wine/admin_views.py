@@ -11,7 +11,7 @@ from wine.image_utils import public_review_image_names, wine_display_image_url
 from wine.image_similarity import save_wine_fingerprint
 from wine.review_images import protect_review_images, publish_review_images, review_image_url
 from wine.duplicate_review import DuplicateMergeError, decide_duplicate
-from wine.suggestions import queue_duplicate_candidates, suggestion_score
+from wine.suggestions import name_review_score, queue_duplicate_candidates
 from wine.naming import normalize_wine_names
 
 
@@ -64,14 +64,7 @@ class AdminDuplicateListView(APIView):
             "results": [{
                 "id": item.pk,
                 "score": round(item.score, 3),
-                "nameScore": round(suggestion_score(
-                    wines[item.source_id].eng_name, wines[item.source_id].kor_name,
-                    wines[item.target_id].eng_name, wines[item.target_id].kor_name,
-                    wines[item.target_id].search_aliases,
-                    wines[item.source_id].type, wines[item.target_id].type,
-                    wines[item.source_id].country.kor_name if wines[item.source_id].country else "",
-                    wines[item.target_id].country.kor_name if wines[item.target_id].country else "",
-                ), 3),
+                "nameScore": name_review_score(wines[item.source_id], wines[item.target_id]),
                 "imageScore": round(item.image_score, 3) if item.image_score is not None else None,
                 "createdAt": item.created_at.isoformat(),
                 "source": describe(wines[item.source_id]),

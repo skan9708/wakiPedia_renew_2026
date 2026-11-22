@@ -104,7 +104,8 @@ class DuplicateReviewTests(TestCase):
 
     def test_conflicting_metadata_prevents_merge(self):
         source = self.register(wineType="White")
-        candidate = WineDuplicateCandidate.objects.get(source=source, target=self.target)
+        self.assertFalse(WineDuplicateCandidate.objects.filter(source=source, target=self.target).exists())
+        candidate = WineDuplicateCandidate.objects.create(source=source, target=self.target, score=0.9)
         response = self.staff_client.patch(
             f"/api/admin/duplicates/{candidate.pk}/",
             {"approved": True, "confirmTargetId": self.target.pk}, format="json",
