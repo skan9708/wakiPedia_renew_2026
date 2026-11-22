@@ -25,6 +25,12 @@ foreach ($assetName in $referencedAssets) {
     }
 }
 
+$staticFiles = @('manifest.json', 'icons/waki-180.png', 'icons/waki-192.png', 'icons/waki-512.png')
+foreach ($staticFile in $staticFiles) {
+    $localFile = Join-Path $distPath $staticFile
+    if (-not (Test-Path -LiteralPath $localFile -PathType Leaf)) { throw "Static file missing: $staticFile" }
+}
+
 $remoteAssets = "$RemoteDist/assets"
 & ssh -i $PemPath -o BatchMode=yes $Target "mkdir -p $remoteAssets && chmod 755 $remoteAssets"
 if ($LASTEXITCODE -ne 0) { throw 'Could not prepare the remote assets directory.' }
@@ -46,6 +52,22 @@ foreach ($assetName in $referencedAssets) {
     $headers = & ssh -i $PemPath -o BatchMode=yes $Target "curl -fsSI $SiteUrl/assets/$assetName"
     if ($LASTEXITCODE -ne 0 -or ($headers -join "`n") -notmatch "Content-Type: $expectedType") {
         throw "Public asset has the wrong response type: $assetName"
+    }
+}
+
+& ssh -i $PemPath -o BatchMode=yes $Target "mkdir -p $RemoteDist/icons && chmod 755 $RemoteDist/icons"
+if ($LASTEXITCODE -ne 0) { throw 'Could not prepare the remote icon directory.' }
+foreach ($staticFile in $staticFiles) {
+    $localFile = Join-Path $distPath $staticFile
+    $remoteFile = "$RemoteDist/$staticFile"
+    & scp -i $PemPath -o BatchMode=yes $localFile "${Target}:$remoteFile"
+    if ($LASTEXITCODE -ne 0) { throw "Upload failed: $staticFile" }
+    & ssh -i $PemPath -o BatchMode=yes $Target "chmod 644 $remoteFile && sudo -u www-data test -r $remoteFile"
+    if ($LASTEXITCODE -ne 0) { throw "Web server cannot read: $staticFile" }
+    $expectedType = if ($staticFile.EndsWith('.json')) { 'application/json' } else { 'image/png' }
+    $headers = & ssh -i $PemPath -o BatchMode=yes $Target "curl -fsSI $SiteUrl/$staticFile"
+    if ($LASTEXITCODE -ne 0 -or ($headers -join "`n") -notmatch "Content-Type: $expectedType") {
+        throw "Public static file has the wrong response type: $staticFile"
     }
 }
 

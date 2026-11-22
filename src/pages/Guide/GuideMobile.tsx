@@ -1,4 +1,5 @@
 import { ChevronDown } from 'lucide-react';
+import { AddToHomeScreen } from '@/components/common/AddToHomeScreen';
 
 type GuideTopic = {
   id: string;
@@ -94,6 +95,8 @@ export function GuideMobile() {
           ))}
         </ol>
       </section>
+
+      <AddToHomeScreen variant="guide" />
 
       <p className="text-sm text-muted">자세한 내용은 궁금한 질문만 펼쳐 보세요.</p>
 
