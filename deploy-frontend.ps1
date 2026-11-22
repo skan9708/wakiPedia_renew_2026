@@ -55,13 +55,18 @@ foreach ($assetName in $referencedAssets) {
     }
 }
 
-& ssh -i $PemPath -o BatchMode=yes $Target "mkdir -p $RemoteDist/icons && chmod 755 $RemoteDist/icons"
+& ssh -i $PemPath -o BatchMode=yes $Target "sudo -n install -d -o ubuntu -g ubuntu -m 755 $RemoteDist/icons"
 if ($LASTEXITCODE -ne 0) { throw 'Could not prepare the remote icon directory.' }
 foreach ($staticFile in $staticFiles) {
     $localFile = Join-Path $distPath $staticFile
     $remoteFile = "$RemoteDist/$staticFile"
-    & scp -i $PemPath -o BatchMode=yes $localFile "${Target}:$remoteFile"
+    $uploadFile = if ($staticFile -eq 'manifest.json') { "$remoteAssets/waki-manifest-upload.json" } else { $remoteFile }
+    & scp -i $PemPath -o BatchMode=yes $localFile "${Target}:$uploadFile"
     if ($LASTEXITCODE -ne 0) { throw "Upload failed: $staticFile" }
+    if ($staticFile -eq 'manifest.json') {
+        & ssh -i $PemPath -o BatchMode=yes $Target "sudo -n install -o ubuntu -g ubuntu -m 644 $uploadFile $remoteFile && rm -f $uploadFile"
+        if ($LASTEXITCODE -ne 0) { throw 'Could not install the web app manifest.' }
+    }
     & ssh -i $PemPath -o BatchMode=yes $Target "chmod 644 $remoteFile && sudo -u www-data test -r $remoteFile"
     if ($LASTEXITCODE -ne 0) { throw "Web server cannot read: $staticFile" }
     $expectedType = if ($staticFile.EndsWith('.json')) { 'application/json' } else { 'image/png' }
